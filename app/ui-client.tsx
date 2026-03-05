@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import type { FairBoardResponse, FairEvent } from "@/lib/server/odds/types";
+import type { FairBoardResponse, FairEvent, FairOutcomeBook } from "@/lib/server/odds/types";
 
 const LEAGUES = [
   { key: "nba", label: "NBA" },
@@ -30,6 +30,94 @@ function setParam(router: ReturnType<typeof useRouter>, searchParams: URLSearchP
   router.replace(`/?${next.toString()}`);
 }
 
+function bookInitials(title: string): string {
+  return title
+    .split(" ")
+    .slice(0, 2)
+    .map((chunk) => chunk[0]?.toUpperCase() || "")
+    .join("");
+}
+
+function edgeHeatStyle(edgePct: number): React.CSSProperties {
+  const clamped = Math.max(-4, Math.min(4, edgePct));
+  const alpha = Math.abs(clamped) / 8;
+  if (clamped > 0) {
+    return { backgroundColor: `rgba(122, 239, 195, ${0.08 + alpha})` };
+  }
+  if (clamped < 0) {
+    return { backgroundColor: `rgba(245, 102, 102, ${0.08 + alpha})` };
+  }
+  return {};
+}
+
+function marketSparkline(event: FairEvent): number[] {
+  const firstOutcome = event.outcomes[0];
+  if (!firstOutcome) return [];
+
+  const openBest = Math.max(
+    ...firstOutcome.books.map((book) => book.movement?.openPrice ?? book.priceAmerican),
+    firstOutcome.bestPrice
+  );
+  const prevBest = Math.max(
+    ...firstOutcome.books.map((book) => book.movement?.prevPrice ?? book.priceAmerican),
+    firstOutcome.bestPrice
+  );
+  const currentBest = Math.max(
+    ...firstOutcome.books.map((book) => book.movement?.currentPrice ?? book.priceAmerican),
+    firstOutcome.bestPrice
+  );
+
+  return [openBest, prevBest, currentBest];
+}
+
+function Sparkline({ values }: { values: number[] }) {
+  if (values.length < 2) return <div className="sparkline-placeholder">--</div>;
+
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const range = max - min || 1;
+
+  const points = values
+    .map((value, idx) => {
+      const x = (idx / (values.length - 1)) * 100;
+      const y = 100 - ((value - min) / range) * 100;
+      return `${x},${y}`;
+    })
+    .join(" ");
+
+  return (
+    <svg viewBox="0 0 100 100" className="sparkline" role="img" aria-label="Line movement sparkline">
+      <polyline points={points} fill="none" stroke="currentColor" strokeWidth="6" strokeLinecap="round" />
+      {values.map((value, idx) => {
+        const x = (idx / (values.length - 1)) * 100;
+        const y = 100 - ((value - min) / range) * 100;
+        return <circle key={`${idx}-${value}`} cx={x} cy={y} r={4} />;
+      })}
+    </svg>
+  );
+}
+
+function FairBestMicrobar({ fairProb, bestBookProb }: { fairProb: number; bestBookProb: number }) {
+  const fairPct = Math.max(0, Math.min(100, fairProb * 100));
+  const bestPct = Math.max(0, Math.min(100, bestBookProb * 100));
+  const edge = (bestBookProb - fairProb) * 100;
+
+  return (
+    <div className="microbar-wrap" title="Edge = implied(best) vs implied(fair)">
+      <div className="microbar-track">
+        <span className="microbar-fair" style={{ left: `${fairPct}%` }} />
+        <span className="microbar-best" style={{ left: `${bestPct}%` }} />
+      </div>
+      <small className={Math.abs(edge) >= 1 ? "edge-badge" : "muted"}>{edge.toFixed(2)}%</small>
+    </div>
+  );
+}
+
+function bestBookProb(outcomes: FairOutcomeBook[]): number {
+  const best = outcomes.find((row) => row.isBestPrice) || outcomes[0];
+  return best?.impliedProbNoVig || 0.5;
+}
+
 export function OddsGridClient({
   board,
   league,
@@ -46,6 +134,9 @@ export function OddsGridClient({
   const [search, setSearch] = useState("");
   const [selectedEvent, setSelectedEvent] = useState<FairEvent | null>(null);
   const [bookFilter, setBookFilter] = useState<Set<string>>(new Set());
+  const [showBookMenu, setShowBookMenu] = useState(false);
+  const [showBestOnly, setShowBestOnly] = useState(false);
+  const [condensed, setCondensed] = useState(false);
 
   const visibleBooks = useMemo(() => {
     if (bookFilter.size === 0) return board.books;
@@ -62,7 +153,7 @@ export function OddsGridClient({
 
     events = events.filter((event) => {
       if (bookFilter.size === 0) return true;
-      return visibleBooks.every((book) => event.outcomes.some((outcome) => outcome.books.some((row) => row.bookKey === book.key)));
+      return event.outcomes.some((outcome) => outcome.books.some((row) => bookFilter.has(row.bookKey)));
     });
 
     if (sortBy === "soonest") {
@@ -78,7 +169,7 @@ export function OddsGridClient({
     }
 
     return [...events].sort((a, b) => b.maxAbsEdgePct - a.maxAbsEdgePct);
-  }, [board.events, bookFilter, visibleBooks, search, sortBy]);
+  }, [board.events, bookFilter, search, sortBy]);
 
   return (
     <main className="grid-shell">
@@ -138,6 +229,7 @@ export function OddsGridClient({
             <button
               className={board.model === "sharp" ? "active" : ""}
               onClick={() => setParam(router, new URLSearchParams(searchParams?.toString() || ""), "model", "sharp")}
+              title="Fair line is a weighted blend of sharper books"
             >
               Sharp-weighted fair
             </button>
@@ -184,39 +276,55 @@ export function OddsGridClient({
           <option value="best">Sort: Best price</option>
         </select>
 
-        <div className="books-filter">
-          {board.books.map((book) => {
-            const active = bookFilter.size === 0 || bookFilter.has(book.key);
-            return (
-              <button
-                key={book.key}
-                className={active ? "active" : ""}
-                onClick={() => {
-                  setBookFilter((prev) => {
-                    const next = new Set(prev);
-                    if (next.size === 0) {
-                      board.books.forEach((item) => next.add(item.key));
-                    }
-                    if (next.has(book.key)) next.delete(book.key);
-                    else next.add(book.key);
-                    if (next.size === board.books.length || next.size === 0) return new Set();
-                    return next;
-                  });
-                }}
-              >
-                {book.title}
-              </button>
-            );
-          })}
+        <div className="toggle-group">
+          <button className={showBestOnly ? "active" : ""} onClick={() => setShowBestOnly((value) => !value)}>
+            Show only best price
+          </button>
+          <button className={condensed ? "active" : ""} onClick={() => setCondensed((value) => !value)}>
+            Condensed rows
+          </button>
+        </div>
+
+        <div className="book-picker">
+          <button className="book-picker-btn" onClick={() => setShowBookMenu((open) => !open)}>
+            Books ({visibleBooks.length})
+          </button>
+          {showBookMenu ? (
+            <div className="book-picker-menu">
+              {board.books.map((book) => {
+                const active = bookFilter.size === 0 || bookFilter.has(book.key);
+                return (
+                  <label key={book.key}>
+                    <input
+                      type="checkbox"
+                      checked={active}
+                      onChange={() => {
+                        setBookFilter((prev) => {
+                          const next = new Set(prev);
+                          if (next.size === 0) board.books.forEach((entry) => next.add(entry.key));
+                          if (next.has(book.key)) next.delete(book.key);
+                          else next.add(book.key);
+                          if (next.size === board.books.length || next.size === 0) return new Set();
+                          return next;
+                        });
+                      }}
+                    />
+                    <span className="book-logo-pill">{bookInitials(book.title)}</span>
+                    <span>{book.title}</span>
+                  </label>
+                );
+              })}
+            </div>
+          ) : null}
         </div>
       </section>
 
-      <section className="odds-grid-wrap">
-        <table className="odds-grid">
+      <section className="odds-grid-wrap desktop-only">
+        <table className={`odds-grid ${condensed ? "condensed" : ""}`}>
           <thead>
             <tr>
               <th className="sticky-col">Matchup</th>
-              <th>Fair</th>
+              <th title="Edge = implied(best) vs implied(fair)">Fair</th>
               <th>Best</th>
               {visibleBooks.map((book) => (
                 <th key={book.key}>{book.title}</th>
@@ -232,6 +340,21 @@ export function OddsGridClient({
                     <strong>{event.awayTeam}</strong>
                     <strong>{event.homeTeam}</strong>
                     <small>{new Date(event.commenceTime).toLocaleString()}</small>
+                    <Sparkline values={marketSparkline(event)} />
+                    <button
+                      className="quick-action"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const first = event.outcomes[0];
+                        const best = first?.books.find((row) => row.isBestPrice);
+                        if (!best) return;
+                        navigator.clipboard.writeText(
+                          `${event.awayTeam} @ ${event.homeTeam} ${first.name} ${formatAmerican(best.priceAmerican)} (${best.title})`
+                        );
+                      }}
+                    >
+                      Copy line
+                    </button>
                   </div>
                 </td>
 
@@ -240,7 +363,7 @@ export function OddsGridClient({
                     <div key={`${event.id}-fair-${outcome.name}`} className="dual-line">
                       <span>{outcome.name}</span>
                       <strong>{formatAmerican(outcome.fairAmerican)}</strong>
-                      <small>{(outcome.fairProb * 100).toFixed(1)}%</small>
+                      <FairBestMicrobar fairProb={outcome.fairProb} bestBookProb={bestBookProb(outcome.books)} />
                     </div>
                   ))}
                 </td>
@@ -250,7 +373,7 @@ export function OddsGridClient({
                     <div key={`${event.id}-best-${outcome.name}`} className="dual-line">
                       <span>{outcome.name}</span>
                       <strong>{formatAmerican(outcome.bestPrice)}</strong>
-                      <small>{outcome.bestBook}</small>
+                      <small className="best-chip">Best · {outcome.bestBook}</small>
                     </div>
                   ))}
                 </td>
@@ -267,9 +390,22 @@ export function OddsGridClient({
                         );
                       }
 
+                      if (showBestOnly && !row.isBestPrice) {
+                        return (
+                          <div key={`${event.id}-${book.key}-${outcome.name}`} className="dual-line muted">
+                            --
+                          </div>
+                        );
+                      }
+
                       return (
-                        <div key={`${event.id}-${book.key}-${outcome.name}`} className="dual-line">
+                        <div
+                          key={`${event.id}-${book.key}-${outcome.name}`}
+                          className="dual-line"
+                          style={edgeHeatStyle(row.edgePct)}
+                        >
                           <strong className={row.isBestPrice ? "best-highlight" : ""}>{formatAmerican(row.priceAmerican)}</strong>
+                          {row.isBestPrice ? <small className="best-chip">Best</small> : null}
                           <small className={Math.abs(row.edgePct) >= 1 ? "edge-badge" : "muted"}>{row.edgePct.toFixed(2)}%</small>
                         </div>
                       );
@@ -280,6 +416,33 @@ export function OddsGridClient({
             ))}
           </tbody>
         </table>
+      </section>
+
+      <section className="mobile-cards mobile-only">
+        {filteredEvents.map((event) => (
+          <article key={`mobile-${event.id}`} className="mobile-card" onClick={() => setSelectedEvent(event)}>
+            <div className="mobile-card-head">
+              <div>
+                <strong>{event.awayTeam} @ {event.homeTeam}</strong>
+                <small>{new Date(event.commenceTime).toLocaleString()}</small>
+              </div>
+              <Sparkline values={marketSparkline(event)} />
+            </div>
+
+            <div className="mobile-lines">
+              {event.outcomes.map((outcome) => (
+                <div key={`mobile-${event.id}-${outcome.name}`}>
+                  <div className="dual-line">
+                    <span>{outcome.name}</span>
+                    <strong>{formatAmerican(outcome.bestPrice)}</strong>
+                    <small className="best-chip">{outcome.bestBook}</small>
+                  </div>
+                  <FairBestMicrobar fairProb={outcome.fairProb} bestBookProb={bestBookProb(outcome.books)} />
+                </div>
+              ))}
+            </div>
+          </article>
+        ))}
       </section>
 
       {selectedEvent ? (
@@ -296,6 +459,11 @@ export function OddsGridClient({
             {selectedEvent.linePoint !== undefined ? ` ${selectedEvent.linePoint}` : ""}
           </p>
 
+          <section className="detail-section">
+            <h4>Line movement (best by phase)</h4>
+            <Sparkline values={marketSparkline(selectedEvent)} />
+          </section>
+
           {selectedEvent.outcomes.map((outcome) => (
             <section key={`${selectedEvent.id}-${outcome.name}`} className="detail-section">
               <h4>{outcome.name}</h4>
@@ -304,7 +472,11 @@ export function OddsGridClient({
               </p>
               <div className="detail-table">
                 {outcome.books.map((book) => (
-                  <div key={`${selectedEvent.id}-${outcome.name}-${book.bookKey}`} className="detail-row">
+                  <div
+                    key={`${selectedEvent.id}-${outcome.name}-${book.bookKey}`}
+                    className="detail-row"
+                    style={edgeHeatStyle(book.edgePct)}
+                  >
                     <span>{book.title}</span>
                     <strong>{formatAmerican(book.priceAmerican)}</strong>
                     <small>{book.edgePct.toFixed(2)}% edge</small>
