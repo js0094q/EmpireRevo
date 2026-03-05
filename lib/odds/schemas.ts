@@ -51,6 +51,12 @@ export type NormalizedEventOdds = {
   fetchedAt: string;
 };
 
+export type DriverRef = {
+  bookKey: string;
+  bookTitle: string;
+  weight: number;
+};
+
 export type DerivedSide = {
   label: string;
   bestPrice: { bookKey: string; bookTitle: string; price: number };
@@ -60,7 +66,16 @@ export type DerivedSide = {
   confidence: "High" | "Medium" | "Low";
   confidenceWhy: { books: number; variance: number; recencySec: number };
   leanPct: number;
-  sharpDrivers: { bookKey: string; bookTitle: string; weight: number }[];
+  sharpDrivers: DriverRef[];
+  explain: {
+    equalWeightedProb: number;
+    sharpWeightedProb: number;
+    leanPct: number;
+    bookCount: number;
+    variance: number;
+    recencySec: number;
+    topDrivers: DriverRef[];
+  };
   movement: {
     openPrice?: number;
     currentPrice?: number;
@@ -82,9 +97,25 @@ export type DerivedGame = {
   updatedAt: string;
 };
 
+export type BoardFeedItem = {
+  id: string;
+  ts: string;
+  type: "rapid_move" | "best_price_improved" | "ev_edge" | "pressure_spike";
+  title: string;
+  subtitle: string;
+  gameId: string;
+  market: MarketKey;
+  confidence?: "High" | "Medium" | "Low";
+};
+
 export type BoardResponse = {
   league: LeagueKey;
   updatedAt: string;
+  meta: {
+    generatedAt: string;
+    windowHours: number;
+    disclaimer: string;
+  };
   editorNote: {
     headline: string;
     body: string;
@@ -94,14 +125,5 @@ export type BoardResponse = {
   comingUp: DerivedGame[];
   bestValueNow: DerivedGame[];
   games: DerivedGame[];
-  feed: {
-    id: string;
-    ts: string;
-    type: "rapid_move" | "best_price_improved" | "ev_edge" | "pressure_spike";
-    title: string;
-    subtitle: string;
-    gameId: string;
-    market: MarketKey;
-    confidence?: "High" | "Medium" | "Low";
-  }[];
+  feed: BoardFeedItem[];
 };

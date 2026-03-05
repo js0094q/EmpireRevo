@@ -5,6 +5,12 @@ type Entry<T> = {
 
 const store = new Map<string, Entry<unknown>>();
 
+export function cacheKey(parts: Array<string | number | undefined>): string {
+  return parts
+    .map((part) => (part === undefined ? "" : String(part)))
+    .join("|");
+}
+
 export function cacheGet<T>(key: string): T | null {
   const hit = store.get(key);
   if (!hit) return null;

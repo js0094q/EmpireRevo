@@ -4,33 +4,42 @@ import type { BoardResponse } from "@/lib/odds/schemas";
 
 export const dynamic = "force-dynamic";
 
-async function getBoard(): Promise<BoardResponse> {
+async function getBoard(league: string): Promise<BoardResponse> {
   const h = await headers();
   const host = h.get("host") || "localhost:3000";
   const proto = host.includes("localhost") ? "http" : "https";
-  const res = await fetch(`${proto}://${host}/api/board?league=nba`, { cache: "no-store" });
+  const res = await fetch(`${proto}://${host}/api/board?sport=${league}`, { cache: "no-store" });
+
   if (!res.ok) {
     let detail = "";
     try {
       const body = await res.json();
       detail = typeof body?.error === "string" ? body.error : "";
     } catch {
-      // ignore parse failures and use generic status text
+      // ignore parse errors and fallback to status only
     }
+
     throw new Error(detail ? `Failed to load board (${res.status}): ${detail}` : `Failed to load board: ${res.status}`);
   }
+
   return res.json();
 }
 
-function fallbackBoard(reason: string): BoardResponse {
+function fallbackBoard(reason: string, league: string): BoardResponse {
+  const safeLeague = ["nfl", "nba", "nhl", "ncaab", "mlb"].includes(league) ? (league as BoardResponse["league"]) : "nba";
   return {
-    league: "nba",
+    league: safeLeague,
     updatedAt: new Date().toISOString(),
+    meta: {
+      generatedAt: new Date().toISOString(),
+      windowHours: 24,
+      disclaimer: "Market intelligence only. This is not financial advice or a guaranteed outcome."
+    },
     editorNote: {
       headline: "Configuration Required",
-      body: `Live data is unavailable right now. ${reason}. Set ODDS_API_KEY in your deployment environment and redeploy.`,
-      watchlist: ["Add ODDS_API_KEY in Vercel Project Settings -> Environment Variables."],
-      lockLike: ["Once configured, the board will populate automatically."]
+      body: `Live market data is unavailable right now. ${reason}`,
+      watchlist: ["Set ODDS_API_KEY in Vercel Project Settings and redeploy."],
+      lockLike: ["Highest Confidence setup appears once markets and key configuration are active."]
     },
     comingUp: [],
     bestValueNow: [],
@@ -39,10 +48,14 @@ function fallbackBoard(reason: string): BoardResponse {
   };
 }
 
-export default async function Page() {
-  const board = await getBoard().catch((err: unknown) => {
+export default async function Page({ searchParams }: { searchParams?: Promise<{ league?: string }> }) {
+  const params = (await searchParams) || {};
+  const league = params.league || "nba";
+
+  const board = await getBoard(league).catch((err: unknown) => {
     const reason = err instanceof Error ? err.message : "Unknown server error";
-    return fallbackBoard(reason);
+    return fallbackBoard(reason, league);
   });
+
   return <BoardClient board={board} />;
 }
