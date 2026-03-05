@@ -12,6 +12,18 @@ const movementState = {
   prevByKey: {} as Record<string, number>
 };
 
+function normalizeApiKey(raw: string | undefined): string {
+  if (!raw) return "";
+  const trimmed = raw.trim();
+  if (
+    (trimmed.startsWith("\"") && trimmed.endsWith("\"")) ||
+    (trimmed.startsWith("'") && trimmed.endsWith("'"))
+  ) {
+    return trimmed.slice(1, -1).trim();
+  }
+  return trimmed;
+}
+
 function boardCacheHeaders(): Record<string, string> {
   const sMaxAge = process.env.EDGE_CACHE_S_MAXAGE || "30";
   const swr = process.env.EDGE_CACHE_SWR || "120";
@@ -114,7 +126,7 @@ export async function GET(req: Request) {
   const hit = cacheGet<BoardResponse>(cacheKey);
   if (hit) return NextResponse.json(hit, { headers: boardCacheHeaders() });
 
-  const apiKey = process.env.ODDS_API_KEY;
+  const apiKey = normalizeApiKey(process.env.ODDS_API_KEY);
   if (!apiKey) {
     return NextResponse.json({ error: "Missing ODDS_API_KEY" }, { status: 500 });
   }

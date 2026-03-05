@@ -8,6 +8,18 @@ export const runtime = "nodejs";
 const DEFAULT_BASE = "https://api.the-odds-api.com";
 const DEFAULT_ODDS_FORMAT = "american";
 
+function normalizeApiKey(raw: string | undefined): string {
+  if (!raw) return "";
+  const trimmed = raw.trim();
+  if (
+    (trimmed.startsWith("\"") && trimmed.endsWith("\"")) ||
+    (trimmed.startsWith("'") && trimmed.endsWith("'"))
+  ) {
+    return trimmed.slice(1, -1).trim();
+  }
+  return trimmed;
+}
+
 function cacheHeaders(): Record<string, string> {
   const sMaxAge = process.env.EDGE_CACHE_S_MAXAGE || "15";
   const swr = process.env.EDGE_CACHE_SWR || "60";
@@ -32,7 +44,7 @@ export async function GET(req: Request) {
   const markets = url.searchParams.get("markets") || "h2h,spreads,totals";
   const oddsFormat = url.searchParams.get("oddsFormat") || DEFAULT_ODDS_FORMAT;
 
-  const apiKey = process.env.ODDS_API_KEY;
+  const apiKey = normalizeApiKey(process.env.ODDS_API_KEY);
   if (!apiKey) {
     return NextResponse.json({ error: "Missing ODDS_API_KEY" }, { status: 500 });
   }
