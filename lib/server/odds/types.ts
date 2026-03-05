@@ -37,6 +37,14 @@ export type FairOutcomeBook = {
   isBestPrice: boolean;
   point?: number;
   lastUpdate?: string;
+  movement?: {
+    openPrice: number;
+    prevPrice: number;
+    currentPrice: number;
+    delta: number;
+    move: number;
+    updatedAt: string;
+  };
 };
 
 export type FairOutcome = {

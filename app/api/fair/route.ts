@@ -4,6 +4,7 @@ import { fetchOddsFromUpstream, sportKeyToLeague } from "@/lib/server/odds/clien
 import { cacheControlHeader } from "@/lib/server/odds/env";
 import { normalizeOddsApiResponse } from "@/lib/server/odds/normalize";
 import { buildFairBoard } from "@/lib/server/odds/fairEngine";
+import { trackMovement } from "@/lib/server/odds/movement";
 
 export const runtime = "nodejs";
 
@@ -43,7 +44,7 @@ export async function GET(req: Request) {
     windowHours,
     Array.from(includeBooks).sort().join(",")
   ]);
-  const hit = cacheGet<any>(key);
+  const hit = await cacheGet<any>(key);
   if (hit) return NextResponse.json(hit, { headers: cacheControlHeader(30, 120) });
 
   try {
@@ -67,7 +68,25 @@ export async function GET(req: Request) {
       timeWindowHours: Number.isFinite(windowHours) ? Math.max(1, windowHours) : 24
     });
 
-    cacheSet(key, payload, 30_000);
+    await Promise.all(
+      payload.events.map(async (event) => {
+        await Promise.all(
+          event.outcomes.map(async (outcome) => {
+            await Promise.all(
+              outcome.books.map(async (book) => {
+                const movement = await trackMovement(
+                  `${event.id}|${market}|${outcome.name}|${book.bookKey}|${book.point ?? "na"}`,
+                  book.priceAmerican
+                );
+                book.movement = movement;
+              })
+            );
+          })
+        );
+      })
+    );
+
+    await cacheSet(key, payload, 30_000);
     return NextResponse.json(payload, { headers: cacheControlHeader(30, 120) });
   } catch (error) {
     const e = error as Error & { code?: string; status?: number; body?: string };

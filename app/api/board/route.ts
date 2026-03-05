@@ -32,7 +32,7 @@ export async function GET(req: Request) {
   const sportKey = leagueToSportKey(league);
 
   const key = cacheKey(["board", league, regions, markets, WINDOW_HOURS]);
-  const hit = cacheGet<BoardResponse>(key);
+  const hit = await cacheGet<BoardResponse>(key);
   if (hit) return NextResponse.json(hit, { headers: cacheControlHeader(30, 120) });
 
   try {
@@ -71,7 +71,7 @@ export async function GET(req: Request) {
       feed
     };
 
-    cacheSet(key, payload, 20_000);
+    await cacheSet(key, payload, 20_000);
     return NextResponse.json(payload, { headers: cacheControlHeader(30, 120) });
   } catch (error) {
     const e = error as Error & { code?: string; status?: number; body?: string };

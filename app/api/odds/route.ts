@@ -14,7 +14,7 @@ export async function GET(req: Request) {
   const oddsFormat = url.searchParams.get("oddsFormat") || "american";
 
   const key = cacheKey(["odds", sportKey, regions, markets, oddsFormat]);
-  const hit = cacheGet<any>(key);
+  const hit = await cacheGet<any>(key);
   if (hit) return NextResponse.json(hit, { headers: cacheControlHeader(15, 60) });
 
   try {
@@ -23,7 +23,7 @@ export async function GET(req: Request) {
     const normalized = normalizeOddsApiResponse({ league, raw });
     const eventOdds = toEventOddsList({ normalized, sportKey });
 
-    cacheSet(key, eventOdds, 10_000);
+    await cacheSet(key, eventOdds, 10_000);
     return NextResponse.json(eventOdds, { headers: cacheControlHeader(15, 60) });
   } catch (error) {
     const e = error as Error & { code?: string; status?: number; body?: string };
