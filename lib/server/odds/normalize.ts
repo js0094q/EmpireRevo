@@ -1,4 +1,5 @@
 import type { EventRef, LeagueKey, MarketKey, NormalizedEventOdds, TeamRef } from "@/lib/odds/schemas";
+import type { EventOdds } from "@/lib/server/odds/types";
 import { TEAM_LOGO_MAP, type TeamLogoMap } from "@/lib/server/odds/logos";
 import { getBookRef } from "@/lib/server/odds/weights";
 
@@ -63,4 +64,33 @@ export function normalizeOddsApiResponse(params: {
       fetchedAt
     };
   });
+}
+
+export function toEventOddsList(params: { normalized: NormalizedEventOdds[]; sportKey: string }): EventOdds[] {
+  const { normalized, sportKey } = params;
+  return normalized.map((event) => ({
+    id: event.event.id,
+    commenceTime: event.event.commenceTime,
+    homeTeam: event.event.home.name,
+    awayTeam: event.event.away.name,
+    sportKey,
+    books: event.books.map((book) => ({
+      bookKey: book.book.key,
+      title: book.book.title,
+      lastUpdate: book.markets
+        .map((market) => market.lastUpdate)
+        .filter(Boolean)
+        .sort()
+        .pop(),
+      markets: book.markets.map((market) => ({
+        key: market.market,
+        lastUpdate: market.lastUpdate,
+        outcomes: market.outcomes.map((outcome) => ({
+          name: outcome.name,
+          priceAmerican: outcome.price,
+          point: outcome.point
+        }))
+      }))
+    }))
+  }));
 }

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { cacheGet, cacheKey, cacheSet } from "@/lib/server/odds/cache";
 import { fetchOddsFromUpstream, sportKeyToLeague } from "@/lib/server/odds/client";
 import { cacheControlHeader } from "@/lib/server/odds/env";
-import { normalizeOddsApiResponse } from "@/lib/server/odds/normalize";
+import { normalizeOddsApiResponse, toEventOddsList } from "@/lib/server/odds/normalize";
 
 export const runtime = "nodejs";
 
@@ -21,14 +21,10 @@ export async function GET(req: Request) {
     const raw = await fetchOddsFromUpstream({ sportKey, regions, markets, oddsFormat });
     const league = sportKeyToLeague(sportKey);
     const normalized = normalizeOddsApiResponse({ league, raw });
-    const payload = {
-      league,
-      fetchedAt: new Date().toISOString(),
-      normalized
-    };
+    const eventOdds = toEventOddsList({ normalized, sportKey });
 
-    cacheSet(key, payload, 10_000);
-    return NextResponse.json(payload, { headers: cacheControlHeader(15, 60) });
+    cacheSet(key, eventOdds, 10_000);
+    return NextResponse.json(eventOdds, { headers: cacheControlHeader(15, 60) });
   } catch (error) {
     const e = error as Error & { code?: string; status?: number; body?: string };
     if (e.code === "MISSING_KEY") {
