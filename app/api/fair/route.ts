@@ -17,14 +17,22 @@ function parseModel(value: string | null): "sharp" | "equal" {
   return value === "equal" ? "equal" : "sharp";
 }
 
+function parseBoundedInt(value: string | null, fallback: number, min: number, max: number): number {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return fallback;
+  return Math.min(max, Math.max(min, Math.floor(parsed)));
+}
+
 export async function GET(req: Request) {
   const url = new URL(req.url);
   const sportKey = url.searchParams.get("sportKey") || "basketball_nba";
   const market = parseMarket(url.searchParams.get("market"));
   const model = parseModel(url.searchParams.get("model"));
   const regions = url.searchParams.get("regions") || "us";
-  const minBooks = Number(url.searchParams.get("minBooks") || 4);
-  const windowHours = Number(url.searchParams.get("windowHours") || 24);
+  const minBooks = parseBoundedInt(url.searchParams.get("minBooks"), 4, 2, 25);
+  const windowHours = parseBoundedInt(url.searchParams.get("windowHours"), 24, 1, 72);
+  const historyWindowHours = parseBoundedInt(url.searchParams.get("historyWindowHours"), 24, 1, 72);
+  const retentionHours = Math.max(24, Math.min(7 * 24, historyWindowHours * 3));
 
   const includeBooksRaw = url.searchParams.get("books") || "";
   const includeBooks = new Set(
@@ -42,6 +50,7 @@ export async function GET(req: Request) {
     regions,
     minBooks,
     windowHours,
+    historyWindowHours,
     Array.from(includeBooks).sort().join(",")
   ]);
   const hit = await cacheGet<any>(key);
@@ -63,9 +72,9 @@ export async function GET(req: Request) {
       sportKey,
       market,
       model,
-      minBooks: Number.isFinite(minBooks) ? Math.max(2, minBooks) : 4,
+      minBooks,
       includeBooks,
-      timeWindowHours: Number.isFinite(windowHours) ? Math.max(1, windowHours) : 24
+      timeWindowHours: windowHours
     });
 
     await Promise.all(
@@ -76,7 +85,12 @@ export async function GET(req: Request) {
               outcome.books.map(async (book) => {
                 const movement = await trackMovement(
                   `${event.id}|${market}|${outcome.name}|${book.bookKey}|${book.point ?? "na"}`,
-                  book.priceAmerican
+                  book.priceAmerican,
+                  {
+                    windowMs: historyWindowHours * 60 * 60 * 1000,
+                    retentionMs: retentionHours * 60 * 60 * 1000,
+                    maxPoints: 1200
+                  }
                 );
                 book.movement = movement;
               })

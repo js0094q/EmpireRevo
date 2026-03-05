@@ -10,6 +10,7 @@ async function getFairBoard(params: {
   market: "h2h" | "spreads" | "totals";
   model: "sharp" | "equal";
   windowHours: number;
+  historyWindowHours: number;
 }): Promise<FairBoardResponse> {
   const h = await headers();
   const host = h.get("host") || "localhost:3000";
@@ -21,6 +22,7 @@ async function getFairBoard(params: {
   endpoint.searchParams.set("market", params.market);
   endpoint.searchParams.set("model", params.model);
   endpoint.searchParams.set("windowHours", String(params.windowHours));
+  endpoint.searchParams.set("historyWindowHours", String(params.historyWindowHours));
 
   const res = await fetch(endpoint.toString(), { cache: "no-store" });
   if (!res.ok) {
@@ -68,7 +70,8 @@ export default async function Page({
     league,
     market,
     model,
-    windowHours
+    windowHours,
+    historyWindowHours: 72
   });
 
   return <OddsGridClient board={board} league={league} windowKey={params.window === "today" ? "today" : "next24"} />;

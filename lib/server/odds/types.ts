@@ -31,6 +31,7 @@ export type EventOdds = {
 export type FairOutcomeBook = {
   bookKey: string;
   title: string;
+  weight: number;
   priceAmerican: number;
   impliedProbNoVig: number;
   edgePct: number;
@@ -44,6 +45,10 @@ export type FairOutcomeBook = {
     delta: number;
     move: number;
     updatedAt: string;
+    history: Array<{
+      ts: string;
+      priceAmerican: number;
+    }>;
   };
 };
 

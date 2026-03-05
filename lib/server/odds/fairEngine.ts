@@ -162,6 +162,7 @@ export function buildFairBoard(params: {
         return {
           bookKey: book!.bookKey,
           title: book!.title,
+          weight: book!.weight,
           priceAmerican: out.priceAmerican,
           impliedProbNoVig: out.pNoVig,
           edgePct: edgePct(out.pNoVig, fair.fairProb),
