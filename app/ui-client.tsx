@@ -1,8 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, type CSSProperties } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import type { FairBoardResponse, FairEvent, FairOutcomeBook } from "@/lib/server/odds/types";
+import { bookMetaFor } from "@/lib/ui/bookMeta";
+import { teamAbbrev, teamLogoFor } from "@/lib/ui/teamMeta";
 
 const LEAGUES = [
   { key: "nba", label: "NBA" },
@@ -22,19 +24,38 @@ type SortKey = "soonest" | "edge" | "best";
 type HistoryWindowKey = "15m" | "1h" | "6h" | "24h";
 type ChartView = "best" | "top_books";
 
+type UiFlags = {
+  condensed: boolean;
+  bestOnly: boolean;
+  showLogos: boolean;
+  showTeamLogos: boolean;
+  editorNoteOpen: boolean;
+};
+
 const HISTORY_WINDOWS: Array<{ key: HistoryWindowKey; label: string; ms: number }> = [
   { key: "15m", label: "15m", ms: 15 * 60 * 1000 },
   { key: "1h", label: "1h", ms: 60 * 60 * 1000 },
   { key: "6h", label: "6h", ms: 6 * 60 * 60 * 1000 },
   { key: "24h", label: "24h", ms: 24 * 60 * 60 * 1000 }
 ];
+
 const CHART_COLORS = ["#56cfff", "#7aefc3", "#ffd36a", "#f59666"];
+const EDGE_THRESHOLD_FOR_SOON = 1;
 
 type ChartSeries = {
   id: string;
   label: string;
   color: string;
   points: Array<{ ts: number; priceAmerican: number }>;
+};
+
+type EditorNoteItem = {
+  id: string;
+  eventId: string;
+  matchup: string;
+  startTime: string;
+  rationale: string;
+  marketLabel: string;
 };
 
 function formatAmerican(price: number): string {
@@ -47,24 +68,36 @@ function setParam(router: ReturnType<typeof useRouter>, searchParams: URLSearchP
   router.replace(`/?${next.toString()}`);
 }
 
-function bookInitials(title: string): string {
-  return title
-    .split(" ")
-    .slice(0, 2)
-    .map((chunk) => chunk[0]?.toUpperCase() || "")
-    .join("");
+function formatUpdatedAt(updatedAtIso: string): string {
+  const ts = Date.parse(updatedAtIso);
+  if (!Number.isFinite(ts)) return "Updated recently";
+  const diffMinutes = Math.max(0, Math.floor((Date.now() - ts) / 60_000));
+  const relative = diffMinutes < 1 ? "just now" : `${diffMinutes}m ago`;
+  const clock = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/New_York",
+    hour: "numeric",
+    minute: "2-digit"
+  }).format(new Date(ts));
+  return `Updated ${relative} (${clock} ET)`;
 }
 
-function edgeHeatStyle(edgePct: number): React.CSSProperties {
-  const clamped = Math.max(-4, Math.min(4, edgePct));
-  const alpha = Math.abs(clamped) / 8;
-  if (clamped > 0) {
-    return { backgroundColor: `rgba(122, 239, 195, ${0.08 + alpha})` };
-  }
-  if (clamped < 0) {
-    return { backgroundColor: `rgba(245, 102, 102, ${0.08 + alpha})` };
-  }
+function edgeBucket(edgePct: number): "good" | "bad" | "neutral" {
+  if (edgePct >= 0.5) return "good";
+  if (edgePct <= -0.5) return "bad";
+  return "neutral";
+}
+
+function edgeHeatStyle(edgePct: number): CSSProperties {
+  const bucket = edgeBucket(edgePct);
+  if (bucket === "good") return { backgroundColor: "var(--edge-good-bg)" };
+  if (bucket === "bad") return { backgroundColor: "var(--edge-bad-bg)" };
   return {};
+}
+
+function marketLabel(market: FairBoardResponse["market"]): string {
+  if (market === "spreads") return "Spread";
+  if (market === "totals") return "Total";
+  return "Moneyline";
 }
 
 function windowMs(key: HistoryWindowKey): number {
@@ -76,10 +109,7 @@ function pointsForBook(book: FairOutcomeBook, windowRangeMs: number): Array<{ ts
   if (!raw.length) return [];
 
   const parsed = raw
-    .map((entry) => ({
-      ts: Date.parse(entry.ts),
-      priceAmerican: entry.priceAmerican
-    }))
+    .map((entry) => ({ ts: Date.parse(entry.ts), priceAmerican: entry.priceAmerican }))
     .filter((entry) => Number.isFinite(entry.ts) && Number.isFinite(entry.priceAmerican));
   if (!parsed.length) return [];
 
@@ -96,6 +126,7 @@ function buildOutcomeSeries(outcome: FairEvent["outcomes"][number], view: ChartV
   if (!ranked.length) return [];
 
   const selected = view === "best" ? [ranked.find((book) => book.isBestPrice) || ranked[0]] : ranked.slice(0, 3);
+
   return selected.map((book, index) => ({
     id: `${book.bookKey}-${outcome.name}`,
     label: book.title,
@@ -165,6 +196,7 @@ function Sparkline({ series, compact = true }: { series: ChartSeries[]; compact?
 function SeriesLegend({ series }: { series: ChartSeries[] }) {
   const visible = series.filter((item) => item.points.length >= 2);
   if (visible.length <= 1) return null;
+
   return (
     <div className="series-legend">
       {visible.map((item) => (
@@ -182,7 +214,12 @@ function formatLastPointTs(series: ChartSeries[]): string {
     .flatMap((entry) => entry.points)
     .reduce((max, point) => Math.max(max, point.ts), 0);
   if (!lastTs) return "--";
-  return new Date(lastTs).toLocaleTimeString();
+
+  return new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/New_York",
+    hour: "numeric",
+    minute: "2-digit"
+  }).format(new Date(lastTs));
 }
 
 function HistoryControls({
@@ -242,6 +279,176 @@ function bestBookProb(outcomes: FairOutcomeBook[]): number {
   return best?.impliedProbNoVig || 0.5;
 }
 
+function variance(values: number[]): number {
+  if (values.length < 2) return 0;
+  const mean = values.reduce((sum, value) => sum + value, 0) / values.length;
+  const sq = values.reduce((sum, value) => sum + (value - mean) ** 2, 0);
+  return sq / (values.length - 1);
+}
+
+function buildEditorNoteItems(events: FairEvent[], market: FairBoardResponse["market"]): EditorNoteItem[] {
+  if (!hasAny(events.length)) return [];
+
+  const byId = new Map(events.map((event) => [event.id, event]));
+  const picks: Array<{ eventId: string; rationale: string; weight: number }> = [];
+
+  const topEdge = [...events].sort((a, b) => b.maxAbsEdgePct - a.maxAbsEdgePct)[0];
+  if (topEdge) {
+    picks.push({
+      eventId: topEdge.id,
+      rationale: `Top edge signal (${topEdge.maxAbsEdgePct.toFixed(2)}% max).`,
+      weight: Math.abs(topEdge.maxAbsEdgePct)
+    });
+  }
+
+  const shopGapRanked = events
+    .map((event) => {
+      let bestGap = 0;
+      for (const outcome of event.outcomes) {
+        const prices = outcome.books.map((book) => book.priceAmerican).sort((a, b) => b - a);
+        if (prices.length > 1) bestGap = Math.max(bestGap, prices[0] - prices[1]);
+      }
+      return { event, bestGap };
+    })
+    .sort((a, b) => b.bestGap - a.bestGap);
+  if (shopGapRanked[0] && shopGapRanked[0].bestGap > 0) {
+    picks.push({
+      eventId: shopGapRanked[0].event.id,
+      rationale: `Largest shop gap (${shopGapRanked[0].bestGap} cents).`,
+      weight: shopGapRanked[0].bestGap
+    });
+  }
+
+  const disagreementRanked = events
+    .map((event) => {
+      const outcomeVars = event.outcomes.map((outcome) => variance(outcome.books.map((book) => book.impliedProbNoVig)));
+      return { event, disagreement: Math.max(...outcomeVars, 0) };
+    })
+    .sort((a, b) => b.disagreement - a.disagreement);
+  if (disagreementRanked[0] && disagreementRanked[0].disagreement > 0) {
+    picks.push({
+      eventId: disagreementRanked[0].event.id,
+      rationale: `Highest book disagreement (variance ${disagreementRanked[0].disagreement.toFixed(4)}).`,
+      weight: disagreementRanked[0].disagreement
+    });
+  }
+
+  const soonEdge = events
+    .filter((event) => event.maxAbsEdgePct >= EDGE_THRESHOLD_FOR_SOON)
+    .sort((a, b) => Date.parse(a.commenceTime) - Date.parse(b.commenceTime))[0];
+  if (soonEdge) {
+    picks.push({
+      eventId: soonEdge.id,
+      rationale: `Starts soon with >= ${EDGE_THRESHOLD_FOR_SOON.toFixed(1)}% edge.`,
+      weight: 0.5
+    });
+  }
+
+  const unique = new Set<string>();
+  const marketText = marketLabel(market);
+  const items: EditorNoteItem[] = [];
+
+  for (const pick of picks.sort((a, b) => b.weight - a.weight)) {
+    if (unique.has(pick.eventId)) continue;
+    const event = byId.get(pick.eventId);
+    if (!event) continue;
+    unique.add(pick.eventId);
+    items.push({
+      id: `${pick.eventId}-${items.length}`,
+      eventId: pick.eventId,
+      matchup: `${event.awayTeam} @ ${event.homeTeam}`,
+      startTime: new Date(event.commenceTime).toLocaleString(),
+      rationale: pick.rationale,
+      marketLabel: marketText
+    });
+    if (items.length >= 4) break;
+  }
+
+  return items;
+}
+
+function hasAny(value: number): boolean {
+  return Number.isFinite(value) && value > 0;
+}
+
+function TeamLabel({
+  teamName,
+  showLogo,
+  logoFailed,
+  onLogoError
+}: {
+  teamName: string;
+  showLogo: boolean;
+  logoFailed: boolean;
+  onLogoError: () => void;
+}) {
+  const logo = teamLogoFor(teamName);
+  const showImage = showLogo && logo && !logoFailed;
+
+  return (
+    <span className="team-label">
+      <span className="team-logo-slot" aria-hidden>
+        {showImage ? (
+          <img
+            src={logo}
+            alt=""
+            width={18}
+            height={18}
+            loading="lazy"
+            decoding="async"
+            className="team-logo"
+            onError={onLogoError}
+          />
+        ) : (
+          <span className="team-abbrev">{teamAbbrev(teamName)}</span>
+        )}
+      </span>
+      <strong>{teamName}</strong>
+    </span>
+  );
+}
+
+function BookMark({
+  bookKey,
+  title,
+  showLogo,
+  failed,
+  onError,
+  compact = false
+}: {
+  bookKey: string;
+  title: string;
+  showLogo: boolean;
+  failed: boolean;
+  onError: () => void;
+  compact?: boolean;
+}) {
+  const meta = bookMetaFor(bookKey, title);
+  const showImage = showLogo && meta.logoSrc && !failed;
+
+  return (
+    <span className={`book-mark ${compact ? "compact" : ""}`}>
+      <span className="book-logo-slot" aria-hidden>
+        {showImage ? (
+          <img
+            src={meta.logoSrc}
+            alt=""
+            width={16}
+            height={16}
+            loading="lazy"
+            decoding="async"
+            className="book-logo"
+            onError={onError}
+          />
+        ) : (
+          <span className="book-logo-fallback">{meta.shortLabel}</span>
+        )}
+      </span>
+      {!compact ? <span>{meta.label}</span> : null}
+    </span>
+  );
+}
+
 export function OddsGridClient({
   board,
   league,
@@ -259,10 +466,22 @@ export function OddsGridClient({
   const [selectedEvent, setSelectedEvent] = useState<FairEvent | null>(null);
   const [bookFilter, setBookFilter] = useState<Set<string>>(new Set());
   const [showBookMenu, setShowBookMenu] = useState(false);
-  const [showBestOnly, setShowBestOnly] = useState(false);
-  const [condensed, setCondensed] = useState(false);
   const [historyWindow, setHistoryWindow] = useState<HistoryWindowKey>("6h");
   const [chartView, setChartView] = useState<ChartView>("best");
+  const defaultShowTeamLogos = typeof window === "undefined" ? true : !window.matchMedia("(max-width: 900px)").matches;
+  const [uiFlags, setUiFlags] = useState<UiFlags>({
+    condensed: false,
+    bestOnly: false,
+    showLogos: true,
+    showTeamLogos: defaultShowTeamLogos,
+    editorNoteOpen: true
+  });
+  const [failedBookLogos, setFailedBookLogos] = useState<Set<string>>(new Set());
+  const [failedTeamLogos, setFailedTeamLogos] = useState<Set<string>>(new Set());
+
+  function setFlag(flag: keyof UiFlags, value: boolean) {
+    setUiFlags((prev) => ({ ...prev, [flag]: value }));
+  }
 
   const historyWindowRangeMs = useMemo(() => windowMs(historyWindow), [historyWindow]);
 
@@ -270,6 +489,7 @@ export function OddsGridClient({
     if (bookFilter.size === 0) return board.books;
     return board.books.filter((book) => bookFilter.has(book.key));
   }, [board.books, bookFilter]);
+  const visibleBookKeys = useMemo(() => new Set(visibleBooks.map((book) => book.key)), [visibleBooks]);
 
   const filteredEvents = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -299,8 +519,32 @@ export function OddsGridClient({
     return [...events].sort((a, b) => b.maxAbsEdgePct - a.maxAbsEdgePct);
   }, [board.events, bookFilter, search, sortBy]);
 
+  const maxEdgeAbs = useMemo(() => {
+    let maxAbs = 0;
+    for (const event of filteredEvents) {
+      for (const outcome of event.outcomes) {
+        for (const row of outcome.books) {
+          if (!visibleBookKeys.has(row.bookKey)) continue;
+          if (uiFlags.bestOnly && !row.isBestPrice) continue;
+          maxAbs = Math.max(maxAbs, Math.abs(row.edgePct));
+        }
+      }
+    }
+    return maxAbs;
+  }, [filteredEvents, uiFlags.bestOnly, visibleBookKeys]);
+
+  const editorItems = useMemo(() => buildEditorNoteItems(filteredEvents, board.market), [filteredEvents, board.market]);
+
+  function openEvent(eventId: string) {
+    const event = filteredEvents.find((item) => item.id === eventId);
+    if (!event) return;
+    setSelectedEvent(event);
+    const el = document.getElementById(`event-row-${eventId}`);
+    el?.scrollIntoView({ behavior: "smooth", block: "center", inline: "nearest" });
+  }
+
   return (
-    <main className="grid-shell">
+    <main className={`grid-shell league-${league}`}>
       <header className="grid-topbar">
         <div className="brand">
           <div className="logo-mark" aria-hidden>
@@ -357,7 +601,7 @@ export function OddsGridClient({
             <button
               className={board.model === "sharp" ? "active" : ""}
               onClick={() => setParam(router, new URLSearchParams(searchParams?.toString() || ""), "model", "sharp")}
-              title="Fair line is a weighted blend of sharper books"
+              title="Weighted blend of sharper books; not a guarantee."
             >
               Sharp-weighted fair
             </button>
@@ -381,8 +625,7 @@ export function OddsGridClient({
           <span> games</span>
         </div>
         <div>
-          <strong>{board.lastUpdatedLabel}</strong>
-          <span> last updated</span>
+          <strong>{formatUpdatedAt(board.updatedAt)}</strong>
         </div>
         <div>
           <strong>{visibleBooks.length}</strong>
@@ -396,6 +639,7 @@ export function OddsGridClient({
           placeholder="Search teams"
           value={search}
           onChange={(event) => setSearch(event.target.value)}
+
         />
 
         <select className="sort-select" value={sortBy} onChange={(event) => setSortBy(event.target.value as SortKey)}>
@@ -405,11 +649,26 @@ export function OddsGridClient({
         </select>
 
         <div className="toggle-group">
-          <button className={showBestOnly ? "active" : ""} onClick={() => setShowBestOnly((value) => !value)}>
-            Show only best price
+          <button className={uiFlags.bestOnly ? "active" : ""} onClick={() => setFlag("bestOnly", !uiFlags.bestOnly)}>
+            Best price only
           </button>
-          <button className={condensed ? "active" : ""} onClick={() => setCondensed((value) => !value)}>
+          <button className={uiFlags.condensed ? "active" : ""} onClick={() => setFlag("condensed", !uiFlags.condensed)}>
             Condensed rows
+          </button>
+          <button className={uiFlags.showLogos ? "active" : ""} onClick={() => setFlag("showLogos", !uiFlags.showLogos)}>
+            Show book logos
+          </button>
+          <button
+            className={uiFlags.showTeamLogos ? "active" : ""}
+            onClick={() => setFlag("showTeamLogos", !uiFlags.showTeamLogos)}
+          >
+            Show team logos
+          </button>
+          <button
+            className={uiFlags.editorNoteOpen ? "active" : ""}
+            onClick={() => setFlag("editorNoteOpen", !uiFlags.editorNoteOpen)}
+          >
+            Editor&apos;s Note
           </button>
         </div>
 
@@ -428,6 +687,8 @@ export function OddsGridClient({
             <div className="book-picker-menu">
               {board.books.map((book) => {
                 const active = bookFilter.size === 0 || bookFilter.has(book.key);
+                const meta = bookMetaFor(book.key, book.title);
+
                 return (
                   <label key={book.key}>
                     <input
@@ -444,8 +705,8 @@ export function OddsGridClient({
                         });
                       }}
                     />
-                    <span className="book-logo-pill">{bookInitials(book.title)}</span>
-                    <span>{book.title}</span>
+                    <span className="book-logo-pill">{meta.shortLabel}</span>
+                    <span>{meta.label}</span>
                   </label>
                 );
               })}
@@ -454,130 +715,214 @@ export function OddsGridClient({
         </div>
       </section>
 
-      <section className="odds-grid-wrap desktop-only">
-        <table className={`odds-grid ${condensed ? "condensed" : ""}`}>
-          <thead>
-            <tr>
-              <th className="sticky-col">Matchup</th>
-              <th title="Edge = implied(best) vs implied(fair)">Fair</th>
-              <th>Best</th>
-              {visibleBooks.map((book) => (
-                <th key={book.key}>{book.title}</th>
-              ))}
-            </tr>
-          </thead>
+      <section className="content-shell">
+        <div className="content-main">
+          {uiFlags.editorNoteOpen ? (
+            <section className="editor-note mobile-only">
+              <details open>
+                <summary>Editor&apos;s Note</summary>
+                {editorItems.length === 0 ? <p className="muted">No qualifying games in current filters.</p> : null}
+                {editorItems.map((item) => (
+                  <article key={`mobile-note-${item.id}`} className="editor-item">
+                    <strong>{item.matchup}</strong>
+                    <small>{item.startTime} · {item.marketLabel}</small>
+                    <p>{item.rationale}</p>
+                    <button onClick={() => openEvent(item.eventId)}>Open</button>
+                  </article>
+                ))}
+              </details>
+            </section>
+          ) : null}
 
-          <tbody>
-            {filteredEvents.map((event) => (
-              <tr key={event.id} onClick={() => setSelectedEvent(event)}>
-                <td className="sticky-col">
-                  <div className="matchup-cell">
-                    <strong>{event.awayTeam}</strong>
-                    <strong>{event.homeTeam}</strong>
-                    <small>{new Date(event.commenceTime).toLocaleString()}</small>
-                    <Sparkline series={rowSeriesForEvent(event, historyWindowRangeMs)} />
-                    <button
-                      className="quick-action"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        const first = event.outcomes[0];
-                        const best = first?.books.find((row) => row.isBestPrice);
-                        if (!best) return;
-                        navigator.clipboard.writeText(
-                          `${event.awayTeam} @ ${event.homeTeam} ${first.name} ${formatAmerican(best.priceAmerican)} (${best.title})`
+          <section className="odds-grid-wrap desktop-only">
+            <table className={`odds-grid ${uiFlags.condensed ? "condensed" : ""}`}>
+              <thead>
+                <tr>
+                  <th className="sticky-col">Matchup</th>
+                  <th title="Fair line">Fair line</th>
+                  <th>Best price</th>
+                  {visibleBooks.map((book) => (
+                    <th key={book.key}>
+                      <BookMark
+                        bookKey={book.key}
+                        title={book.title}
+                        showLogo={uiFlags.showLogos}
+                        failed={failedBookLogos.has(book.key)}
+                        onError={() => setFailedBookLogos((prev) => new Set(prev).add(book.key))}
+                        compact
+                      />
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+
+              <tbody>
+                {filteredEvents.map((event) => (
+                  <tr id={`event-row-${event.id}`} key={event.id} onClick={() => setSelectedEvent(event)}>
+                    <td className="sticky-col">
+                      <div className="matchup-cell">
+                        <TeamLabel
+                          teamName={event.awayTeam}
+                          showLogo={uiFlags.showTeamLogos}
+                          logoFailed={failedTeamLogos.has(event.awayTeam)}
+                          onLogoError={() => setFailedTeamLogos((prev) => new Set(prev).add(event.awayTeam))}
+                        />
+                        <TeamLabel
+                          teamName={event.homeTeam}
+                          showLogo={uiFlags.showTeamLogos}
+                          logoFailed={failedTeamLogos.has(event.homeTeam)}
+                          onLogoError={() => setFailedTeamLogos((prev) => new Set(prev).add(event.homeTeam))}
+                        />
+                        <small>{new Date(event.commenceTime).toLocaleString()}</small>
+                        <Sparkline series={rowSeriesForEvent(event, historyWindowRangeMs)} />
+                        <button
+                          className="quick-action"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const first = event.outcomes[0];
+                            const best = first?.books.find((row) => row.isBestPrice);
+                            if (!best) return;
+                            navigator.clipboard.writeText(
+                              `${event.awayTeam} @ ${event.homeTeam} ${first.name} ${formatAmerican(best.priceAmerican)} (${best.title})`
+                            );
+                          }}
+                        >
+                          Copy line
+                        </button>
+                      </div>
+                    </td>
+
+                    <td>
+                      {event.outcomes.map((outcome) => (
+                        <div key={`${event.id}-fair-${outcome.name}`} className="dual-line">
+                          <span>{outcome.name}</span>
+                          <strong>{formatAmerican(outcome.fairAmerican)}</strong>
+                          <FairBestMicrobar fairProb={outcome.fairProb} bestBookProb={bestBookProb(outcome.books)} />
+                        </div>
+                      ))}
+                    </td>
+
+                    <td>
+                      {event.outcomes.map((outcome) => {
+                        const bestBook = outcome.books.find((book) => book.isBestPrice);
+                        return (
+                          <div key={`${event.id}-best-${outcome.name}`} className="dual-line">
+                            <span>{outcome.name}</span>
+                            <strong>{formatAmerican(outcome.bestPrice)}</strong>
+                            {bestBook ? (
+                              <small className="best-chip with-logo">
+                                Best ·
+                                <BookMark
+                                  bookKey={bestBook.bookKey}
+                                  title={bestBook.title}
+                                  showLogo={uiFlags.showLogos}
+                                  failed={failedBookLogos.has(bestBook.bookKey)}
+                                  onError={() => setFailedBookLogos((prev) => new Set(prev).add(bestBook.bookKey))}
+                                  compact
+                                />
+                              </small>
+                            ) : (
+                              <small className="best-chip">Best</small>
+                            )}
+                          </div>
                         );
-                      }}
-                    >
-                      Copy line
-                    </button>
-                  </div>
-                </td>
+                      })}
+                    </td>
 
-                <td>
+                    {visibleBooks.map((book) => (
+                      <td key={`${event.id}-${book.key}`}>
+                        {event.outcomes.map((outcome) => {
+                          const row = outcome.books.find((item) => item.bookKey === book.key);
+                          if (!row) {
+                            return (
+                              <div key={`${event.id}-${book.key}-${outcome.name}`} className="dual-line muted placeholder-cell">
+                                --
+                              </div>
+                            );
+                          }
+
+                          if (uiFlags.bestOnly && !row.isBestPrice) {
+                            return (
+                              <div key={`${event.id}-${book.key}-${outcome.name}`} className="dual-line muted placeholder-cell">
+                                --
+                              </div>
+                            );
+                          }
+
+                          const normalizedEdgeWidth = maxEdgeAbs > 0 ? Math.min(100, (Math.abs(row.edgePct) / maxEdgeAbs) * 100) : 0;
+                          const bucketClass = edgeBucket(row.edgePct);
+
+                          return (
+                            <div
+                              key={`${event.id}-${book.key}-${outcome.name}`}
+                              className={`dual-line edge-${bucketClass} ${row.isBestPrice ? "best-cell" : ""}`}
+                              style={edgeHeatStyle(row.edgePct)}
+                            >
+                              <strong className={row.isBestPrice ? "best-highlight" : ""}>{formatAmerican(row.priceAmerican)}</strong>
+                              {row.isBestPrice ? <small className="best-chip">Best</small> : null}
+                              <small className={Math.abs(row.edgePct) >= 1 ? "edge-badge" : "muted"}>Edge {row.edgePct.toFixed(2)}%</small>
+                              <span className="edge-meter" aria-hidden>
+                                <span className="edge-meter-fill" style={{ width: `${normalizedEdgeWidth}%` }} />
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </section>
+
+          <section className="mobile-cards mobile-only">
+            {filteredEvents.map((event) => (
+              <article
+                id={`event-row-${event.id}`}
+                key={`mobile-${event.id}`}
+                className="mobile-card"
+                onClick={() => setSelectedEvent(event)}
+              >
+                <div className="mobile-card-head">
+                  <div>
+                    <strong>{event.awayTeam} @ {event.homeTeam}</strong>
+                    <small>{new Date(event.commenceTime).toLocaleString()}</small>
+                  </div>
+                  <Sparkline series={rowSeriesForEvent(event, historyWindowRangeMs)} />
+                </div>
+
+                <div className="mobile-lines">
                   {event.outcomes.map((outcome) => (
-                    <div key={`${event.id}-fair-${outcome.name}`} className="dual-line">
-                      <span>{outcome.name}</span>
-                      <strong>{formatAmerican(outcome.fairAmerican)}</strong>
+                    <div key={`mobile-${event.id}-${outcome.name}`}>
+                      <div className="dual-line">
+                        <span>{outcome.name}</span>
+                        <strong>{formatAmerican(outcome.bestPrice)}</strong>
+                        <small className="best-chip">Best price</small>
+                      </div>
                       <FairBestMicrobar fairProb={outcome.fairProb} bestBookProb={bestBookProb(outcome.books)} />
                     </div>
                   ))}
-                </td>
-
-                <td>
-                  {event.outcomes.map((outcome) => (
-                    <div key={`${event.id}-best-${outcome.name}`} className="dual-line">
-                      <span>{outcome.name}</span>
-                      <strong>{formatAmerican(outcome.bestPrice)}</strong>
-                      <small className="best-chip">Best · {outcome.bestBook}</small>
-                    </div>
-                  ))}
-                </td>
-
-                {visibleBooks.map((book) => (
-                  <td key={`${event.id}-${book.key}`}>
-                    {event.outcomes.map((outcome) => {
-                      const row = outcome.books.find((item) => item.bookKey === book.key);
-                      if (!row) {
-                        return (
-                          <div key={`${event.id}-${book.key}-${outcome.name}`} className="dual-line muted">
-                            --
-                          </div>
-                        );
-                      }
-
-                      if (showBestOnly && !row.isBestPrice) {
-                        return (
-                          <div key={`${event.id}-${book.key}-${outcome.name}`} className="dual-line muted">
-                            --
-                          </div>
-                        );
-                      }
-
-                      return (
-                        <div
-                          key={`${event.id}-${book.key}-${outcome.name}`}
-                          className="dual-line"
-                          style={edgeHeatStyle(row.edgePct)}
-                        >
-                          <strong className={row.isBestPrice ? "best-highlight" : ""}>{formatAmerican(row.priceAmerican)}</strong>
-                          {row.isBestPrice ? <small className="best-chip">Best</small> : null}
-                          <small className={Math.abs(row.edgePct) >= 1 ? "edge-badge" : "muted"}>{row.edgePct.toFixed(2)}%</small>
-                        </div>
-                      );
-                    })}
-                  </td>
-                ))}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </section>
-
-      <section className="mobile-cards mobile-only">
-        {filteredEvents.map((event) => (
-          <article key={`mobile-${event.id}`} className="mobile-card" onClick={() => setSelectedEvent(event)}>
-            <div className="mobile-card-head">
-              <div>
-                <strong>{event.awayTeam} @ {event.homeTeam}</strong>
-                <small>{new Date(event.commenceTime).toLocaleString()}</small>
-              </div>
-              <Sparkline series={rowSeriesForEvent(event, historyWindowRangeMs)} />
-            </div>
-
-            <div className="mobile-lines">
-              {event.outcomes.map((outcome) => (
-                <div key={`mobile-${event.id}-${outcome.name}`}>
-                  <div className="dual-line">
-                    <span>{outcome.name}</span>
-                    <strong>{formatAmerican(outcome.bestPrice)}</strong>
-                    <small className="best-chip">{outcome.bestBook}</small>
-                  </div>
-                  <FairBestMicrobar fairProb={outcome.fairProb} bestBookProb={bestBookProb(outcome.books)} />
                 </div>
-              ))}
-            </div>
-          </article>
-        ))}
+              </article>
+            ))}
+          </section>
+        </div>
+
+        {uiFlags.editorNoteOpen ? (
+          <aside className="editor-note desktop-only">
+            <h3>Editor&apos;s Note</h3>
+            <p className="muted">Today&apos;s highest-conviction spots in the active view.</p>
+            {editorItems.length === 0 ? <p className="muted">No qualifying games in current filters.</p> : null}
+            {editorItems.map((item) => (
+              <article key={item.id} className="editor-item">
+                <strong>{item.matchup}</strong>
+                <small>{item.startTime} · {item.marketLabel}</small>
+                <p>{item.rationale}</p>
+                <button onClick={() => openEvent(item.eventId)}>Open</button>
+              </article>
+            ))}
+          </aside>
+        ) : null}
       </section>
 
       {selectedEvent ? (
@@ -596,7 +941,7 @@ export function OddsGridClient({
 
           <section className="detail-section">
             <h4>Movement history</h4>
-            <p className="muted">Snapshots are persisted per event/market/outcome/book and deduped by unchanged prices.</p>
+            <p className="muted">Persisted snapshots only. No synthetic interpolation.</p>
             <HistoryControls
               historyWindow={historyWindow}
               setHistoryWindow={setHistoryWindow}
@@ -609,7 +954,7 @@ export function OddsGridClient({
             <section key={`${selectedEvent.id}-${outcome.name}`} className="detail-section">
               <h4>{outcome.name}</h4>
               <p className="muted">
-                Fair: {formatAmerican(outcome.fairAmerican)} ({(outcome.fairProb * 100).toFixed(2)}%)
+                Fair line: {formatAmerican(outcome.fairAmerican)} ({(outcome.fairProb * 100).toFixed(2)}%)
               </p>
               {(() => {
                 const series = buildOutcomeSeries(outcome, chartView, historyWindowRangeMs);
@@ -617,7 +962,7 @@ export function OddsGridClient({
                   <div className="detail-history">
                     <Sparkline series={series} compact={false} />
                     <SeriesLegend series={series} />
-                    <small className="muted">Last snapshot: {formatLastPointTs(series)}</small>
+                    <small className="muted">Last snapshot: {formatLastPointTs(series)} ET</small>
                   </div>
                 );
               })()}
@@ -630,7 +975,7 @@ export function OddsGridClient({
                   >
                     <span>{book.title}</span>
                     <strong>{formatAmerican(book.priceAmerican)}</strong>
-                    <small>{book.edgePct.toFixed(2)}% edge</small>
+                    <small>Edge {book.edgePct.toFixed(2)}%</small>
                   </div>
                 ))}
               </div>

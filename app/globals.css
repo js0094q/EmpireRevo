@@ -1,13 +1,26 @@
 :root {
   --bg: #071018;
-  --bg2: #0d1721;
-  --panel: rgba(17, 29, 41, 0.8);
-  --line: rgba(255, 255, 255, 0.1);
+  --bg2: #0c1722;
+  --panel: rgba(18, 29, 42, 0.82);
+  --panel-2: rgba(13, 24, 36, 0.92);
+  --line: rgba(255, 255, 255, 0.12);
   --text: #e8f0f7;
   --muted: #9bb0c4;
-  --accent: #56cfff;
-  --accent-soft: #8ddeff;
+  --border: rgba(255, 255, 255, 0.13);
+  --info: #56cfff;
+  --accent: var(--info);
   --good: #7aefc3;
+  --bad: #f79ca0;
+  --warn: #ffd36a;
+  --accent-soft: #8ddeff;
+  --league-nba: #f36f45;
+  --league-nfl: #4cb3ff;
+  --league-nhl: #80f2ce;
+  --league-ncaab: #ffcf5b;
+  --league-mlb: #f08b98;
+  --league-accent: var(--info);
+  --edge-good-bg: rgba(122, 239, 195, 0.11);
+  --edge-bad-bg: rgba(247, 156, 160, 0.09);
 }
 
 * { box-sizing: border-box; }
@@ -20,6 +33,12 @@ body {
     radial-gradient(880px 520px at 92% -10%, rgba(122, 239, 195, 0.14), transparent),
     linear-gradient(180deg, var(--bg), var(--bg2));
 }
+
+.league-nba { --league-accent: var(--league-nba); }
+.league-nfl { --league-accent: var(--league-nfl); }
+.league-nhl { --league-accent: var(--league-nhl); }
+.league-ncaab { --league-accent: var(--league-ncaab); }
+.league-mlb { --league-accent: var(--league-mlb); }
 
 .config-shell {
   min-height: 100vh;
@@ -48,10 +67,10 @@ body {
   z-index: 30;
   display: grid;
   gap: 12px;
-  border: 1px solid var(--line);
+  border: 1px solid var(--border);
   border-radius: 14px;
   padding: 12px;
-  background: rgba(7, 16, 24, 0.8);
+  background: rgba(7, 16, 24, 0.86);
   backdrop-filter: blur(10px);
 }
 
@@ -126,8 +145,8 @@ body {
 .book-picker-btn:hover,
 .quick-action:hover {
   color: var(--text);
-  border-color: rgba(86, 207, 255, 0.45);
-  background: rgba(86, 207, 255, 0.14);
+  border-color: color-mix(in srgb, var(--league-accent) 65%, white 35%);
+  background: color-mix(in srgb, var(--league-accent) 16%, transparent);
 }
 
 .summary-strip {
@@ -231,7 +250,7 @@ body {
 
 .odds-grid-wrap {
   margin-top: 12px;
-  border: 1px solid var(--line);
+  border: 1px solid var(--border);
   border-radius: 14px;
   background: var(--panel);
   overflow: auto;
@@ -263,8 +282,8 @@ body {
 .odds-grid thead th {
   position: sticky;
   top: 0;
-  z-index: 2;
-  background: rgba(12, 20, 31, 0.96);
+  z-index: 8;
+  background: rgba(12, 20, 31, 0.98);
   text-align: left;
   font-size: 12px;
   color: var(--muted);
@@ -273,8 +292,12 @@ body {
 .sticky-col {
   position: sticky;
   left: 0;
-  z-index: 3;
+  z-index: 9;
   background: rgba(12, 20, 31, 0.98);
+}
+
+.odds-grid thead .sticky-col {
+  z-index: 10;
 }
 
 .odds-grid tbody tr {
@@ -282,12 +305,42 @@ body {
 }
 
 .odds-grid tbody tr:hover td {
-  background: rgba(86, 207, 255, 0.05);
+  background: color-mix(in srgb, var(--league-accent) 8%, transparent);
 }
 
 .matchup-cell {
   display: grid;
   gap: 4px;
+}
+
+.team-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.team-logo-slot {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 18px;
+  border-radius: 999px;
+  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--line);
+}
+
+.team-logo {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+}
+
+.team-abbrev {
+  font-size: 9px;
+  color: var(--accent-soft);
+  letter-spacing: 0.02em;
 }
 
 .matchup-cell small,
@@ -306,6 +359,14 @@ body {
   padding: 2px 5px;
 }
 
+.placeholder-cell {
+  opacity: 0.45;
+}
+
+.best-cell {
+  outline: 1px solid color-mix(in srgb, var(--good) 48%, transparent);
+}
+
 .dual-line small {
   font-size: 11px;
 }
@@ -322,8 +383,65 @@ body {
   padding: 1px 6px;
 }
 
+.best-chip.with-logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.book-mark {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.book-mark.compact {
+  gap: 0;
+}
+
+.book-logo-slot {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 16px;
+  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.02);
+  overflow: hidden;
+}
+
+.book-logo {
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+}
+
+.book-logo-fallback {
+  color: var(--accent-soft);
+  font-size: 8px;
+  line-height: 1;
+  letter-spacing: 0.02em;
+}
+
 .edge-badge {
   color: var(--accent-soft);
+}
+
+.edge-meter {
+  grid-column: 1 / span 3;
+  width: 100%;
+  height: 3px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.07);
+  overflow: hidden;
+}
+
+.edge-meter-fill {
+  display: block;
+  height: 100%;
+  background: color-mix(in srgb, var(--league-accent) 65%, var(--good) 35%);
 }
 
 .sparkline {
@@ -399,6 +517,64 @@ body {
   gap: 8px;
 }
 
+.content-shell {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  align-items: start;
+}
+
+.content-main {
+  min-width: 0;
+}
+
+.editor-note {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--panel-2);
+  padding: 12px;
+}
+
+.editor-note.desktop-only {
+  position: sticky;
+  top: 88px;
+}
+
+.editor-note h3 {
+  margin: 0 0 6px;
+}
+
+.editor-note summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.editor-item {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 8px;
+  margin-top: 8px;
+  display: grid;
+  gap: 4px;
+}
+
+.editor-item p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.editor-item button {
+  justify-self: start;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.02);
+  color: var(--text);
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
 .detail-drawer {
   position: fixed;
   right: 0;
@@ -472,6 +648,10 @@ body {
 
   .summary-strip {
     flex-wrap: wrap;
+  }
+
+  .content-shell {
+    grid-template-columns: 1fr;
   }
 }
 
