@@ -1,0 +1,191 @@
+.button {
+  appearance: none;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-muted);
+  color: var(--color-text);
+  border-radius: var(--radius-pill);
+  padding: 0.625rem 0.95rem;
+  font: inherit;
+  font-size: 0.9rem;
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    border-color 140ms ease,
+    background-color 140ms ease,
+    color 140ms ease,
+    transform 140ms ease;
+}
+
+.button:hover,
+.button:focus-visible {
+  border-color: var(--color-highlight);
+  background: var(--color-hover, rgba(255, 255, 255, 0.06));
+  outline: none;
+}
+
+.button:active {
+  transform: translateY(1px);
+}
+
+.buttonPrimary {
+  background: var(--color-accent);
+  border-color: color-mix(in srgb, var(--color-accent) 80%, white 20%);
+  color: #031018;
+}
+
+.buttonPrimary:hover,
+.buttonPrimary:focus-visible {
+  background: color-mix(in srgb, var(--color-accent) 88%, white 12%);
+}
+
+.buttonGhost {
+  background: transparent;
+}
+
+.buttonSubtle {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.buttonActive {
+  background: color-mix(in srgb, var(--color-accent) 14%, var(--color-surface-muted));
+  border-color: color-mix(in srgb, var(--color-accent) 50%, white 20%);
+  color: var(--color-text);
+}
+
+.segmented {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  padding: 0.25rem;
+  border-radius: var(--radius-pill);
+  background: var(--color-surface-muted);
+  border: 1px solid var(--color-border);
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-height: 1.75rem;
+  padding: 0.28rem 0.55rem;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--color-border);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--color-text-muted);
+  font-size: 0.74rem;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.pillPositive {
+  color: var(--color-positive);
+  border-color: rgba(101, 214, 173, 0.32);
+  background: rgba(101, 214, 173, 0.12);
+}
+
+.pillWarning {
+  color: var(--color-warning);
+  border-color: rgba(237, 184, 94, 0.32);
+  background: rgba(237, 184, 94, 0.12);
+}
+
+.pillDanger {
+  color: var(--color-danger);
+  border-color: rgba(240, 124, 124, 0.32);
+  background: rgba(240, 124, 124, 0.12);
+}
+
+.pillAccent {
+  color: var(--color-accent);
+  border-color: rgba(100, 171, 255, 0.3);
+  background: rgba(100, 171, 255, 0.11);
+}
+
+.field,
+.select {
+  width: 100%;
+  min-height: 2.6rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--color-text);
+  padding: 0.72rem 0.9rem;
+  font: inherit;
+  transition:
+    border-color 140ms ease,
+    background-color 140ms ease,
+    box-shadow 140ms ease;
+}
+
+.field::placeholder {
+  color: var(--color-text-dim);
+}
+
+.field:focus-visible,
+.select:focus-visible {
+  outline: none;
+  border-color: var(--color-highlight);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-highlight) 45%, transparent);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.drawerOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(2, 6, 11, 0.66);
+  backdrop-filter: blur(6px);
+  z-index: 50;
+}
+
+.drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: min(34rem, 100vw);
+  height: 100vh;
+  z-index: 60;
+  background: linear-gradient(180deg, rgba(13, 18, 26, 0.98), rgba(8, 12, 18, 0.98));
+  border-left: 1px solid var(--color-border);
+  box-shadow: var(--shadow-xl);
+  overflow: auto;
+  transform: translateX(0);
+  animation: drawerIn 180ms ease;
+}
+
+@keyframes drawerIn {
+  from {
+    transform: translateX(18px);
+    opacity: 0;
+  }
+
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.drawerInner {
+  padding: 1rem;
+}
+
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: var(--radius-sm);
+}
+
+.skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.14), transparent);
+  animation: shimmer 1.4s infinite;
+}
+
+@keyframes shimmer {
+  to {
+    transform: translateX(100%);
+  }
+}

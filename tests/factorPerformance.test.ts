@@ -1,0 +1,174 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import { resetPersistenceForTests } from "../lib/server/odds/persistence";
+import { persistEvaluationResult, persistValidationEvent } from "../lib/server/odds/validationStore";
+import { persistOutcomeResult } from "../lib/server/odds/outcomes";
+import { buildFactorPerformance } from "../lib/server/odds/factorPerformance";
+import type { PersistedEvaluationResult, PersistedValidationEvent } from "../lib/server/odds/types";
+
+function validationEvent(id: string, sideKey: string, confidence: number): PersistedValidationEvent {
+  return {
+    version: 1,
+    id,
+    createdAt: 1_710_000_000_000,
+    sportKey: "basketball_nba",
+    eventId: "evt-factor",
+    marketKey: "h2h",
+    sideKey,
+    commenceTime: "2026-03-01T00:00:00.000Z",
+    point: null,
+    bookKey: "book-a",
+    snapshotRef: null,
+    pinnedContext: {
+      pinnedBookKey: null,
+      pinnedBestPriceAmerican: null,
+      globalBestPriceAmerican: -104
+    },
+    model: {
+      fairAmerican: -108,
+      fairProb: 0.52,
+      rankingScore: confidence * 100,
+      confidenceScore: confidence,
+      evPct: 2,
+      evDefensibility: "full"
+    },
+    diagnostics: {
+      stalePenalty: 0.45,
+      timingPenalty: 0.2,
+      coveragePenalty: 0.1,
+      widthPenalty: null,
+      reasons: ["Likely closing"],
+      factorBreakdown: {
+        edge: 0.2,
+        confidence,
+        sharpParticipation: 0.35
+      }
+    },
+    execution: {
+      displayedPriceAmerican: -104,
+      displayedBookKey: "book-a"
+    }
+  };
+}
+
+function evaluation(id: string, beat: boolean): PersistedEvaluationResult {
+  return {
+    version: 1,
+    id: `${id}:eval`,
+    validationEventId: id,
+    createdAt: 1_710_000_000_000,
+    sportKey: "basketball_nba",
+    eventId: "evt-factor",
+    marketKey: "h2h",
+    close: {
+      globalBestAmerican: -108,
+      pinnedBestAmerican: null,
+      sharpConsensusAmerican: -109,
+      fairAmerican: -108
+    },
+    clv: {
+      global: {
+        betPriceAmerican: -104,
+        closePriceAmerican: -108,
+        betImpliedProb: 0.5098039215686274,
+        closeImpliedProb: 0.5192307692307693,
+        clvProbDelta: beat ? 0.0094268476621419 : -0.0094268476621419,
+        fairAtBetTime: -108,
+        displayAmericanDelta: beat ? 4 : -4,
+        clvAmericanDelta: beat ? 4 : -4,
+        beatClose: beat,
+        closeReference: "closing_global_best"
+      },
+      pinned: {
+        betPriceAmerican: -104,
+        closePriceAmerican: null,
+        betImpliedProb: 0.5098039215686274,
+        closeImpliedProb: null,
+        clvProbDelta: null,
+        fairAtBetTime: -108,
+        displayAmericanDelta: null,
+        clvAmericanDelta: null,
+        beatClose: null,
+        closeReference: "closing_pinned_best"
+      },
+      sharpConsensus: {
+        betPriceAmerican: -104,
+        closePriceAmerican: -109,
+        betImpliedProb: 0.5098039215686274,
+        closeImpliedProb: 0.5215311004784688,
+        clvProbDelta: 0.0117271789098414,
+        fairAtBetTime: -108,
+        displayAmericanDelta: 5,
+        clvAmericanDelta: 5,
+        beatClose: true,
+        closeReference: "closing_sharp_consensus"
+      },
+      fair: {
+        betPriceAmerican: -104,
+        closePriceAmerican: -108,
+        betImpliedProb: 0.5098039215686274,
+        closeImpliedProb: 0.5192307692307693,
+        clvProbDelta: 0.0094268476621419,
+        fairAtBetTime: -108,
+        displayAmericanDelta: 4,
+        clvAmericanDelta: 4,
+        beatClose: true,
+        closeReference: "closing_fair"
+      }
+    },
+    beatCloseGlobal: beat,
+    beatClosePinned: null,
+    modelEdgeHeld: beat,
+    confidenceBucket: beat ? "high" : "low",
+    rankingDecile: beat ? 8 : 3,
+    evDefensibility: "full",
+    methodology: {
+      closeReference: "closing_global_best",
+      clvSpace: "implied_probability",
+      displaySpace: "american_odds",
+      roiStakeModel: "flat_unit_stake",
+      probabilitySource: "validation_event_fair_probability",
+      isDefaultCloseReference: true
+    }
+  };
+}
+
+test.beforeEach(() => {
+  resetPersistenceForTests();
+});
+
+test("factor performance reports CLV/ROI history for ranking factors", async () => {
+  await persistValidationEvent(validationEvent("factor-win", "away", 0.78));
+  await persistValidationEvent(validationEvent("factor-loss", "home", 0.48));
+  await persistEvaluationResult(evaluation("factor-win", true));
+  await persistEvaluationResult(evaluation("factor-loss", false));
+
+  await persistOutcomeResult({
+    sportKey: "basketball_nba",
+    eventId: "evt-factor",
+    marketKey: "h2h",
+    sideKey: "away",
+    result: "win"
+  });
+
+  await persistOutcomeResult({
+    sportKey: "basketball_nba",
+    eventId: "evt-factor",
+    marketKey: "h2h",
+    sideKey: "home",
+    result: "loss"
+  });
+
+  const summary = await buildFactorPerformance(50);
+
+  assert.equal(summary.sampleSize, 2);
+  assert.equal(summary.settledSampleSize, 2);
+  assert.equal(summary.confidenceTier, "low");
+  assert.ok(summary.factors.some((row) => row.factor === "marketPressure"));
+  assert.ok(summary.factors.some((row) => row.factor === "confidenceScore"));
+
+  const confidenceRow = summary.factors.find((row) => row.factor === "confidenceScore");
+  assert.equal(confidenceRow?.sampleSize, 2);
+  assert.ok(confidenceRow?.avgCLV !== null);
+  assert.ok(confidenceRow?.avgROI !== null);
+});
