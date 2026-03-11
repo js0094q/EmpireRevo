@@ -12,7 +12,7 @@ import { fetchFairBoardPageData, hasOddsKey, toSportKey } from "@/lib/server/odd
 import { buildOutcomeMarketKey } from "@/lib/server/odds/snapshotPersistence";
 import { buildMarketTimeline } from "@/lib/server/odds/timeline";
 import { detectMarketPressureForMarket } from "@/lib/server/odds/marketPressure";
-import { buildFairEventsForNormalizedEvent } from "@/lib/server/odds/fairEngine";
+import { buildFairEventsForNormalizedEvent, LIMITED_MARKET_MIN_BOOKS } from "@/lib/server/odds/fairEngine";
 import { getNormalizedOdds } from "@/lib/server/odds/oddsService";
 import { eventDetailHref, formatMarketLabel, formatOffer, strongestBook, strongestOutcome } from "@/components/board/board-helpers";
 import type { FairEvent, FairOutcomeBook } from "@/lib/server/odds/types";
@@ -65,14 +65,7 @@ function pickRelatedMarketEvent(params: {
   currentEventId: string;
 }): FairEvent | null {
   if (!params.relatedEvents.length) return null;
-  return (
-    params.relatedEvents.find((candidate) => candidate.id === params.currentEventId) ??
-    params.relatedEvents
-      .slice()
-      .sort((a, b) => b.contributingBookCount - a.contributingBookCount || Math.abs(a.linePoint ?? 0) - Math.abs(b.linePoint ?? 0))
-      [0] ??
-    null
-  );
+  return params.relatedEvents.find((candidate) => candidate.id === params.currentEventId) ?? params.relatedEvents[0] ?? null;
 }
 
 function findEventFromNormalized(params: {
@@ -172,29 +165,35 @@ export default async function GamePage({
   }
 
   const sourceEvent = normalizedResult.normalized.find((entry) => entry.event.id === event.baseEventId) ?? null;
-  const marketLinks = sourceEvent
-    ? pageData.activeMarkets
-        .map((marketKey) => {
+  const marketSwitchOptions = sourceEvent
+    ? pageData.marketAvailability
+        .filter((entry) => entry.status !== "unavailable")
+        .map((availability) => {
+          const selectionMinBooks = availability.status === "limited" ? LIMITED_MARKET_MIN_BOOKS : minBooks;
           const relatedEvents = buildFairEventsForNormalizedEvent({
             normalized: sourceEvent,
             sportKey,
-            market: marketKey,
+            market: availability.market,
             model,
-            minBooks
+            minBooks: selectionMinBooks
           });
           const relatedEvent = pickRelatedMarketEvent({ relatedEvents, currentEventId: event.id });
-          if (!relatedEvent) return null;
+          if (!relatedEvent && availability.status === "active") return null;
           return {
-            market: marketKey,
-            href: eventDetailHref({
-              eventId: relatedEvent.id,
-              league,
-              market: relatedEvent.market,
-              model
-            })
+            market: availability.market,
+            href: relatedEvent
+              ? eventDetailHref({
+                  eventId: relatedEvent.id,
+                  league,
+                  market: relatedEvent.market,
+                  model
+                })
+              : null,
+            status: availability.status,
+            pointGroups: relatedEvents.length
           };
         })
-        .filter((entry): entry is { market: MarketKey; href: string } => Boolean(entry))
+        .filter((entry): entry is { market: MarketKey; href: string | null; status: "active" | "limited"; pointGroups: number } => Boolean(entry))
     : [
         {
           market: event.market,
@@ -203,9 +202,14 @@ export default async function GamePage({
             league,
             market: event.market,
             model
-          })
+          }),
+          status: "active" as const,
+          pointGroups: 1
         }
       ];
+  const currentMarketSwitch = marketSwitchOptions.find((entry) => entry.market === event.market) ?? null;
+  const currentMarketStatus = pageData.marketAvailability.find((entry) => entry.market === event.market)?.status ?? "active";
+  const showRepresentativeNote = event.market !== "h2h" && (currentMarketSwitch?.pointGroups ?? 0) > 1;
 
   const featuredOutcome = strongestOutcome(event);
   const featuredBook = strongestBook(featuredOutcome);
@@ -271,16 +275,30 @@ export default async function GamePage({
             </div>
 
             <div className={styles.marketTabs} aria-label="Markets">
-              {marketLinks.map((entry) => (
-                <Link
-                  key={`${entry.market}-${entry.href}`}
-                  href={entry.href}
-                  className={entry.market === event.market ? styles.marketTabActive : styles.marketTab}
-                >
-                  {formatMarketLabel(entry.market)}
-                </Link>
-              ))}
+              {marketSwitchOptions.map((entry) =>
+                entry.status === "limited" && entry.market !== event.market ? (
+                  <span key={`${entry.market}-limited`} className={styles.marketTabMuted} title="Limited live availability">
+                    {formatMarketLabel(entry.market)}
+                  </span>
+                ) : (
+                  <Link
+                    key={`${entry.market}-${entry.href ?? "current"}`}
+                    href={entry.href || "#"}
+                    className={entry.market === event.market ? styles.marketTabActive : styles.marketTab}
+                  >
+                    {formatMarketLabel(entry.market)}
+                  </Link>
+                )
+              )}
             </div>
+
+            {currentMarketStatus === "limited" ? (
+              <p className={styles.marketHint}>This market is live, but comparable line coverage is limited right now.</p>
+            ) : null}
+
+            {showRepresentativeNote ? (
+              <p className={styles.marketHint}>Default market view reflects the most widely available comparable line for this matchup.</p>
+            ) : null}
 
             <div className={styles.priceGrid}>
               <div className={styles.priceCard}>

@@ -12,6 +12,7 @@ import { BoardTable } from "@/components/board/BoardTable";
 import { EmptyState } from "@/components/board/EmptyState";
 import { Pill } from "@/components/ui/Pill";
 import {
+  formatMarketLabel,
   formatUpdatedLabel,
   strongestBook,
   strongestOutcome,
@@ -127,6 +128,8 @@ export function BoardShell({ board, league, windowKey, mode = "board" }: BoardSh
   const featuredOpportunity = opportunities[0] ?? null;
   const featuredEvent = featuredOpportunity ? orderedEvents.find((event) => event.id === featuredOpportunity.eventId) ?? null : null;
   const featuredOutcome = featuredEvent ? strongestOutcome(featuredEvent) : topEvent ? topOutcome(topEvent) : null;
+  const currentMarketAvailability = board.marketAvailability.find((entry) => entry.market === board.market) ?? null;
+  const limitedMarkets = board.marketAvailability.filter((entry) => entry.status === "limited");
   const methodologyCopy = board.sharpBooksUsed.length
     ? `Consensus fair prices lean on sharper market-making books when available, including ${joinTitles(board.sharpBooksUsed.slice(0, 3))}.`
     : null;
@@ -267,7 +270,7 @@ export function BoardShell({ board, league, windowKey, mode = "board" }: BoardSh
           <BoardToolbar
             league={league}
             market={board.market}
-            activeMarkets={board.activeMarkets}
+            marketAvailability={board.marketAvailability}
             windowKey={windowKey}
             sortBy={sortBy}
             search={search}
@@ -282,6 +285,16 @@ export function BoardShell({ board, league, windowKey, mode = "board" }: BoardSh
             onTogglePositive={() => setPositiveOnly((value) => !value)}
             onRefresh={() => router.refresh()}
           />
+
+          {currentMarketAvailability?.status === "limited" ? (
+            <p className={styles.marketNote}>
+              {formatMarketLabel(board.market)} has limited live availability right now. EmpirePicks is showing the board only where books are hanging comparable lines.
+            </p>
+          ) : limitedMarkets.length ? (
+            <p className={styles.marketNote}>
+              {joinTitles(limitedMarkets.map((entry) => formatMarketLabel(entry.market)))} currently have limited live availability.
+            </p>
+          ) : null}
 
           {orderedEvents.length ? (
             <BoardTable

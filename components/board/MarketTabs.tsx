@@ -10,12 +10,25 @@ const OPTIONS = [
 export function MarketTabs({
   value,
   onChange,
-  availableMarkets
+  marketAvailability
 }: {
   value: FairBoardResponse["market"];
   onChange: (value: FairBoardResponse["market"]) => void;
-  availableMarkets?: FairBoardResponse["activeMarkets"];
+  marketAvailability?: FairBoardResponse["marketAvailability"];
 }) {
-  const options = OPTIONS.filter((option) => !availableMarkets || availableMarkets.includes(option.value));
+  const availabilityByMarket = new Map((marketAvailability || []).map((entry) => [entry.market, entry]));
+  const options = OPTIONS.flatMap((option) => {
+    const availability = availabilityByMarket.get(option.value);
+    if (availability?.status === "unavailable") return [];
+
+    return [
+      {
+        value: option.value,
+        label: option.label,
+        disabled: availability?.status === "limited" && option.value !== value,
+        title: availability?.status === "limited" ? "Limited live availability" : undefined
+      }
+    ];
+  });
   return <SegmentedControl value={value} options={options} onChange={onChange} ariaLabel="Market" />;
 }

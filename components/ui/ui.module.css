@@ -27,6 +27,19 @@
   transform: translateY(1px);
 }
 
+.button:disabled {
+  cursor: not-allowed;
+  color: var(--color-text-dim);
+  border-color: rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.button:disabled:hover,
+.button:disabled:focus-visible {
+  border-color: rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.02);
+}
+
 .buttonPrimary {
   background: var(--color-accent);
   border-color: color-mix(in srgb, var(--color-accent) 80%, white 20%);

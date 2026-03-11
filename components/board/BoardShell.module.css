@@ -109,7 +109,8 @@
 .heroSupport,
 .heroDescription,
 .heroTimestamp,
-.disclosure {
+.disclosure,
+.marketNote {
   margin: 0;
 }
 
@@ -478,6 +479,12 @@
   text-align: center;
 }
 
+.marketNote {
+  padding: 0 0.1rem;
+  color: var(--color-text-muted);
+  font-size: 0.82rem;
+}
+
 .teamAvatar {
   display: inline-flex;
   align-items: center;
@@ -529,6 +536,9 @@
 .teamAvatarFallback {
   font-family: var(--font-mono);
   font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  line-height: 1;
   color: var(--color-text-muted);
 }
 

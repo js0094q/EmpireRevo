@@ -24,7 +24,7 @@ const SIDE_OPTIONS = [
 type BoardToolbarProps = {
   league: string;
   market: FairBoardResponse["market"];
-  activeMarkets: FairBoardResponse["activeMarkets"];
+  marketAvailability: FairBoardResponse["marketAvailability"];
   windowKey: Exclude<BoardWindowKey, "all">;
   sortBy: BoardSortKey;
   search: string;
@@ -43,7 +43,7 @@ type BoardToolbarProps = {
 export function BoardToolbar({
   league,
   market,
-  activeMarkets,
+  marketAvailability,
   windowKey,
   sortBy,
   search,
@@ -63,7 +63,7 @@ export function BoardToolbar({
       <div className={styles.toolbarRow}>
         <div className={styles.toolbarLeft}>
           <LeagueSelector value={league} onChange={onLeagueChange} />
-          <MarketTabs value={market} onChange={onMarketChange} availableMarkets={activeMarkets} />
+          <MarketTabs value={market} onChange={onMarketChange} marketAvailability={marketAvailability} />
         </div>
         <div className={styles.toolbarRight}>
           <SegmentedControl value={windowKey} options={WINDOW_OPTIONS} onChange={onWindowChange} ariaLabel="Time window" />

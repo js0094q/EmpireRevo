@@ -1,6 +1,6 @@
 import type { EventRef, LeagueKey, MarketKey, NormalizedEventOdds, TeamRef } from "@/lib/odds/schemas";
 import type { EventOdds } from "@/lib/server/odds/types";
-import { TEAM_LOGO_MAP, type TeamLogoMap } from "@/lib/server/odds/logos";
+import { TEAM_LOGO_MAP, canonicalizeTeamName, resolveTeamLogo, type TeamLogoMap } from "@/lib/server/odds/logos";
 import { getBookRef } from "@/lib/server/odds/weights";
 
 function slugify(input: string): string {
@@ -23,17 +23,19 @@ export function normalizeOddsApiResponse(params: {
   return raw.map((event: any) => {
     const homeName = String(event.home_team || "Home");
     const awayName = String(event.away_team || "Away");
+    const canonicalHomeName = canonicalizeTeamName(homeName, league);
+    const canonicalAwayName = canonicalizeTeamName(awayName, league);
 
     const home: TeamRef = {
-      id: slugify(homeName),
+      id: slugify(canonicalHomeName),
       name: homeName,
-      logoUrl: teamLogoMap[homeName]
+      logoUrl: resolveTeamLogo(homeName, league, teamLogoMap)
     };
 
     const away: TeamRef = {
-      id: slugify(awayName),
+      id: slugify(canonicalAwayName),
       name: awayName,
-      logoUrl: teamLogoMap[awayName]
+      logoUrl: resolveTeamLogo(awayName, league, teamLogoMap)
     };
 
     const eventRef: EventRef = {

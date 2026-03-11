@@ -257,6 +257,16 @@ export type ValidationTrackingSummary = {
   sink: "memory" | "custom" | "redis";
 };
 
+export type MarketAvailabilityStatus = "active" | "limited" | "unavailable";
+
+export type MarketAvailability = {
+  market: MarketKey;
+  status: MarketAvailabilityStatus;
+  feedEventCount: number;
+  comparableEventCount: number;
+  qualifiedEventCount: number;
+};
+
 export type FairBoardResponse = {
   ok: boolean;
   league: string;
@@ -266,6 +276,7 @@ export type FairBoardResponse = {
   updatedAt: string;
   lastUpdatedLabel: string;
   activeMarkets: MarketKey[];
+  marketAvailability: MarketAvailability[];
   sharpBooksUsed: string[];
   books: { key: string; title: string; tier: BookTier }[];
   events: FairEvent[];

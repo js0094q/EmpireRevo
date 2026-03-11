@@ -4,6 +4,8 @@ import styles from "./ui.module.css";
 type SegmentedOption<T extends string> = {
   value: T;
   label: string;
+  disabled?: boolean;
+  title?: string;
 };
 
 type SegmentedControlProps<T extends string> = {
@@ -27,6 +29,8 @@ export function SegmentedControl<T extends string>({
           active={option.value === value}
           role="tab"
           aria-selected={option.value === value}
+          disabled={option.disabled}
+          title={option.title}
           onClick={() => onChange(option.value)}
         >
           {option.label}

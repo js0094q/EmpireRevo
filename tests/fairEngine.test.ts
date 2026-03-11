@@ -1,7 +1,12 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import type { NormalizedEventOdds } from "../lib/odds/schemas";
-import { buildFairBoard, getActiveMarketsForBoard } from "../lib/server/odds/fairEngine";
+import {
+  buildFairBoard,
+  buildFairEventsForNormalizedEvent,
+  getActiveMarketsForBoard,
+  getMarketAvailabilityForBoard
+} from "../lib/server/odds/fairEngine";
 import { americanToDecimal } from "../lib/server/odds/fairMath";
 
 function buildEvent(): NormalizedEventOdds {
@@ -182,4 +187,79 @@ test("getActiveMarketsForBoard only returns markets with usable live lines", () 
   });
 
   assert.deepEqual(activeMarkets, ["h2h", "spreads"]);
+});
+
+test("getMarketAvailabilityForBoard distinguishes active, limited, and unavailable markets", () => {
+  const event = buildEvent();
+  event.books.push({
+    book: { key: "fanduel", title: "FanDuel", tier: "mainstream", weight: 0.38, isSharpWeighted: false },
+    markets: [
+      {
+        market: "h2h",
+        lastUpdate: "2026-03-08T12:15:00.000Z",
+        outcomes: [
+          { name: "Boston Celtics", price: -118 },
+          { name: "New York Knicks", price: 102 }
+        ]
+      }
+    ]
+  });
+
+  const availability = getMarketAvailabilityForBoard({
+    normalized: [event],
+    model: "weighted",
+    minBooks: 3
+  });
+
+  assert.deepEqual(
+    availability.map((entry) => [entry.market, entry.status]),
+    [
+      ["h2h", "active"],
+      ["spreads", "limited"],
+      ["totals", "unavailable"]
+    ]
+  );
+});
+
+test("representative spread point prefers broader consensus coverage over fringe groups", () => {
+  const event = buildEvent();
+  event.books.push({
+    book: { key: "fanduel", title: "FanDuel", tier: "mainstream", weight: 0.38, isSharpWeighted: false },
+    markets: [
+      {
+        market: "spreads",
+        lastUpdate: "2026-03-08T12:15:00.000Z",
+        outcomes: [
+          { name: "Boston Celtics", price: -111, point: -3.5 },
+          { name: "New York Knicks", price: -109, point: 3.5 }
+        ]
+      }
+    ]
+  });
+  event.books.push({
+    book: { key: "circa", title: "Circa", tier: "sharp", weight: 1, isSharpWeighted: true },
+    markets: [
+      {
+        market: "spreads",
+        lastUpdate: "2026-03-08T12:16:00.000Z",
+        outcomes: [
+          { name: "Boston Celtics", price: -103, point: -4 },
+          { name: "New York Knicks", price: -117, point: 4 }
+        ]
+      }
+    ]
+  });
+
+  const fairEvents = buildFairEventsForNormalizedEvent({
+    normalized: event,
+    sportKey: "basketball_nba",
+    market: "spreads",
+    model: "weighted",
+    minBooks: 2
+  });
+
+  assert.deepEqual(
+    fairEvents.map((entry) => entry.linePoint),
+    [-3.5, -4]
+  );
 });
