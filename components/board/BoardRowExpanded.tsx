@@ -2,11 +2,14 @@ import Link from "next/link";
 import type { FairEvent } from "@/lib/server/odds/types";
 import styles from "./BoardShell.module.css";
 import { BookColumnCell } from "@/components/board/BookColumnCell";
-import { formatCommenceTime, formatMarketLabel } from "@/components/board/board-helpers";
+import { BestPriceCell } from "@/components/board/BestPriceCell";
+import { FairOddsCell } from "@/components/board/FairOddsCell";
+import { eventDetailHref, formatCommenceTime, formatMarketLabel, strongestOutcome } from "@/components/board/board-helpers";
 import { ConfidencePill } from "@/components/board/ConfidencePill";
 import { MovementPill } from "@/components/board/MovementPill";
 import { EdgeBadge } from "@/components/board/EdgeBadge";
 import { Button } from "@/components/ui/Button";
+import { TeamAvatar } from "@/components/board/TeamAvatar";
 
 export function BoardRowExpanded({
   event,
@@ -21,48 +24,60 @@ export function BoardRowExpanded({
   compact?: boolean;
   onClose?: () => void;
 }) {
+  const outcome = strongestOutcome(event);
+  const href = event.outcomes.length
+    ? eventDetailHref({
+        eventId: event.id,
+        league,
+        market: event.market,
+        model
+      })
+    : null;
+
   return (
     <div className={compact ? styles.drawerDetail : styles.expandedGrid}>
       <section className={styles.detailPanel}>
         <div className={styles.detailHeader}>
           <div>
+            <div className={styles.matchupTeams}>
+              <TeamAvatar name={event.awayTeam} logoUrl={event.awayLogoUrl} size="md" showName={false} />
+              <TeamAvatar name={event.homeTeam} logoUrl={event.homeLogoUrl} size="md" showName={false} />
+            </div>
             <div className={styles.cellLabel}>{formatMarketLabel(event.market)}</div>
-            <div>
+            <div className={styles.detailTitle}>
               {event.awayTeam} @ {event.homeTeam}
             </div>
             <div className={styles.expandedMeta}>{formatCommenceTime(event.commenceTime)}</div>
           </div>
           <div className={styles.detailPills}>
-            <ConfidencePill label={event.confidenceLabel} />
             <EdgeBadge edgePct={event.maxAbsEdgePct} />
+            <ConfidencePill label={event.confidenceLabel} />
           </div>
         </div>
 
         <div className={styles.detailNotes}>
           <div className={styles.note}>
-            <div className={styles.cellLabel}>Rank summary</div>
-            <div className={styles.detailCopy}>{event.rankingSummary}</div>
+            <div className={styles.cellLabel}>Top side</div>
+            <div className={styles.detailCopy}>{outcome.name}</div>
           </div>
           <div className={styles.note}>
-            <div className={styles.cellLabel}>Coverage</div>
-            <div className={styles.detailCopy}>
-              {event.contributingBookCount}/{event.totalBookCount} books contributing. Timing signal: {event.timingLabel}.
-            </div>
+            <BestPriceCell event={event} outcome={outcome} />
           </div>
-          {event.excludedBooks.length ? (
-            <div className={styles.note}>
-              <div className={styles.cellLabel}>Partial data</div>
-              <div className={styles.detailCopy}>
-                {event.excludedBooks.length} books were excluded due to missing market coverage or equivalent-line mismatch.
-              </div>
-            </div>
-          ) : null}
+          <div className={styles.note}>
+            <FairOddsCell event={event} outcome={outcome} />
+          </div>
+          <div className={styles.note}>
+            <div className={styles.cellLabel}>Market note</div>
+            <div className={styles.detailCopy}>{outcome.explanation}</div>
+          </div>
         </div>
 
         <div className={styles.stateActions}>
-          <Link href={`/game/${event.id}?league=${league}&market=${event.market}&model=${model}`} className="app-link">
-            Open event page
-          </Link>
+          {href ? (
+            <Link href={href} className="app-link">
+              Open event page
+            </Link>
+          ) : null}
           {onClose ? <Button onClick={onClose}>Close</Button> : null}
         </div>
       </section>

@@ -12,8 +12,9 @@ import { FairOddsCell } from "@/components/board/FairOddsCell";
 import { EdgeBadge } from "@/components/board/EdgeBadge";
 import { ConfidencePill } from "@/components/board/ConfidencePill";
 import { MovementPill } from "@/components/board/MovementPill";
-import { formatCommenceTime, formatMarketLabel, topBook, topOutcome } from "@/components/board/board-helpers";
+import { formatCommenceTime, formatMarketLabel, strongestBook, strongestOutcome } from "@/components/board/board-helpers";
 import { Pill } from "@/components/ui/Pill";
+import { TeamAvatar } from "@/components/board/TeamAvatar";
 
 const BoardRowExpanded = dynamic(() =>
   import("./BoardRowExpanded").then((mod) => ({
@@ -49,7 +50,7 @@ export function BoardTable({
       <div className={styles.tableHeader}>
         <div>
           <div className={styles.tableHeadTitle}>Board</div>
-          <div className={styles.tableHeadMeta}>Scan matchup, best price, fair line, edge, then expand only when needed.</div>
+          <div className={styles.tableHeadMeta}>Scan the matchup, compare the live price to fair value, then open the books only when you need detail.</div>
         </div>
       </div>
 
@@ -58,11 +59,11 @@ export function BoardTable({
           <thead>
             <tr>
               <th>Matchup</th>
-              <th>Score</th>
-              <th>Best price</th>
-              <th>Fair line</th>
-              <th>Edge / trust</th>
-              <th>Timing</th>
+              <th>Top side</th>
+              <th>Best line</th>
+              <th>Fair price</th>
+              <th>Edge</th>
+              <th>Market note</th>
               <th />
             </tr>
           </thead>
@@ -95,13 +96,17 @@ export function BoardTable({
 
       <div className={styles.cards}>
         {events.map((event) => {
-          const outcome = topOutcome(event);
-          const book = topBook(outcome);
+          const outcome = strongestOutcome(event);
+          const book = strongestBook(outcome);
 
           return (
             <article key={`card-${event.id}`} className={styles.card}>
               <div className={styles.cardTop}>
                 <div>
+                  <div className={styles.matchupTeams}>
+                    <TeamAvatar name={event.awayTeam} logoUrl={event.awayLogoUrl} size="sm" showName={false} />
+                    <TeamAvatar name={event.homeTeam} logoUrl={event.homeLogoUrl} size="sm" showName={false} />
+                  </div>
                   <strong>
                     {event.awayTeam} @ {event.homeTeam}
                   </strong>
@@ -120,14 +125,14 @@ export function BoardTable({
               </div>
 
               <div className={styles.rowPills}>
-                <ConfidencePill label={event.confidenceLabel} />
                 <MovementPill outcome={outcome} />
+                <ConfidencePill label={event.confidenceLabel} />
               </div>
 
               <div className={styles.stateActions}>
                 <Button onClick={() => onOpenDrawer(event.id)}>View books</Button>
                 <Button variant="ghost" onClick={() => onToggleExpanded(event.id)}>
-                  {expandedEventId === event.id ? "Collapse inline" : "Expand inline"}
+                  {expandedEventId === event.id ? "Hide inline" : "Expand inline"}
                 </Button>
               </div>
 
@@ -142,7 +147,7 @@ export function BoardTable({
           <div className={styles.drawerCard}>
             <div className={styles.drawerHeader}>
               <div>
-                <div className={styles.tableHeadTitle}>Quick view</div>
+                <div className={styles.tableHeadTitle}>Books view</div>
                 <div className={styles.tableHeadMeta}>
                   {drawerEvent.awayTeam} @ {drawerEvent.homeTeam}
                 </div>

@@ -1,6 +1,7 @@
 import { OddsGridClient } from "./ui-client";
 import { ErrorState } from "@/components/board/ErrorState";
-import { fetchFairBoardServer, hasOddsKey } from "@/lib/server/odds/pageData";
+import { fetchFairBoardPageData, hasOddsKey } from "@/lib/server/odds/pageData";
+import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
@@ -23,7 +24,7 @@ export default async function Page({
   const model = params.model === "sharp" || params.model === "equal" || params.model === "weighted" ? (params.model as "sharp" | "equal" | "weighted") : "weighted";
   const windowHours = params.window === "today" ? 12 : 24;
 
-  const result = await fetchFairBoardServer({
+  const result = await fetchFairBoardPageData({
     league,
     market,
     model,
@@ -56,8 +57,8 @@ export default async function Page({
     return <ErrorState title={title} message={message} hint={hint} />;
   }
 
-  const board = result.board;
-  if (!board) {
+  const pageData = result.board;
+  if (!pageData) {
     return (
       <ErrorState
         title="Live odds unavailable"
@@ -67,12 +68,22 @@ export default async function Page({
     );
   }
 
+  if (pageData.resolvedMarket !== market) {
+    const nextParams = new URLSearchParams();
+    nextParams.set("league", league);
+    nextParams.set("market", pageData.resolvedMarket);
+    if (params.window === "today") nextParams.set("window", "today");
+    if (model !== "weighted") nextParams.set("model", model);
+    redirect(`/?${nextParams.toString()}`);
+  }
+
+  const board = pageData.board;
   if (!board.events.length) {
     return (
       <ErrorState
-        title="No books currently offer this market"
-        message="Try switching leagues or widening the time window."
-        hint="If this persists, the upstream feed may have limited market coverage."
+        title="No live lines available"
+        message="Try switching leagues or checking back when more books are posting."
+        hint="EmpirePicks only shows markets with live comparable prices."
       />
     );
   }

@@ -3,7 +3,7 @@ import type { FairBoardResponse, FairEvent, FairOutcome, FairOutcomeBook } from 
 export type BoardMode = "board" | "games";
 export type BoardSortKey = "score" | "edge" | "confidence" | "best" | "soonest" | "timing";
 export type BoardWindowKey = "all" | "today" | "next24";
-export type BoardSideKey = "all" | "favorites" | "underdogs";
+export type BoardSideKey = "all" | "favored" | "underdogs";
 
 export const SORT_OPTIONS: Array<{ value: BoardSortKey; label: string }> = [
   { value: "score", label: "Best edge first" },
@@ -68,6 +68,18 @@ export function topBook(outcome: FairOutcome): FairOutcomeBook | null {
   return [...outcome.books].sort((a, b) => b.edgePct - a.edgePct || b.evPct - a.evPct)[0] ?? null;
 }
 
+export function strongestBook(outcome: FairOutcome): FairOutcomeBook | null {
+  return [...outcome.books].sort((a, b) => Math.abs(b.edgePct) - Math.abs(a.edgePct) || b.edgePct - a.edgePct)[0] ?? null;
+}
+
+export function strongestOutcome(event: FairEvent): FairOutcome {
+  return [...event.outcomes].sort((a, b) => {
+    const aEdge = Math.abs(strongestBook(a)?.edgePct ?? 0);
+    const bEdge = Math.abs(strongestBook(b)?.edgePct ?? 0);
+    return bEdge - aEdge || b.opportunityScore - a.opportunityScore;
+  })[0]!;
+}
+
 export function bestPriceBook(outcome: FairOutcome): FairOutcomeBook | null {
   return outcome.books.find((book) => book.isBestPrice) ?? outcome.books[0] ?? null;
 }
@@ -109,4 +121,18 @@ export function updatedMinutes(updatedAtIso: string): number {
 
 export function eventHasPartialData(event: FairEvent): boolean {
   return event.contributingBookCount < event.totalBookCount || event.excludedBooks.length > 0;
+}
+
+export function eventDetailHref(params: {
+  eventId: string;
+  league: string;
+  market: FairEvent["market"];
+  model: "sharp" | "equal" | "weighted";
+}): string {
+  const query = new URLSearchParams({
+    league: params.league,
+    market: params.market,
+    model: params.model
+  });
+  return `/game/${encodeURIComponent(params.eventId)}?${query.toString()}`;
 }

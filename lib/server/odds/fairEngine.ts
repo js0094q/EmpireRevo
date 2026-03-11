@@ -69,10 +69,16 @@ type GroupedMarket = {
 const DEFAULT_MODEL: WeightModel = "weighted";
 const DEFAULT_MIN_BOOKS = 3;
 const FAIR_BOARD_DISCLAIMER = "Market intelligence only. This is not financial advice or a guaranteed outcome.";
+const MARKET_ORDER: MarketKey[] = ["h2h", "spreads", "totals"];
 
 function normalizeModel(model?: string | null): WeightModel {
   if (model === "sharp" || model === "equal" || model === "weighted") return model;
   return DEFAULT_MODEL;
+}
+
+function normalizeIncludedBooks(includeBooks?: Set<string> | null): Set<string> | null {
+  if (!includeBooks || includeBooks.size === 0) return null;
+  return new Set(Array.from(includeBooks).map((book) => book.toLowerCase()));
 }
 
 function formatWindowLabel(windowHours?: number): string {
@@ -472,9 +478,12 @@ function buildFairEvent(params: {
 
   return {
     id: params.group.signature === "moneyline" ? params.baseId : `${params.baseId}:${params.group.signature}`,
+    baseEventId: params.baseId,
     commenceTime: params.normalized.event.commenceTime,
     homeTeam: params.normalized.event.home.name,
     awayTeam: params.normalized.event.away.name,
+    homeLogoUrl: params.normalized.event.home.logoUrl,
+    awayLogoUrl: params.normalized.event.away.logoUrl,
     sportKey: params.sportKey,
     market: params.market,
     linePoint: params.group.linePoint,
@@ -491,6 +500,76 @@ function buildFairEvent(params: {
     excludedBooks: params.excludedBooks,
     outcomes
   };
+}
+
+export function buildFairEventsForNormalizedEvent(options: {
+  normalized: NormalizedEventOdds;
+  sportKey: string;
+  market: MarketKey;
+  model?: WeightModel;
+  minBooks?: number;
+  includeBooks?: Set<string> | null;
+  calibration?: OddsCalibration;
+}): FairEvent[] {
+  const calibration = options.calibration ?? getOddsCalibration();
+  const model = normalizeModel(options.model);
+  const minBooks = Math.max(1, options.minBooks ?? DEFAULT_MIN_BOOKS);
+  const includeBooks = normalizeIncludedBooks(options.includeBooks);
+  const marketRows = toBookRows({
+    event: options.normalized,
+    market: options.market,
+    model,
+    includeBooks
+  });
+  const groups = groupBooksByPoint({ rows: marketRows.rows, market: options.market });
+
+  return groups
+    .filter((group) => group.books.length >= minBooks)
+    .map((group) => {
+      const excludedBySignature = marketRows.rows
+        .filter((row) => !group.books.some((included) => included.bookKey === row.bookKey))
+        .map((row) => ({
+          bookKey: row.bookKey,
+          title: row.title,
+          reason: "point_mismatch" as const
+        }));
+      const excludedBooks = [...marketRows.excluded, ...excludedBySignature];
+      return buildFairEvent({
+        baseId: options.normalized.event.id,
+        normalized: options.normalized,
+        sportKey: options.sportKey,
+        market: options.market,
+        group,
+        totalBookCount: marketRows.totalBookCount,
+        excludedBooks,
+        calibration
+      });
+    })
+    .filter((event): event is FairEvent => Boolean(event));
+}
+
+export function getActiveMarketsForBoard(options: {
+  normalized: NormalizedEventOdds[];
+  model?: WeightModel;
+  minBooks?: number;
+  includeBooks?: Set<string> | null;
+}): MarketKey[] {
+  const model = normalizeModel(options.model);
+  const minBooks = Math.max(1, options.minBooks ?? DEFAULT_MIN_BOOKS);
+  const includeBooks = normalizeIncludedBooks(options.includeBooks);
+
+  return MARKET_ORDER.filter((market) =>
+    options.normalized.some((event) => {
+      const marketRows = toBookRows({
+        event,
+        market,
+        model,
+        includeBooks
+      });
+      const groups = groupBooksByPoint({ rows: marketRows.rows, market });
+      return groups.some((group) => group.books.length >= minBooks);
+    })
+  );
 }
 
 async function emitValidationSnapshots(params: {
@@ -563,40 +642,26 @@ export async function buildFairBoard(options: BuildFairBoardParams): Promise<Fai
   const calibrationMeta = getCalibrationMeta();
   const model = normalizeModel(options.model);
   const minBooks = Math.max(1, options.minBooks ?? DEFAULT_MIN_BOOKS);
-  const includeBooks = options.includeBooks
-    ? new Set(Array.from(options.includeBooks).map((book) => book.toLowerCase()))
-    : null;
+  const includeBooks = normalizeIncludedBooks(options.includeBooks);
 
   const booksDirectory = new Map<string, { title: string; tier: FairBoardResponse["books"][number]["tier"] }>();
   const events: FairEvent[] = [];
 
   for (const normalized of options.normalized) {
-    const marketRows = toBookRows({ event: normalized, market: options.market, model, includeBooks });
-    const groups = groupBooksByPoint({ rows: marketRows.rows, market: options.market });
-    for (const group of groups) {
-      if (group.books.length < minBooks) continue;
-      const excludedBySignature = marketRows.rows
-        .filter((row) => !group.books.some((included) => included.bookKey === row.bookKey))
-        .map((row) => ({
-          bookKey: row.bookKey,
-          title: row.title,
-          reason: "point_mismatch" as const
-        }));
-      const excludedBooks = [...marketRows.excluded, ...excludedBySignature];
-      const event = buildFairEvent({
-        baseId: normalized.event.id,
-        normalized,
-        sportKey: options.sportKey,
-        market: options.market,
-        group,
-        totalBookCount: marketRows.totalBookCount,
-        excludedBooks,
-        calibration
+    const normalizedEvents = buildFairEventsForNormalizedEvent({
+      normalized,
+      sportKey: options.sportKey,
+      market: options.market,
+      model,
+      minBooks,
+      includeBooks,
+      calibration
+    });
+    for (const event of normalizedEvents) {
+      events.push(event);
+      event.outcomes.forEach((outcome) => {
+        outcome.books.forEach((book) => booksDirectory.set(book.bookKey, { title: book.title, tier: book.tier }));
       });
-      if (event) {
-        events.push(event);
-        group.books.forEach((book) => booksDirectory.set(book.bookKey, { title: book.title, tier: book.tier }));
-      }
     }
   }
 
@@ -606,6 +671,7 @@ export async function buildFairBoard(options: BuildFairBoardParams): Promise<Fai
   const books = Array.from(booksDirectory.entries())
     .map(([key, value]) => ({ key, title: value.title, tier: value.tier }))
     .sort((a, b) => a.title.localeCompare(b.title));
+  const sharpBooksUsed = books.filter((book) => book.tier === "sharp").map((book) => book.title);
 
   const topOpportunities = events
     .flatMap((event) =>
@@ -623,7 +689,7 @@ export async function buildFairBoard(options: BuildFairBoardParams): Promise<Fai
         pinnedScore: outcome.pinnedActionability.pinnedScore
       }))
     )
-    .sort((a, b) => b.score - a.score)
+    .sort((a, b) => Math.abs(b.edgePct) - Math.abs(a.edgePct) || b.score - a.score)
     .slice(0, 12);
 
   const capturedAtMs = Date.now();
@@ -652,6 +718,8 @@ export async function buildFairBoard(options: BuildFairBoardParams): Promise<Fai
     model,
     updatedAt: nowIso,
     lastUpdatedLabel: formatWindowLabel(options.timeWindowHours),
+    activeMarkets: [options.market],
+    sharpBooksUsed,
     books,
     events,
     topOpportunities,

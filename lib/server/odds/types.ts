@@ -27,6 +27,8 @@ export type EventOdds = {
   commenceTime: string;
   homeTeam: string;
   awayTeam: string;
+  homeLogoUrl?: string;
+  awayLogoUrl?: string;
   sportKey: string;
   books: BookOdds[];
 };
@@ -200,9 +202,12 @@ export type FairEventBookExclusion = {
 
 export type FairEvent = {
   id: string;
+  baseEventId: string;
   commenceTime: string;
   homeTeam: string;
   awayTeam: string;
+  homeLogoUrl?: string;
+  awayLogoUrl?: string;
   sportKey: string;
   market: "h2h" | "spreads" | "totals";
   linePoint?: number;
@@ -260,6 +265,8 @@ export type FairBoardResponse = {
   model: "sharp" | "equal" | "weighted";
   updatedAt: string;
   lastUpdatedLabel: string;
+  activeMarkets: MarketKey[];
+  sharpBooksUsed: string[];
   books: { key: string; title: string; tier: BookTier }[];
   events: FairEvent[];
   topOpportunities: FairBoardOpportunity[];

@@ -2,7 +2,7 @@ import type { FairEvent } from "@/lib/server/odds/types";
 import type { BoardSortKey } from "@/components/board/board-helpers";
 
 export type StartWindowKey = "all" | "6h" | "12h" | "24h";
-export type SideFilter = "all" | "favorites" | "underdogs";
+export type SideFilter = "all" | "favored" | "underdogs";
 export type SortKey = BoardSortKey | "stale" | "sharp_dev" | "market" | "pinned_edge" | "pinned_score" | "pinned_stale";
 
 export type EventFilterOptions = {
@@ -54,7 +54,7 @@ function eventHasPositiveEv(event: FairEvent, visibleBookKeys: Set<string>): boo
 
 function eventMatchesSideFilter(event: FairEvent, sideFilter: SideFilter): boolean {
   if (sideFilter === "all") return true;
-  if (sideFilter === "favorites") {
+  if (sideFilter === "favored") {
     return event.outcomes.some((outcome) => outcome.consensusDirection === "favored");
   }
   return event.outcomes.some((outcome) => outcome.consensusDirection === "underdog");

@@ -25,7 +25,18 @@
 
 .brand {
   display: grid;
-  gap: 0.2rem;
+  gap: 0.35rem;
+}
+
+.brandRow {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.brandCopy {
+  display: grid;
+  gap: 0.18rem;
 }
 
 .eyebrow {
@@ -37,13 +48,51 @@
 
 .title {
   margin: 0;
-  font-size: clamp(1.3rem, 1.8vw, 1.75rem);
+  font-size: clamp(1.2rem, 1.65vw, 1.55rem);
 }
 
 .subtitle {
   margin: 0;
   color: var(--color-text-muted);
-  font-size: 0.92rem;
+  font-size: 0.9rem;
+}
+
+.brandMark {
+  width: 2.75rem;
+  height: 2.75rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.brandMarkCompact {
+  width: 2.25rem;
+  height: 2.25rem;
+}
+
+.brandMark svg {
+  width: 100%;
+  height: 100%;
+}
+
+.brandMarkBase {
+  fill: rgba(255, 255, 255, 0.03);
+  stroke: rgba(255, 255, 255, 0.1);
+  stroke-width: 1.5;
+}
+
+.brandMarkLine,
+.brandMarkLineMuted {
+  stroke-linecap: round;
+  stroke-width: 3.5;
+}
+
+.brandMarkLine {
+  stroke: var(--color-text);
+}
+
+.brandMarkLineMuted {
+  stroke: var(--color-text-dim);
 }
 
 .crumbs {

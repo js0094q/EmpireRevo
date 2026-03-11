@@ -1,23 +1,100 @@
 import Link from "next/link";
-import { fetchFairBoardServer, hasOddsKey } from "@/lib/server/odds/pageData";
+import { redirect } from "next/navigation";
+import { AppContainer } from "@/components/layout/AppContainer";
+import { AppHeader } from "@/components/layout/AppHeader";
+import { ConfidencePill } from "@/components/board/ConfidencePill";
+import { EdgeBadge } from "@/components/board/EdgeBadge";
+import { EventTimelinePanel } from "@/components/board/EventTimelinePanel";
+import { MovementPill } from "@/components/board/MovementPill";
+import { TeamAvatar } from "@/components/board/TeamAvatar";
+import { getPersistenceStatus } from "@/lib/server/odds/persistence";
+import { fetchFairBoardPageData, hasOddsKey, toSportKey } from "@/lib/server/odds/pageData";
 import { buildOutcomeMarketKey } from "@/lib/server/odds/snapshotPersistence";
 import { buildMarketTimeline } from "@/lib/server/odds/timeline";
 import { detectMarketPressureForMarket } from "@/lib/server/odds/marketPressure";
-import { getPersistenceStatus } from "@/lib/server/odds/persistence";
-import { EventTimelinePanel } from "@/components/board/EventTimelinePanel";
-
-function formatAmerican(price: number): string {
-  return price > 0 ? `+${price}` : `${price}`;
-}
+import { buildFairEventsForNormalizedEvent } from "@/lib/server/odds/fairEngine";
+import { getNormalizedOdds } from "@/lib/server/odds/oddsService";
+import { eventDetailHref, formatMarketLabel, formatOffer, strongestBook, strongestOutcome } from "@/components/board/board-helpers";
+import type { FairEvent, FairOutcomeBook } from "@/lib/server/odds/types";
+import type { MarketKey } from "@/lib/odds/schemas";
+import styles from "./page.module.css";
 
 function formatProb(prob: number): string {
   return `${(prob * 100).toFixed(2)}%`;
 }
 
-function formatPoint(point?: number): string {
-  if (!Number.isFinite(point)) return "--";
-  const value = Number(point);
-  return value > 0 ? `+${value}` : `${value}`;
+function formatRole(book: FairOutcomeBook): string {
+  if (book.tier === "sharp") return `Sharp market maker · ${book.weight.toFixed(2)}x`;
+  if (book.tier === "signal") return `Signal book · ${book.weight.toFixed(2)}x`;
+  if (book.tier === "mainstream") return `Mainstream book · ${book.weight.toFixed(2)}x`;
+  if (book.tier === "promo") return `Promo book · ${book.weight.toFixed(2)}x`;
+  return `Book weight ${book.weight.toFixed(2)}x`;
+}
+
+function formatMatchTime(iso: string): string {
+  const ts = Date.parse(iso);
+  if (!Number.isFinite(ts)) return "Start time unavailable";
+  return new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/New_York",
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit"
+  }).format(new Date(ts));
+}
+
+function joinTitles(values: string[]): string {
+  if (values.length <= 1) return values[0] ?? "";
+  if (values.length === 2) return `${values[0]} and ${values[1]}`;
+  return `${values.slice(0, -1).join(", ")}, and ${values[values.length - 1]}`;
+}
+
+function edgeDeltaText(edgePct: number): string {
+  return `${Math.abs(edgePct).toFixed(2)}% ${edgePct >= 0 ? "above" : "below"} consensus fair value`;
+}
+
+function sortBooks(books: FairOutcomeBook[]): FairOutcomeBook[] {
+  return books
+    .slice()
+    .sort((a, b) => Number(b.isBestPrice) - Number(a.isBestPrice) || Math.abs(b.edgePct) - Math.abs(a.edgePct));
+}
+
+function pickRelatedMarketEvent(params: {
+  relatedEvents: FairEvent[];
+  currentEventId: string;
+}): FairEvent | null {
+  if (!params.relatedEvents.length) return null;
+  return (
+    params.relatedEvents.find((candidate) => candidate.id === params.currentEventId) ??
+    params.relatedEvents
+      .slice()
+      .sort((a, b) => b.contributingBookCount - a.contributingBookCount || Math.abs(a.linePoint ?? 0) - Math.abs(b.linePoint ?? 0))
+      [0] ??
+    null
+  );
+}
+
+function findEventFromNormalized(params: {
+  eventId: string;
+  market: MarketKey;
+  sportKey: string;
+  model: "sharp" | "equal" | "weighted";
+  minBooks: number;
+  normalized: Awaited<ReturnType<typeof getNormalizedOdds>>["normalized"];
+}): FairEvent | null {
+  for (const event of params.normalized) {
+    const relatedEvents = buildFairEventsForNormalizedEvent({
+      normalized: event,
+      sportKey: params.sportKey,
+      market: params.market,
+      model: params.model,
+      minBooks: params.minBooks
+    });
+    const match = relatedEvents.find((candidate) => candidate.id === params.eventId);
+    if (match) return match;
+  }
+  return null;
 }
 
 export default async function GamePage({
@@ -44,25 +121,97 @@ export default async function GamePage({
   const league = query.league || "nba";
   const market = query.market === "spreads" || query.market === "totals" ? query.market : "h2h";
   const model = query.model === "sharp" || query.model === "equal" || query.model === "weighted" ? query.model : "weighted";
+  const minBooks = 4;
 
-  const board = await fetchFairBoardServer({
+  const pageData = await fetchFairBoardPageData({
     league,
     market,
     model,
     windowHours: 24,
-    historyWindowHours: 72
+    historyWindowHours: 72,
+    minBooks
   });
 
-  const event = board.events.find((entry) => entry.id === eventId);
+  if (pageData.resolvedMarket !== market) {
+    const nextParams = new URLSearchParams({
+      league,
+      market: pageData.resolvedMarket,
+      model
+    });
+    redirect(`/game/${encodeURIComponent(eventId)}?${nextParams.toString()}`);
+  }
+
+  const sportKey = toSportKey(league);
+  const normalizedResult = await getNormalizedOdds({
+    sportKey,
+    regions: "us",
+    markets: "h2h,spreads,totals",
+    oddsFormat: "american"
+  });
+
+  const board = pageData.board;
+  const eventFromBoard = board.events.find((entry) => entry.id === eventId) ?? null;
+  const event =
+    eventFromBoard ??
+    findEventFromNormalized({
+      eventId,
+      market: pageData.resolvedMarket,
+      sportKey,
+      model,
+      minBooks,
+      normalized: normalizedResult.normalized
+    });
 
   if (!event) {
     return (
       <main className="grid-shell">
-        <p>Game not found in this market window.</p>
+        <p>Event not found in the live board.</p>
         <Link href={`/?league=${league}&market=${market}&model=${model}`}>Back to board</Link>
       </main>
     );
   }
+
+  const sourceEvent = normalizedResult.normalized.find((entry) => entry.event.id === event.baseEventId) ?? null;
+  const marketLinks = sourceEvent
+    ? pageData.activeMarkets
+        .map((marketKey) => {
+          const relatedEvents = buildFairEventsForNormalizedEvent({
+            normalized: sourceEvent,
+            sportKey,
+            market: marketKey,
+            model,
+            minBooks
+          });
+          const relatedEvent = pickRelatedMarketEvent({ relatedEvents, currentEventId: event.id });
+          if (!relatedEvent) return null;
+          return {
+            market: marketKey,
+            href: eventDetailHref({
+              eventId: relatedEvent.id,
+              league,
+              market: relatedEvent.market,
+              model
+            })
+          };
+        })
+        .filter((entry): entry is { market: MarketKey; href: string } => Boolean(entry))
+    : [
+        {
+          market: event.market,
+          href: eventDetailHref({
+            eventId: event.id,
+            league,
+            market: event.market,
+            model
+          })
+        }
+      ];
+
+  const featuredOutcome = strongestOutcome(event);
+  const featuredBook = strongestBook(featuredOutcome);
+  const methodologyCopy = board.sharpBooksUsed.length
+    ? `Consensus fair prices lean on sharper market-making books when available, including ${joinTitles(board.sharpBooksUsed.slice(0, 3))}.`
+    : null;
 
   const persistence = getPersistenceStatus();
   const outcomeTimeline = persistence.durable
@@ -95,134 +244,161 @@ export default async function GamePage({
   const timelineByOutcome = new Map(outcomeTimeline.map((entry) => [entry.outcomeName, entry]));
 
   return (
-    <main className="grid-shell">
-      <Link href={`/?league=${league}&market=${market}&model=${model}`}>Back to board</Link>
-      <h1>
-        {event.awayTeam} @ {event.homeTeam}
-      </h1>
-      <p className="muted">
-        {new Date(event.commenceTime).toLocaleString()} · {event.market.toUpperCase()} · Score {event.opportunityScore.toFixed(1)} · {event.confidenceLabel}
-      </p>
+    <AppContainer>
+      <div className={styles.page}>
+        <AppHeader
+          eyebrow="EmpirePicks"
+          title="Event detail"
+          subtitle="Compare live sportsbook prices against the consensus fair line."
+          breadcrumbs={[
+            { label: "Board", href: `/?league=${league}&market=${event.market}&model=${model}` },
+            { label: `${event.awayTeam} @ ${event.homeTeam}` }
+          ]}
+        />
 
-      <section className="detail-section">
-        <h3>Market Summary</h3>
-        <div className="detail-table">
-          <div className="detail-row slim">
-            <span>Opportunity Score</span>
-            <small>{event.opportunityScore.toFixed(1)}</small>
-          </div>
-          <div className="detail-row slim">
-            <span>Confidence</span>
-            <small>{event.confidenceLabel} ({event.confidenceScore.toFixed(2)})</small>
-          </div>
-          <div className="detail-row slim">
-            <span>Book Participation</span>
-            <small>{event.contributingBookCount}/{event.totalBookCount} contributing books</small>
-          </div>
-          <div className="detail-row slim">
-            <span>Stale-line Strength</span>
-            <small>{event.staleStrength.toFixed(2)}</small>
-          </div>
-          <div className="detail-row slim">
-            <span>Market Timing</span>
-            <small>{event.timingLabel}</small>
-          </div>
-          <div className="detail-row slim">
-            <span>Why This Ranks Here</span>
-            <small>{event.rankingSummary}</small>
-          </div>
-        </div>
-      </section>
+        <div className={styles.contentGrid}>
+          <section className={styles.summaryCard}>
+            <div className={styles.teamStack}>
+              <TeamAvatar name={event.awayTeam} logoUrl={event.awayLogoUrl} size="lg" showName={false} />
+              <TeamAvatar name={event.homeTeam} logoUrl={event.homeLogoUrl} size="lg" showName={false} />
+            </div>
 
-      {event.excludedBooks.length ? (
-        <section className="detail-section">
-          <h3>Book Participation</h3>
-          <div className="detail-table">
-            {event.excludedBooks.map((book) => (
-              <div key={`${event.id}-${book.bookKey}`} className="detail-row slim">
-                <span>{book.title}</span>
-                <small>{book.reason === "point_mismatch" ? "Excluded: equivalent-line mismatch" : "Excluded: market unavailable"}</small>
+            <div className={styles.metaBlock}>
+              <h1 className={styles.matchupTitle}>
+                {event.awayTeam} @ {event.homeTeam}
+              </h1>
+              <p className={styles.metaLine}>{formatMatchTime(event.commenceTime)}</p>
+            </div>
+
+            <div className={styles.marketTabs} aria-label="Markets">
+              {marketLinks.map((entry) => (
+                <Link
+                  key={`${entry.market}-${entry.href}`}
+                  href={entry.href}
+                  className={entry.market === event.market ? styles.marketTabActive : styles.marketTab}
+                >
+                  {formatMarketLabel(entry.market)}
+                </Link>
+              ))}
+            </div>
+
+            <div className={styles.priceGrid}>
+              <div className={styles.priceCard}>
+                <span className={styles.eyebrow}>Consensus Fair Price</span>
+                <strong>{formatOffer(event.market, featuredOutcome)}</strong>
+                <small>{formatProb(featuredOutcome.fairProb)} fair probability</small>
               </div>
-            ))}
-          </div>
-        </section>
-      ) : null}
-
-      {event.outcomes.map((outcome) => (
-        <section key={outcome.name} className="detail-section">
-          <h3>{outcome.name}</h3>
-          <p className="muted">{outcome.explanation}</p>
-          <div className="detail-table">
-            <div className="detail-row slim">
-              <span>Opportunity Diagnostics</span>
-              <small>Fair Price {formatAmerican(outcome.fairAmerican)} · Fair Prob {formatProb(outcome.fairProb)} · Score {outcome.opportunityScore.toFixed(1)}</small>
-            </div>
-            <div className="detail-row slim">
-              <span>Confidence Drivers</span>
-              <small>{outcome.confidenceLabel} ({outcome.confidenceScore.toFixed(2)}) · {outcome.confidenceNotes.join(" · ")}</small>
-            </div>
-            <div className="detail-row slim">
-              <span>Stale-Line Analysis</span>
-              <small>{outcome.staleSummary} · Sharp deviation {outcome.sharpDeviation.toFixed(2)}pp</small>
-            </div>
-            <div className="detail-row slim">
-              <span>Market Timing Summary</span>
-              <small>{outcome.timingSignal.label} ({outcome.timingSignal.urgencyScore.toFixed(2)}) · {outcome.timingSignal.reasons.join(" · ") || outcome.movementSummary}</small>
-            </div>
-            <div className="detail-row slim">
-              <span>Score Breakdown</span>
-              <small>
-                Edge {((outcome.rankingBreakdown?.componentContributions.edge || 0) * 100).toFixed(1)} ·
-                Confidence {((outcome.rankingBreakdown?.componentContributions.confidence || 0) * 100).toFixed(1)} ·
-                Coverage {((outcome.rankingBreakdown?.componentContributions.coverage || 0) * 100).toFixed(1)} ·
-                Stale {((outcome.rankingBreakdown?.componentContributions.stale || 0) * 100).toFixed(1)}
-              </small>
-            </div>
-          </div>
-
-          <div className="detail-table">
-            {outcome.books.map((book) => (
-              <div key={`${outcome.name}-${book.bookKey}`} className="detail-row detail-grid">
-                <span>
-                  {book.title} <small className="muted">({book.tier}, {book.weight.toFixed(2)}x)</small>
-                </span>
-                <strong>{event.market === "h2h" ? formatAmerican(book.priceAmerican) : `${formatPoint(book.point)} (${formatAmerican(book.priceAmerican)})`}</strong>
-                <small>Implied Prob {formatProb(book.impliedProb)}</small>
-                <small>No-Vig Prob {formatProb(book.impliedProbNoVig)}</small>
-                <small>Fair Prob {formatProb(outcome.fairProb)}</small>
-                <small>Fair Price {formatAmerican(outcome.fairAmerican)}</small>
-                <small>Edge {book.edgePct.toFixed(2)}%</small>
-                <small>
-                  {book.evReliability === "suppressed"
-                    ? "Expected Value suppressed for this market context"
-                    : book.evQualified
-                      ? `Expected Value ${book.evPct.toFixed(2)}%`
-                      : `Expected Value ${book.evPct.toFixed(2)}% (qualified)`}
-                </small>
-                <small>{book.staleSummary || "In line with market"}{book.staleFlag && book.staleFlag !== "none" ? ` · ${book.staleFlag}` : ""}</small>
+              <div className={styles.priceCard}>
+                <span className={styles.eyebrow}>Best Available</span>
+                <strong>{featuredBook ? formatOffer(event.market, featuredBook) : "--"}</strong>
+                <small>{featuredBook ? featuredBook.title : "No live book"}</small>
               </div>
-            ))}
-          </div>
-
-          <EventTimelinePanel
-            outcome={outcome.name}
-            timeline={timelineByOutcome.get(outcome.name)?.timeline || null}
-            pressureSignals={timelineByOutcome.get(outcome.name)?.pressureSignals || []}
-          />
-        </section>
-      ))}
-
-      <section className="detail-section">
-        <h3>Book Responsiveness Summary</h3>
-        <div className="detail-table">
-          {board.bookBehavior.slice(0, 10).map((row) => (
-            <div key={`book-behavior-${row.bookKey}`} className="detail-row slim">
-              <span>{row.title} ({row.tier})</span>
-              <small>Lag {Math.round(row.lagRate * 100)}% · Stale {Math.round(row.staleRate * 100)}% · Move-first {Math.round(row.moveFirstRate * 100)}% · {row.summary}</small>
             </div>
-          ))}
+
+            <div className={styles.noteCard}>
+              <span className={styles.eyebrow}>Editors Note</span>
+              <p className={styles.noteCopy}>
+                {featuredBook
+                  ? `${featuredBook.title} is pricing ${featuredOutcome.name} ${edgeDeltaText(featuredBook.edgePct)}.`
+                  : "No standout dislocation is available on the current board."}
+              </p>
+              <div className={styles.noteMeta}>
+                <EdgeBadge edgePct={featuredBook?.edgePct ?? 0} />
+                {featuredOutcome.timingSignal.label !== "Weak timing signal" ? <MovementPill outcome={featuredOutcome} /> : null}
+                <ConfidencePill label={featuredOutcome.confidenceLabel} />
+              </div>
+            </div>
+
+            {methodologyCopy ? <p className={styles.methodology}>{methodologyCopy}</p> : null}
+
+            <div className={styles.backRow}>
+              <Link href={`/?league=${league}&market=${event.market}&model=${model}`} className="app-link">
+                Back to board
+              </Link>
+            </div>
+          </section>
+
+          <section className={styles.comparisonCard}>
+            {event.outcomes.map((outcome) => {
+              const timelineEntry = timelineByOutcome.get(outcome.name);
+              const showSignals =
+                (timelineEntry?.timeline?.points.length ?? 0) >= 2 || Boolean(timelineEntry?.pressureSignals?.length);
+
+              return (
+                <section key={outcome.name} className={styles.outcomeSection}>
+                  <div className={styles.outcomeHeader}>
+                    <div>
+                      <h2 className={styles.outcomeTitle}>{outcome.name}</h2>
+                      <p className={styles.outcomeCopy}>{outcome.explanation}</p>
+                    </div>
+                    <div className={styles.outcomePills}>
+                      <EdgeBadge edgePct={strongestBook(outcome)?.edgePct ?? 0} />
+                      {outcome.timingSignal.label !== "Weak timing signal" ? <MovementPill outcome={outcome} /> : null}
+                    </div>
+                  </div>
+
+                  <div className={styles.bookTable}>
+                    <div className={styles.bookTableHeader}>
+                      <span>Sportsbook</span>
+                      <span>Line</span>
+                      <span>Edge</span>
+                      <span>Role</span>
+                    </div>
+                    {sortBooks(outcome.books).map((book) => (
+                      <div key={`${outcome.name}-${book.bookKey}`} className={styles.bookRow}>
+                        <div className={styles.bookPrimary}>
+                          <strong>{book.title}</strong>
+                          <small>{book.isBestPrice ? "Best live line" : "Live board listing"}</small>
+                        </div>
+                        <div className={styles.bookLine}>{formatOffer(event.market, book)}</div>
+                        <div className={styles.bookEdge}>
+                          <EdgeBadge edgePct={book.edgePct} />
+                        </div>
+                        <div className={styles.bookRole}>
+                          <span>{formatRole(book)}</span>
+                          {book.staleSummary && book.staleFlag !== "none" ? <small>{book.staleSummary}</small> : null}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {showSignals ? (
+                    <details className={styles.disclosure}>
+                      <summary className={styles.disclosureSummary}>Market signals</summary>
+                      <div className={styles.disclosureBody}>
+                        <EventTimelinePanel
+                          outcome={outcome.name}
+                          timeline={timelineEntry?.timeline || null}
+                          pressureSignals={timelineEntry?.pressureSignals || []}
+                        />
+                      </div>
+                    </details>
+                  ) : null}
+                </section>
+              );
+            })}
+
+            {(event.excludedBooks.length || methodologyCopy) ? (
+              <details className={styles.disclosure}>
+                <summary className={styles.disclosureSummary}>Board details</summary>
+                <div className={styles.disclosureBody}>
+                  {methodologyCopy ? <p className={styles.disclosureCopy}>{methodologyCopy}</p> : null}
+                  {event.excludedBooks.length ? (
+                    <div className={styles.disclosureList}>
+                      {event.excludedBooks.map((book) => (
+                        <div key={`${event.id}-${book.bookKey}`} className={styles.disclosureRow}>
+                          <span>{book.title}</span>
+                          <small>{book.reason === "point_mismatch" ? "Equivalent line mismatch" : "Market unavailable"}</small>
+                        </div>
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
+              </details>
+            ) : null}
+          </section>
         </div>
-      </section>
-    </main>
+      </div>
+    </AppContainer>
   );
 }

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import layoutStyles from "./layout.module.css";
+import { BrandMark } from "@/components/layout/BrandMark";
 
 type AppHeaderProps = {
   eyebrow: string;
@@ -13,8 +14,13 @@ export function AppHeader({ eyebrow, title, subtitle, breadcrumbs }: AppHeaderPr
     <header className={layoutStyles.header}>
       <div className={layoutStyles.headerInner}>
         <div className={layoutStyles.brand}>
-          <span className={layoutStyles.eyebrow}>{eyebrow}</span>
-          <h1 className={layoutStyles.title}>{title}</h1>
+          <div className={layoutStyles.brandRow}>
+            <BrandMark compact />
+            <div className={layoutStyles.brandCopy}>
+              <span className={layoutStyles.eyebrow}>{eyebrow}</span>
+              <p className={layoutStyles.title}>{title}</p>
+            </div>
+          </div>
           <p className={layoutStyles.subtitle}>{subtitle}</p>
         </div>
         {breadcrumbs?.length ? (

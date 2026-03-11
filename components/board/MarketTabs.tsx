@@ -9,10 +9,13 @@ const OPTIONS = [
 
 export function MarketTabs({
   value,
-  onChange
+  onChange,
+  availableMarkets
 }: {
   value: FairBoardResponse["market"];
   onChange: (value: FairBoardResponse["market"]) => void;
+  availableMarkets?: FairBoardResponse["activeMarkets"];
 }) {
-  return <SegmentedControl value={value} options={OPTIONS} onChange={onChange} ariaLabel="Market" />;
+  const options = OPTIONS.filter((option) => !availableMarkets || availableMarkets.includes(option.value));
+  return <SegmentedControl value={value} options={options} onChange={onChange} ariaLabel="Market" />;
 }

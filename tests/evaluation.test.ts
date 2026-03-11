@@ -7,6 +7,7 @@ import type { FairEvent } from "../lib/server/odds/types";
 function makeEvent(): FairEvent {
   return {
     id: "evt",
+    baseEventId: "evt",
     commenceTime: "2099-01-01T00:00:00.000Z",
     homeTeam: "Home",
     awayTeam: "Away",

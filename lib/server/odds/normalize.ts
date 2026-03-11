@@ -73,6 +73,8 @@ export function toEventOddsList(params: { normalized: NormalizedEventOdds[]; spo
     commenceTime: event.event.commenceTime,
     homeTeam: event.event.home.name,
     awayTeam: event.event.away.name,
+    homeLogoUrl: event.event.home.logoUrl,
+    awayLogoUrl: event.event.away.logoUrl,
     sportKey,
     books: event.books.map((book) => ({
       bookKey: book.book.key,

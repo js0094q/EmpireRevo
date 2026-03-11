@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "EmpirePicks",
-  description: "Live market intelligence powered by weighted sportsbook consensus.",
+  description: "Compare live sportsbook prices, consensus fair value, and the market's biggest pricing gaps.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

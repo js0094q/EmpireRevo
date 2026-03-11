@@ -8,6 +8,7 @@ function mockEvent(id: string, opts?: { edge?: number; ev?: number; commenceTime
   const ev = opts?.ev ?? 2.1;
   return {
     id,
+    baseEventId: id,
     commenceTime: opts?.commenceTime ?? "2099-01-01T00:00:00.000Z",
     homeTeam: "Home",
     awayTeam: "Away",

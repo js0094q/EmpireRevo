@@ -1,7 +1,8 @@
 import { OddsGridClient } from "@/app/ui-client";
 import { ErrorState } from "@/components/board/ErrorState";
-import { fetchFairBoardServer, hasOddsKey } from "@/lib/server/odds/pageData";
+import { fetchFairBoardPageData, hasOddsKey } from "@/lib/server/odds/pageData";
 import { sportKeyToLeague } from "@/lib/server/odds/client";
+import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
@@ -38,7 +39,7 @@ export default async function GamesPage({ searchParams }: { searchParams?: Promi
       : "weighted";
   const windowHours = params.window === "today" ? 12 : 24;
 
-  const result = await fetchFairBoardServer({
+  const result = await fetchFairBoardPageData({
     league,
     market,
     model,
@@ -71,13 +72,33 @@ export default async function GamesPage({ searchParams }: { searchParams?: Promi
     return <ErrorState title={title} message={message} hint={hint} />;
   }
 
-  const board = result.board;
-  if (!board || !board.events.length) {
+  const pageData = result.board;
+  if (!pageData) {
     return (
       <ErrorState
-        title="No books currently offer this market"
-        message="Try another league, market, or time window."
-        hint="The schedule loaded, but no comparable offers were available for the selected view."
+        title="Games board unavailable"
+        message="Unexpected error while loading the game board."
+        hint="Missing board payload."
+      />
+    );
+  }
+
+  if (pageData.resolvedMarket !== market) {
+    const nextParams = new URLSearchParams();
+    nextParams.set("league", league);
+    nextParams.set("market", pageData.resolvedMarket);
+    if (params.window === "today") nextParams.set("window", "today");
+    if (model !== "weighted") nextParams.set("model", model);
+    redirect(`/games?${nextParams.toString()}`);
+  }
+
+  const board = pageData.board;
+  if (!board.events.length) {
+    return (
+      <ErrorState
+        title="No live lines available"
+        message="Try another league or check back when more books are posting."
+        hint="EmpirePicks only shows markets with live comparable prices."
       />
     );
   }

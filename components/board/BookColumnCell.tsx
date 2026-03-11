@@ -18,7 +18,9 @@ export function BookColumnCell({
     <div className={cn(styles.detailRow, book.isBestPrice && styles.detailRowBest)}>
       <div>
         <div className={styles.bookLabel}>{book.title}</div>
-        <div className={styles.bookMeta}>{book.tier} book · weight {book.weight.toFixed(2)}x</div>
+        <div className={styles.bookMeta}>
+          {book.tier === "sharp" ? "Sharp market maker" : book.tier} · weight {book.weight.toFixed(2)}x
+        </div>
       </div>
       <div className={styles.bookOdds}>{formatOffer(event.market, book)}</div>
       <EdgeBadge edgePct={book.edgePct} />

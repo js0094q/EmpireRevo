@@ -6,6 +6,7 @@ import { filterEvents, pinnedEventMetrics, sortEvents } from "../components/boar
 function event(id: string, pinnedEdge: number, globalEdge: number): FairEvent {
   return {
     id,
+    baseEventId: id,
     commenceTime: "2099-01-01T00:00:00.000Z",
     homeTeam: "Home",
     awayTeam: "Away",
