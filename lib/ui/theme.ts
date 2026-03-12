@@ -2,18 +2,18 @@ import type { FairBoardResponse } from "@/lib/server/odds/types";
 
 export const themeTokens = {
   colors: {
-    background: "#070b10",
-    surface: "#0d121a",
-    surfaceMuted: "#121923",
-    text: "#f1f4f7",
-    textMuted: "#9ea8b5",
-    textDim: "#6f7986",
-    accent: "#64abff",
-    positive: "#65d6ad",
-    warning: "#edb85e",
-    danger: "#f07c7c",
-    border: "rgba(255,255,255,0.08)",
-    highlight: "rgba(100,171,255,0.42)"
+    background: "#05080d",
+    surface: "#0e1520",
+    surfaceMuted: "#141e2b",
+    text: "#f3f7fb",
+    textMuted: "#a5afbc",
+    textDim: "#778293",
+    accent: "#6fb8ff",
+    positive: "#7ce3bf",
+    warning: "#f2c271",
+    danger: "#ff8d8d",
+    border: "rgba(255,255,255,0.1)",
+    highlight: "rgba(111,184,255,0.5)"
   },
   spacing: {
     xs: "0.35rem",

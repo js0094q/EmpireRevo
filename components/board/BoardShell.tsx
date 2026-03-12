@@ -23,6 +23,8 @@ import {
 } from "@/components/board/board-helpers";
 import { filterEvents, sortEvents } from "@/components/board/selectors";
 import { TeamAvatar } from "@/components/board/TeamAvatar";
+import { EdgeBadge } from "@/components/board/EdgeBadge";
+import { cn } from "@/lib/ui/cn";
 
 type OpportunityCard = {
   key: string;
@@ -34,6 +36,7 @@ type OpportunityCard = {
   edgePct: number;
   edgeMagnitude: number;
   event: FairBoardResponse["events"][number];
+  outcome: FairBoardResponse["events"][number]["outcomes"][number];
 };
 
 function joinTitles(values: string[]): string {
@@ -44,6 +47,13 @@ function joinTitles(values: string[]): string {
 
 function edgeDeltaText(edgePct: number): string {
   return `${Math.abs(edgePct).toFixed(2)}% ${edgePct >= 0 ? "above" : "below"} fair value`;
+}
+
+function firstSentence(text: string): string {
+  const delimiters = [". ", "! ", "? "];
+  const indexes = delimiters.map((delimiter) => text.indexOf(delimiter)).filter((index) => index >= 0);
+  const end = indexes.length ? Math.min(...indexes) + 1 : -1;
+  return end > 0 ? text.slice(0, end) : text;
 }
 
 type BoardShellProps = {
@@ -100,7 +110,8 @@ export function BoardShell({ board, league, windowKey, mode = "board" }: BoardSh
 
   const orderedEvents = useMemo(() => sortEvents(filteredEvents, sortBy), [filteredEvents, sortBy]);
   const topEvent = orderedEvents[0] ?? null;
-  const opportunities = useMemo<OpportunityCard[]>(
+
+  const rankedOpportunities = useMemo<OpportunityCard[]>(
     () =>
       filteredEvents
         .flatMap((event) =>
@@ -116,23 +127,48 @@ export function BoardShell({ board, league, windowKey, mode = "board" }: BoardSh
               book: book.title,
               edgePct: book.edgePct,
               edgeMagnitude: Math.abs(book.edgePct),
-              event
+              event,
+              outcome
             };
           })
         )
         .filter((entry): entry is OpportunityCard => Boolean(entry))
-        .sort((a, b) => b.edgeMagnitude - a.edgeMagnitude || Date.parse(a.event.commenceTime) - Date.parse(b.event.commenceTime))
-        .slice(0, 3),
+        .sort((a, b) => b.edgeMagnitude - a.edgeMagnitude || Date.parse(a.event.commenceTime) - Date.parse(b.event.commenceTime)),
     [filteredEvents]
   );
-  const featuredOpportunity = opportunities[0] ?? null;
-  const featuredEvent = featuredOpportunity ? orderedEvents.find((event) => event.id === featuredOpportunity.eventId) ?? null : null;
-  const featuredOutcome = featuredEvent ? strongestOutcome(featuredEvent) : topEvent ? topOutcome(topEvent) : null;
+
+  const opportunities = rankedOpportunities.slice(0, 3);
+  const featuredOpportunity = rankedOpportunities.find((item) => item.edgePct > 0) ?? rankedOpportunities[0] ?? null;
+  const featuredEvent = featuredOpportunity
+    ? orderedEvents.find((event) => event.id === featuredOpportunity.eventId) ?? null
+    : topEvent;
+  const featuredOutcome = featuredOpportunity?.outcome ?? (featuredEvent ? topOutcome(featuredEvent) : null);
   const currentMarketAvailability = board.marketAvailability.find((entry) => entry.market === board.market) ?? null;
   const limitedMarkets = board.marketAvailability.filter((entry) => entry.status === "limited");
   const methodologyCopy = board.sharpBooksUsed.length
-    ? `Consensus fair prices lean on sharper market-making books when available, including ${joinTitles(board.sharpBooksUsed.slice(0, 3))}.`
+    ? `Consensus fair prices prioritize market-making books such as ${joinTitles(board.sharpBooksUsed.slice(0, 3))}.`
     : null;
+
+  const highValueCount = rankedOpportunities.filter((item) => item.edgePct >= 1).length;
+  const positiveSignalCount = rankedOpportunities.filter((item) => item.edgePct >= 0.5).length;
+  const negativeSignalCount = rankedOpportunities.filter((item) => item.edgePct <= -0.5).length;
+  const likelyClosingCount = filteredEvents.filter((event) => event.timingLabel === "Likely closing").length;
+  const weakTimingCount = filteredEvents.filter((event) => event.timingLabel === "Weak timing signal").length;
+  const averageCoveragePct =
+    filteredEvents.length > 0
+      ? (filteredEvents.reduce((sum, event) => sum + (event.totalBookCount ? event.contributingBookCount / event.totalBookCount : 0), 0) /
+          filteredEvents.length) *
+        100
+      : 0;
+
+  const marketSummary = featuredOpportunity
+    ? `${formatMarketLabel(board.market)} markets show ${orderedEvents.length} active games, with ${highValueCount} opportunities currently above a +1.00% edge threshold. ${featuredOpportunity.team} at ${featuredOpportunity.book} is leading the board at ${edgeDeltaText(featuredOpportunity.edgePct)}.`
+    : `${formatMarketLabel(board.market)} markets are live with ${orderedEvents.length} active games, but no clear dislocations under current filters.`;
+
+  const analysisContext =
+    weakTimingCount > 0
+      ? `${weakTimingCount} matchups are currently tagged with weak timing signals, so prioritize price quality over urgency on those spots.`
+      : "Timing pressure is stable across the current board, with no broad weak-signal cluster right now.";
 
   return (
     <AppContainer>
@@ -143,106 +179,142 @@ export function BoardShell({ board, league, windowKey, mode = "board" }: BoardSh
           subtitle={
             mode === "games"
               ? "Focused slate view with cleaner market filters and reliable event links."
-              : "Compare best line, consensus fair price, and edge in one scan."
+              : "Market intelligence first, then scanner-level line shopping detail."
           }
           breadcrumbs={mode === "games" ? [{ label: "Board", href: "/" }, { label: "Games" }] : undefined}
         />
 
         <div className={styles.stack}>
-          <section className={styles.hero}>
-            <div className={styles.heroPanel}>
-              <div className={styles.heroBrand}>
-                <div className={styles.heroBrandTop}>
-                  <BrandMark />
-                  <span className={styles.heroKicker}>Live Board</span>
+          <section className={styles.intelligenceGrid}>
+            <section className={styles.summaryPanel}>
+              <div className={styles.summaryHeader}>
+                <div>
+                  <div className={styles.sectionEyebrow}>Market Summary</div>
+                  <h1 className={styles.summaryTitle}>Live Market Intelligence</h1>
+                  <p className={styles.summaryLead}>Spot where books are disconnected from fair value before drilling into row-level pricing.</p>
                 </div>
-                <h1 className={styles.heroTitle}>EmpirePicks</h1>
-                <p className={styles.heroSectionTitle}>Live Line Shopping</p>
-                <p className={styles.heroSupport}>Value Focused Betting Lines</p>
-                <p className={styles.heroDescription}>
-                  Compare live sportsbook prices, estimate consensus fair value, and spot the market&apos;s biggest pricing gaps.
-                </p>
-                <p className={styles.heroTimestamp}>Updated {formatUpdatedLabel(board.updatedAt)}</p>
+                <div className={styles.summaryBrand}>
+                  <BrandMark />
+                  <span className={styles.summaryTimestamp}>Updated {formatUpdatedLabel(board.updatedAt)}</span>
+                </div>
               </div>
 
-              <div className={styles.heroMetrics}>
-                <div className={styles.metric}>
+              <div className={styles.metricGrid}>
+                <div className={styles.metricCard}>
                   <span className={styles.metricLabel}>Active games</span>
                   <span className={styles.metricValue}>{orderedEvents.length}</span>
                 </div>
-                <div className={styles.metric}>
+                <div className={styles.metricCard}>
                   <span className={styles.metricLabel}>Best edge</span>
                   <span className={styles.metricValue}>{featuredOpportunity ? `${featuredOpportunity.edgeMagnitude.toFixed(2)}%` : "--"}</span>
                 </div>
-                <div className={styles.metric}>
-                  <span className={styles.metricLabel}>High value opportunities</span>
-                  <span className={styles.metricValue}>{opportunities.length}</span>
+                <div className={styles.metricCard}>
+                  <span className={styles.metricLabel}>High-value opportunities</span>
+                  <span className={styles.metricValue}>{highValueCount}</span>
+                </div>
+                <div className={styles.metricCard}>
+                  <span className={styles.metricLabel}>Coverage</span>
+                  <span className={styles.metricValue}>{`${averageCoveragePct.toFixed(0)}%`}</span>
                 </div>
               </div>
 
-              <div className={styles.definitionGrid}>
-                <div className={styles.definitionItem}>
-                  <span className={styles.definitionLabel}>Best Line</span>
-                  <span className={styles.definitionCopy}>Strongest live sportsbook price available.</span>
-                </div>
-                <div className={styles.definitionItem}>
-                  <span className={styles.definitionLabel}>Consensus Fair Price</span>
-                  <span className={styles.definitionCopy}>No-vig estimate built from sharper books when they are live.</span>
-                </div>
-                <div className={styles.definitionItem}>
-                  <span className={styles.definitionLabel}>Edge</span>
-                  <span className={styles.definitionCopy}>Gap between the live sportsbook line and consensus fair value.</span>
-                </div>
+              <div className={styles.pulseRow}>
+                <Pill tone="positive">Positive edges {positiveSignalCount}</Pill>
+                <Pill tone="danger">Negative edges {negativeSignalCount}</Pill>
+                <Pill tone={likelyClosingCount > 0 ? "warning" : "neutral"}>Likely closing {likelyClosingCount}</Pill>
               </div>
+            </section>
 
-              <div className={styles.editorCard}>
-                <div className={styles.tableHeadTitle}>Editors Note</div>
-                <p className={styles.editorCopy}>
-                  {featuredOpportunity && featuredOutcome
-                    ? `${featuredOpportunity.team} at ${featuredOpportunity.book} is the clearest current gap, with ${edgeDeltaText(
-                        featuredOpportunity.edgePct
-                      )}.`
-                    : "The board is live, but there are no standout dislocations under the current filters."}
-                </p>
-                {opportunities.length ? (
-                  <div className={styles.editorList}>
-                    {opportunities.map((item, index) => (
-                      <button
-                        key={`editor-${item.key}`}
-                        className={styles.editorListItem}
-                        onClick={() => {
-                          setExpandedEventId(item.eventId);
-                          setDrawerEventId(null);
-                        }}
-                      >
-                        <span className={styles.editorRank}>0{index + 1}</span>
-                        <span className={styles.editorListCopy}>
-                          {item.matchup}
-                          <small>
-                            {item.team} at {item.book} · {edgeDeltaText(item.edgePct)}
-                          </small>
-                        </span>
-                      </button>
-                    ))}
+            <aside className={styles.featuredPanel}>
+              <div className={styles.sectionEyebrow}>Featured Opportunity</div>
+              {featuredOpportunity && featuredEvent && featuredOutcome ? (
+                <button
+                  className={styles.featuredButton}
+                  onClick={() => {
+                    setExpandedEventId(featuredOpportunity.eventId);
+                    setDrawerEventId(null);
+                  }}
+                >
+                  <div className={styles.featuredTopRow}>
+                    <div className={styles.matchupTeams}>
+                      <TeamAvatar name={featuredEvent.awayTeam} logoUrl={featuredEvent.awayLogoUrl} size="md" showName={false} />
+                      <TeamAvatar name={featuredEvent.homeTeam} logoUrl={featuredEvent.homeLogoUrl} size="md" showName={false} />
+                    </div>
+                    <EdgeBadge edgePct={featuredOpportunity.edgePct} size="lg" />
                   </div>
-                ) : null}
-              </div>
+                  <div className={styles.featuredMatchup}>{featuredOpportunity.matchup}</div>
+                  <div className={styles.featuredMeta}>
+                    <span>{featuredOpportunity.team}</span>
+                    <span>{featuredOpportunity.book}</span>
+                    <span>{featuredOutcome.timingSignal.label}</span>
+                  </div>
+                  <p className={styles.featuredCopy}>{firstSentence(featuredOutcome.explanation)}</p>
+                </button>
+              ) : (
+                <div className={styles.featuredEmpty}>No featured opportunity under the current filters.</div>
+              )}
+            </aside>
+          </section>
 
-              {methodologyCopy ? <p className={styles.methodologyNote}>{methodologyCopy}</p> : null}
+          <section className={styles.analysisPanel}>
+            <div className={styles.analysisHeader}>
+              <div>
+                <p className={styles.sectionEyebrow}>Editors Note</p>
+                <h2 className={styles.sectionTitle}>Curated board read</h2>
+              </div>
+              {featuredOpportunity ? <EdgeBadge edgePct={featuredOpportunity.edgePct} /> : null}
             </div>
 
-            <aside className={styles.heroAside}>
-              <h3>High Value Opportunities</h3>
-              <div className={styles.opportunityList}>
+            <p className={styles.analysisCopy}>{marketSummary}</p>
+            {methodologyCopy ? <p className={styles.analysisContext}>{methodologyCopy}</p> : null}
+            <p className={styles.analysisContext}>{analysisContext}</p>
+
+            {opportunities.length ? (
+              <div className={styles.analysisList}>
+                {opportunities.map((item, index) => (
+                  <button
+                    key={`editor-${item.key}`}
+                    className={styles.analysisItem}
+                    onClick={() => {
+                      setExpandedEventId(item.eventId);
+                      setDrawerEventId(null);
+                    }}
+                  >
+                    <span className={styles.analysisRank}>{`0${index + 1}`}</span>
+                    <span className={styles.analysisItemBody}>
+                      <span className={styles.analysisItemTop}>
+                        <strong>{item.matchup}</strong>
+                        <EdgeBadge edgePct={item.edgePct} />
+                      </span>
+                      <small>
+                        {item.team} at {item.book} · {edgeDeltaText(item.edgePct)} · {item.outcome.timingSignal.label}
+                      </small>
+                    </span>
+                  </button>
+                ))}
+              </div>
+            ) : null}
+          </section>
+
+          <section className={styles.opportunitySection}>
+            <div className={styles.sectionHeader}>
+              <div>
+                <p className={styles.sectionEyebrow}>Top Opportunities</p>
+                <h2 className={styles.sectionTitle}>Fast edge scan</h2>
+              </div>
+            </div>
+
+            {opportunities.length ? (
+              <div className={styles.opportunityGrid}>
                 {opportunities.map((item) => {
                   const event = item.event;
                   return (
                     <button
                       key={`opportunity-${item.key}`}
-                        className={styles.opportunityItem}
-                        onClick={() => {
-                          setExpandedEventId(item.eventId);
-                          setDrawerEventId(null);
+                      className={cn(styles.opportunityItem, item.edgePct >= 0 ? styles.opportunityItemPositive : styles.opportunityItemNegative)}
+                      onClick={() => {
+                        setExpandedEventId(item.eventId);
+                        setDrawerEventId(null);
                       }}
                     >
                       <div className={styles.opportunityTopRow}>
@@ -250,7 +322,7 @@ export function BoardShell({ board, league, windowKey, mode = "board" }: BoardSh
                           <TeamAvatar name={event.awayTeam} logoUrl={event.awayLogoUrl} size="sm" showName={false} />
                           <TeamAvatar name={event.homeTeam} logoUrl={event.homeLogoUrl} size="sm" showName={false} />
                         </div>
-                        <Pill tone={item.edgePct >= 0 ? "positive" : "danger"}>{`${item.edgePct >= 0 ? "+" : ""}${item.edgePct.toFixed(2)}%`}</Pill>
+                        <EdgeBadge edgePct={item.edgePct} />
                       </div>
                       <div className={styles.opportunityTop}>
                         <strong>{item.matchup}</strong>
@@ -264,61 +336,75 @@ export function BoardShell({ board, league, windowKey, mode = "board" }: BoardSh
                   );
                 })}
               </div>
-            </aside>
+            ) : (
+              <p className={styles.sectionMuted}>No standout opportunities right now. Use filters below to expand the board.</p>
+            )}
           </section>
 
-          <BoardToolbar
-            league={league}
-            market={board.market}
-            marketAvailability={board.marketAvailability}
-            windowKey={windowKey}
-            sortBy={sortBy}
-            search={search}
-            side={side}
-            positiveOnly={positiveOnly}
-            onLeagueChange={(value) => replaceParam("league", value)}
-            onMarketChange={(value) => replaceParam("market", value)}
-            onWindowChange={(value) => replaceParam("window", value)}
-            onSortChange={setSortBy}
-            onSearchChange={setSearch}
-            onSideChange={setSide}
-            onTogglePositive={() => setPositiveOnly((value) => !value)}
-            onRefresh={() => router.refresh()}
-          />
+          <section className={styles.liveBoardSection}>
+            <div className={styles.liveBoardHeader}>
+              <div>
+                <p className={styles.sectionEyebrow}>Live Board</p>
+                <h2 className={styles.sectionTitle}>Scanner</h2>
+                <p className={styles.sectionMuted}>
+                  Search, sort, and expand matchups to inspect full book-by-book pricing without leaving the board.
+                </p>
+              </div>
+            </div>
 
-          {currentMarketAvailability?.status === "limited" ? (
-            <p className={styles.marketNote}>
-              {formatMarketLabel(board.market)} has limited live availability right now. EmpirePicks is showing the board only where books are hanging comparable lines.
-            </p>
-          ) : limitedMarkets.length ? (
-            <p className={styles.marketNote}>
-              {joinTitles(limitedMarkets.map((entry) => formatMarketLabel(entry.market)))} currently have limited live availability.
-            </p>
-          ) : null}
-
-          {orderedEvents.length ? (
-            <BoardTable
-              events={orderedEvents}
-              expandedEventId={expandedEventId}
-              drawerEventId={drawerEventId}
+            <BoardToolbar
               league={league}
-              model={board.model}
-              onToggleExpanded={(eventId) => setExpandedEventId((current) => (current === eventId ? null : eventId))}
-              onOpenDrawer={setDrawerEventId}
-              onCloseDrawer={() => setDrawerEventId(null)}
+              market={board.market}
+              marketAvailability={board.marketAvailability}
+              windowKey={windowKey}
+              sortBy={sortBy}
+              search={search}
+              side={side}
+              positiveOnly={positiveOnly}
+              onLeagueChange={(value) => replaceParam("league", value)}
+              onMarketChange={(value) => replaceParam("market", value)}
+              onWindowChange={(value) => replaceParam("window", value)}
+              onSortChange={setSortBy}
+              onSearchChange={setSearch}
+              onSideChange={setSide}
+              onTogglePositive={() => setPositiveOnly((value) => !value)}
+              onRefresh={() => router.refresh()}
             />
-          ) : (
-            <EmptyState
-              title="No games match the current filters"
-              message="Try a broader search, switch market, or clear the value-only filter."
-              actionLabel="Reset filters"
-              onAction={() => {
-                setSearch("");
-                setPositiveOnly(false);
-                setSide("all");
-              }}
-            />
-          )}
+
+            {currentMarketAvailability?.status === "limited" ? (
+              <p className={styles.marketNote}>
+                {formatMarketLabel(board.market)} has limited live availability right now. EmpirePicks is showing the board only where books are hanging comparable lines.
+              </p>
+            ) : limitedMarkets.length ? (
+              <p className={styles.marketNote}>
+                {joinTitles(limitedMarkets.map((entry) => formatMarketLabel(entry.market)))} currently have limited live availability.
+              </p>
+            ) : null}
+
+            {orderedEvents.length ? (
+              <BoardTable
+                events={orderedEvents}
+                expandedEventId={expandedEventId}
+                drawerEventId={drawerEventId}
+                league={league}
+                model={board.model}
+                onToggleExpanded={(eventId) => setExpandedEventId((current) => (current === eventId ? null : eventId))}
+                onOpenDrawer={setDrawerEventId}
+                onCloseDrawer={() => setDrawerEventId(null)}
+              />
+            ) : (
+              <EmptyState
+                title="No games match the current filters"
+                message="Try a broader search, switch market, or clear the value-only filter."
+                actionLabel="Reset filters"
+                onAction={() => {
+                  setSearch("");
+                  setPositiveOnly(false);
+                  setSide("all");
+                }}
+              />
+            )}
+          </section>
 
           <p className={styles.disclosure}>{board.disclaimer}</p>
         </div>

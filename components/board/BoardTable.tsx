@@ -49,8 +49,8 @@ export function BoardTable({
     <section className={styles.tableWrap}>
       <div className={styles.tableHeader}>
         <div>
-          <div className={styles.tableHeadTitle}>Board</div>
-          <div className={styles.tableHeadMeta}>Scan the matchup, compare the live price to fair value, then open the books only when you need detail.</div>
+          <div className={styles.tableHeadTitle}>Scanner Rows</div>
+          <div className={styles.tableHeadMeta}>Compare best line vs fair value at row speed, then expand into full book detail only for actionable spots.</div>
         </div>
       </div>
 

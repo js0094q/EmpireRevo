@@ -82,36 +82,37 @@
   min-height: 1.75rem;
   padding: 0.28rem 0.55rem;
   border-radius: var(--radius-pill);
-  border: 1px solid var(--color-border);
-  background: rgba(255, 255, 255, 0.03);
-  color: var(--color-text-muted);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--color-text);
   font-size: 0.74rem;
+  font-weight: 600;
   letter-spacing: 0.02em;
   white-space: nowrap;
 }
 
 .pillPositive {
-  color: var(--color-positive);
-  border-color: rgba(101, 214, 173, 0.32);
-  background: rgba(101, 214, 173, 0.12);
+  color: color-mix(in srgb, var(--color-positive) 86%, white 14%);
+  border-color: color-mix(in srgb, var(--color-positive) 52%, transparent);
+  background: var(--color-positive-soft);
 }
 
 .pillWarning {
-  color: var(--color-warning);
-  border-color: rgba(237, 184, 94, 0.32);
-  background: rgba(237, 184, 94, 0.12);
+  color: color-mix(in srgb, var(--color-warning) 90%, white 10%);
+  border-color: color-mix(in srgb, var(--color-warning) 52%, transparent);
+  background: var(--color-warning-soft);
 }
 
 .pillDanger {
-  color: var(--color-danger);
-  border-color: rgba(240, 124, 124, 0.32);
-  background: rgba(240, 124, 124, 0.12);
+  color: color-mix(in srgb, var(--color-danger) 90%, white 10%);
+  border-color: color-mix(in srgb, var(--color-danger) 52%, transparent);
+  background: var(--color-danger-soft);
 }
 
 .pillAccent {
-  color: var(--color-accent);
-  border-color: rgba(100, 171, 255, 0.3);
-  background: rgba(100, 171, 255, 0.11);
+  color: color-mix(in srgb, var(--color-accent) 92%, white 8%);
+  border-color: color-mix(in srgb, var(--color-accent) 56%, transparent);
+  background: var(--color-accent-soft);
 }
 
 .field,

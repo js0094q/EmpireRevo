@@ -23,7 +23,13 @@ function BoardRowComponent({ event, expanded, onToggle, onOpenDrawer }: BoardRow
   const book = strongestBook(outcome);
 
   return (
-    <tr className={cn(styles.tableRow, expanded && styles.tableRowActive)}>
+    <tr
+      className={cn(
+        styles.tableRow,
+        book ? (book.edgePct >= 0 ? styles.tableRowPositive : styles.tableRowNegative) : null,
+        expanded && styles.tableRowActive
+      )}
+    >
       <td>
         <div className={styles.matchup}>
           <div className={styles.matchupTeams}>
