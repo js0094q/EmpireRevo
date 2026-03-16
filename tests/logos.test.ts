@@ -149,10 +149,14 @@ test("logo coverage resolves canonical teams for mapped pro leagues", () => {
 test("canonicalizeTeamName handles common feed aliases and punctuation", () => {
   assert.equal(canonicalizeTeamName("L.A. Clippers", "nba"), "Los Angeles Clippers");
   assert.equal(canonicalizeTeamName("N.Y. Knicks", "nba"), "New York Knicks");
+  assert.equal(canonicalizeTeamName("NYK", "nba"), "New York Knicks");
+  assert.equal(canonicalizeTeamName("GSW Warriors", "nba"), "Golden State Warriors");
   assert.equal(canonicalizeTeamName("SF 49ers", "nfl"), "San Francisco 49ers");
   assert.equal(canonicalizeTeamName("Washington Football Team", "nfl"), "Washington Commanders");
   assert.equal(canonicalizeTeamName("Saint Louis Blues", "nhl"), "St. Louis Blues");
+  assert.equal(canonicalizeTeamName("Utah Mammoth", "nhl"), "Utah Hockey Club");
   assert.equal(canonicalizeTeamName("D-Backs", "mlb"), "Arizona Diamondbacks");
+  assert.equal(canonicalizeTeamName("Sacramento Athletics", "mlb"), "Athletics");
 });
 
 test("resolveTeamLogo matches aliases to the same canonical asset", () => {
@@ -162,4 +166,9 @@ test("resolveTeamLogo matches aliases to the same canonical asset", () => {
   );
   assert.equal(resolveTeamLogo("N.Y. Knicks", "nba"), resolveTeamLogo("New York Knicks", "nba"));
   assert.equal(resolveTeamLogo("A's", "mlb"), resolveTeamLogo("Athletics", "mlb"));
+  assert.equal(resolveTeamLogo("TBL Lightning", "nhl"), resolveTeamLogo("Tampa Bay Lightning", "nhl"));
+});
+
+test("canonicalizeTeamName avoids ambiguous cross-league aliases without league context", () => {
+  assert.equal(canonicalizeTeamName("Rangers"), "Rangers");
 });

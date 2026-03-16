@@ -691,19 +691,37 @@
 }
 
 .teamAvatarFallback {
-  font-family: var(--font-mono);
-  font-size: 0.68rem;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  line-height: 1;
-  color: var(--color-text-muted);
+  width: 100%;
+  height: 100%;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid hsl(var(--team-avatar-fallback-hue, 214) 52% 56% / 0.45);
+  background:
+    radial-gradient(circle at 24% 20%, hsl(var(--team-avatar-fallback-hue, 214) 88% 74% / 0.45), transparent 60%),
+    linear-gradient(
+      165deg,
+      hsl(var(--team-avatar-fallback-hue, 214) 48% 34% / 0.95),
+      hsl(calc(var(--team-avatar-fallback-hue, 214) + 22) 62% 20% / 0.98)
+    );
 }
 
-.teamAvatarMd .teamAvatarFallback {
+.teamAvatarFallbackText {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  line-height: 1;
+  color: rgba(244, 248, 255, 0.94);
+  text-shadow: 0 1px 0 rgba(5, 8, 14, 0.45);
+}
+
+.teamAvatarMd .teamAvatarFallbackText {
   font-size: 0.74rem;
 }
 
-.teamAvatarLg .teamAvatarFallback {
+.teamAvatarLg .teamAvatarFallbackText {
   font-size: 0.88rem;
 }
 

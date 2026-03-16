@@ -115,7 +115,7 @@ function rawMarketPresence(event: NormalizedEventOdds, market: MarketKey, includ
     const keyLc = book.book.key.toLowerCase();
     if (includeBooks && !includeBooks.has(keyLc)) return false;
     const targetMarket = book.markets.find((entry) => entry.market === market);
-    return Boolean(targetMarket && targetMarket.outcomes.length >= 2);
+    return Boolean(targetMarket && targetMarket.outcomes.length > 0);
   });
 }
 
@@ -209,12 +209,31 @@ function groupBooksByPoint(params: {
 }
 
 function marketCenterPoint(groups: GroupedMarket[]): number | null {
-  const withPoints = groups.filter((group) => Number.isFinite(group.linePoint));
+  const withPoints = groups
+    .filter((group) => Number.isFinite(group.linePoint))
+    .slice()
+    .sort((a, b) => Number(a.linePoint ?? 0) - Number(b.linePoint ?? 0));
   if (!withPoints.length) return null;
-  const totalBooks = withPoints.reduce((sum, group) => sum + group.books.length, 0);
-  if (!totalBooks) return null;
-  const weightedPoint = withPoints.reduce((sum, group) => sum + Number(group.linePoint ?? 0) * group.books.length, 0);
-  return weightedPoint / totalBooks;
+  const totalWeight = withPoints.reduce((sum, group) => sum + group.books.length, 0);
+  if (!totalWeight) return null;
+
+  // Weighted median keeps center anchored to the most widely dealt points
+  // without letting fringe alt-lines pull the default too far.
+  let runningWeight = 0;
+  const halfway = totalWeight / 2;
+  for (let idx = 0; idx < withPoints.length; idx += 1) {
+    const current = withPoints[idx]!;
+    runningWeight += current.books.length;
+    if (runningWeight < halfway) continue;
+
+    if (runningWeight === halfway && withPoints[idx + 1]) {
+      const next = withPoints[idx + 1]!;
+      return (Number(current.linePoint ?? 0) + Number(next.linePoint ?? 0)) / 2;
+    }
+    return Number(current.linePoint ?? 0);
+  }
+
+  return Number(withPoints[withPoints.length - 1]?.linePoint ?? 0);
 }
 
 function qualityCoverageScore(group: GroupedMarket): number {
@@ -224,6 +243,14 @@ function qualityCoverageScore(group: GroupedMarket): number {
     if (book.tier === "mainstream") return sum + 2;
     if (book.tier === "promo") return sum + 1;
     return sum + 0.5;
+  }, 0);
+}
+
+function marketMakingCoverageScore(group: GroupedMarket): number {
+  return group.books.reduce((sum, book) => {
+    if (book.tier === "sharp") return sum + 2;
+    if (book.tier === "signal") return sum + 1;
+    return sum;
   }, 0);
 }
 
@@ -580,7 +607,9 @@ export function buildFairEventsForNormalizedEvent(options: {
         event,
         group,
         bookCoverage: group.books.length,
+        marketMakingCoverage: marketMakingCoverageScore(group),
         qualityScore: qualityCoverageScore(group),
+        consensusShare: marketRows.rows.length > 0 ? group.books.length / marketRows.rows.length : 0,
         pointDistance: centerPoint === null ? 0 : Math.abs((group.linePoint ?? centerPoint) - centerPoint)
       };
     })
@@ -591,17 +620,21 @@ export function buildFairEventsForNormalizedEvent(options: {
         event: FairEvent;
         group: GroupedMarket;
         bookCoverage: number;
+        marketMakingCoverage: number;
         qualityScore: number;
+        consensusShare: number;
         pointDistance: number;
       } => Boolean(entry)
     )
     .sort((a, b) => {
       const consensusDiff = b.bookCoverage - a.bookCoverage;
       if (consensusDiff) return consensusDiff;
+      const marketMakingDiff = b.marketMakingCoverage - a.marketMakingCoverage;
+      if (marketMakingDiff) return marketMakingDiff;
       const qualityDiff = b.qualityScore - a.qualityScore;
       if (qualityDiff) return qualityDiff;
-      const bookDiff = b.event.bookCount - a.event.bookCount;
-      if (bookDiff) return bookDiff;
+      const shareDiff = b.consensusShare - a.consensusShare;
+      if (shareDiff) return shareDiff;
       const centerDiff = a.pointDistance - b.pointDistance;
       if (centerDiff) return centerDiff;
       return b.event.maxAbsEdgePct - a.event.maxAbsEdgePct;
@@ -624,6 +657,8 @@ export function getMarketAvailabilityForBoard(options: {
     let feedEventCount = 0;
     let comparableEventCount = 0;
     let qualifiedEventCount = 0;
+    let comparableBookCount = 0;
+    let qualifiedBookCount = 0;
 
     for (const event of options.normalized) {
       if (rawMarketPresence(event, market, includeBooks)) {
@@ -637,18 +672,29 @@ export function getMarketAvailabilityForBoard(options: {
         includeBooks
       });
       const groups = groupBooksByPoint({ rows: marketRows.rows, market });
+      const maxGroupCoverage = groups.reduce((max, group) => Math.max(max, group.books.length), 0);
 
-      if (groups.some((group) => group.books.length >= limitedMinBooks)) {
+      if (maxGroupCoverage >= limitedMinBooks) {
         comparableEventCount += 1;
+        comparableBookCount += maxGroupCoverage;
       }
 
-      if (groups.some((group) => group.books.length >= minBooks)) {
+      if (maxGroupCoverage >= minBooks) {
         qualifiedEventCount += 1;
+        qualifiedBookCount += maxGroupCoverage;
       }
     }
 
+    // Larger slates need more than a single qualifying event to look "active";
+    // smaller slates stay usable with one fully comparable event.
+    const activeEventThreshold = feedEventCount >= 6 ? 2 : 1;
+    const activeBookThreshold = activeEventThreshold * minBooks;
     const status =
-      qualifiedEventCount > 0 ? "active" : comparableEventCount > 0 || feedEventCount > 0 ? "limited" : "unavailable";
+      qualifiedEventCount >= activeEventThreshold && qualifiedBookCount >= activeBookThreshold
+        ? "active"
+        : comparableEventCount > 0 || comparableBookCount > 0 || feedEventCount > 0
+          ? "limited"
+          : "unavailable";
 
     return {
       market,

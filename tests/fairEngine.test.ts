@@ -221,6 +221,56 @@ test("getMarketAvailabilityForBoard distinguishes active, limited, and unavailab
   );
 });
 
+test("getMarketAvailabilityForBoard keeps large-slate thin coverage as limited", () => {
+  const primary = buildEvent();
+  primary.event.id = "nba_primary";
+  primary.books.push({
+    book: { key: "fanduel", title: "FanDuel", tier: "mainstream", weight: 0.38, isSharpWeighted: false },
+    markets: [
+      {
+        market: "h2h",
+        lastUpdate: "2026-03-08T12:15:00.000Z",
+        outcomes: [
+          { name: "Boston Celtics", price: -118 },
+          { name: "New York Knicks", price: 102 }
+        ]
+      }
+    ]
+  });
+
+  const sparseEvents = Array.from({ length: 5 }, (_, idx) => {
+    const event = buildEvent();
+    event.event.id = `nba_sparse_${idx + 1}`;
+    event.books = [
+      {
+        book: { key: "pinnacle", title: "Pinnacle", tier: "sharp", weight: 1, isSharpWeighted: true },
+        markets: [
+          {
+            market: "h2h",
+            lastUpdate: "2026-03-08T12:00:00.000Z",
+            outcomes: [
+              { name: "Boston Celtics", price: -125 },
+              { name: "New York Knicks", price: 112 }
+            ]
+          }
+        ]
+      }
+    ];
+    return event;
+  });
+
+  const availability = getMarketAvailabilityForBoard({
+    normalized: [primary, ...sparseEvents],
+    model: "weighted",
+    minBooks: 3
+  });
+
+  const h2h = availability.find((entry) => entry.market === "h2h");
+  assert.equal(h2h?.feedEventCount, 6);
+  assert.equal(h2h?.qualifiedEventCount, 1);
+  assert.equal(h2h?.status, "limited");
+});
+
 test("representative spread point prefers broader consensus coverage over fringe groups", () => {
   const event = buildEvent();
   event.books.push({
@@ -261,5 +311,76 @@ test("representative spread point prefers broader consensus coverage over fringe
   assert.deepEqual(
     fairEvents.map((entry) => entry.linePoint),
     [-3.5, -4]
+  );
+});
+
+test("representative total point favors market-making quality over fringe pricing", () => {
+  const event = buildEvent();
+  event.books = [
+    {
+      book: { key: "pinnacle", title: "Pinnacle", tier: "sharp", weight: 1, isSharpWeighted: true },
+      markets: [
+        {
+          market: "totals",
+          lastUpdate: "2026-03-08T12:00:00.000Z",
+          outcomes: [
+            { name: "Over", price: -110, point: 228.5 },
+            { name: "Under", price: -110, point: 228.5 }
+          ]
+        }
+      ]
+    },
+    {
+      book: { key: "draftkings", title: "DraftKings", tier: "mainstream", weight: 0.4, isSharpWeighted: false },
+      markets: [
+        {
+          market: "totals",
+          lastUpdate: "2026-03-08T12:05:00.000Z",
+          outcomes: [
+            { name: "Over", price: -112, point: 228.5 },
+            { name: "Under", price: -108, point: 228.5 }
+          ]
+        }
+      ]
+    },
+    {
+      book: { key: "bovada", title: "Bovada", tier: "promo", weight: 0.18, isSharpWeighted: false },
+      markets: [
+        {
+          market: "totals",
+          lastUpdate: "2026-03-08T12:10:00.000Z",
+          outcomes: [
+            { name: "Over", price: 105, point: 229.5 },
+            { name: "Under", price: -125, point: 229.5 }
+          ]
+        }
+      ]
+    },
+    {
+      book: { key: "mybookie", title: "MyBookie", tier: "promo", weight: 0.15, isSharpWeighted: false },
+      markets: [
+        {
+          market: "totals",
+          lastUpdate: "2026-03-08T12:11:00.000Z",
+          outcomes: [
+            { name: "Over", price: 108, point: 229.5 },
+            { name: "Under", price: -128, point: 229.5 }
+          ]
+        }
+      ]
+    }
+  ];
+
+  const fairEvents = buildFairEventsForNormalizedEvent({
+    normalized: event,
+    sportKey: "basketball_nba",
+    market: "totals",
+    model: "weighted",
+    minBooks: 2
+  });
+
+  assert.deepEqual(
+    fairEvents.map((entry) => entry.linePoint),
+    [228.5, 229.5]
   );
 });
