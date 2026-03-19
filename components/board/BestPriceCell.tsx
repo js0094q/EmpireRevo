@@ -8,7 +8,7 @@ export function BestPriceCell({ event, outcome }: { event: FairEvent; outcome: F
 
   return (
     <div className={styles.priceCell}>
-      <span className={styles.cellLabel}>Best line</span>
+      <span className={styles.cellLabel}>Best Line</span>
       <span className={styles.cellValue}>{bestBook ? formatOffer(event.market, bestBook) : "--"}</span>
       <div className={styles.metaLine}>
         <Pill tone="accent">{outcome.name}</Pill>

@@ -9,9 +9,7 @@ import { Button } from "@/components/ui/Button";
 import { Drawer } from "@/components/ui/Drawer";
 import { BestPriceCell } from "@/components/board/BestPriceCell";
 import { FairOddsCell } from "@/components/board/FairOddsCell";
-import { EdgeBadge } from "@/components/board/EdgeBadge";
-import { ConfidencePill } from "@/components/board/ConfidencePill";
-import { MovementPill } from "@/components/board/MovementPill";
+import { EdgeBadge, getEdgeTierLabel } from "@/components/board/EdgeBadge";
 import { formatCommenceTime, formatMarketLabel, strongestBook, strongestOutcome } from "@/components/board/board-helpers";
 import { Pill } from "@/components/ui/Pill";
 import { TeamAvatar } from "@/components/board/TeamAvatar";
@@ -49,8 +47,8 @@ export function BoardTable({
     <section className={styles.tableWrap}>
       <div className={styles.tableHeader}>
         <div>
-          <div className={styles.tableHeadTitle}>Scanner Rows</div>
-          <div className={styles.tableHeadMeta}>Compare best line vs fair value at row speed, then expand into full book detail only for actionable spots.</div>
+          <div className={styles.tableHeadTitle}>Live Board</div>
+          <div className={styles.tableHeadMeta}>Matchups, best prices, fair value, and edge in one view.</div>
         </div>
       </div>
 
@@ -59,12 +57,11 @@ export function BoardTable({
           <thead>
             <tr>
               <th>Matchup</th>
-              <th>Top side</th>
-              <th>Best line</th>
-              <th>Fair price</th>
+              <th>Top Side</th>
+              <th>Best Line</th>
+              <th>Fair Value</th>
               <th>Edge</th>
-              <th>Market note</th>
-              <th />
+              <th>Details</th>
             </tr>
           </thead>
           <tbody>
@@ -80,7 +77,7 @@ export function BoardTable({
                   />
                   {expanded ? (
                     <tr className={styles.rowExpanded}>
-                      <td colSpan={7}>
+                      <td colSpan={6}>
                         <div className={styles.expandPanel}>
                           <BoardRowExpanded event={event} league={league} model={model} />
                         </div>
@@ -98,6 +95,7 @@ export function BoardTable({
         {events.map((event) => {
           const outcome = strongestOutcome(event);
           const book = strongestBook(outcome);
+          const edgeTierLabel = book && book.edgePct >= 0 ? getEdgeTierLabel(book.edgePct) : null;
 
           return (
             <article key={`card-${event.id}`} className={styles.card}>
@@ -124,15 +122,27 @@ export function BoardTable({
                 <FairOddsCell event={event} outcome={outcome} />
               </div>
 
-              <div className={styles.rowPills}>
-                <MovementPill outcome={outcome} />
-                <ConfidencePill label={event.confidenceLabel} />
+              <p className={styles.mobileDirective}>{`Best Bet: ${outcome.name}`}</p>
+
+              <div className={styles.mobileCardMeta}>
+                <Pill>{`Top Side: ${outcome.name}`}</Pill>
+                {book && (book.isSharpBook || book.tier === "sharp") ? (
+                  <span
+                    className={styles.sharpBookBadge}
+                    title="Sharp books reflect more efficient market pricing and are often used as reference points."
+                  >
+                    <span className={styles.sharpBookBadgeDot} aria-hidden="true" />
+                    Sharp Book
+                  </span>
+                ) : null}
+                {book ? <span className={styles.edgeContextNote}>{book.edgePct >= 0 ? "Better than market average" : "Overpriced at this book"}</span> : null}
+                {edgeTierLabel ? <span className={styles.edgeTierHint}>{edgeTierLabel}</span> : null}
               </div>
 
               <div className={styles.stateActions}>
                 <Button onClick={() => onOpenDrawer(event.id)}>View books</Button>
                 <Button variant="ghost" onClick={() => onToggleExpanded(event.id)}>
-                  {expandedEventId === event.id ? "Hide inline" : "Expand inline"}
+                  {expandedEventId === event.id ? "Hide details" : "Show details"}
                 </Button>
               </div>
 

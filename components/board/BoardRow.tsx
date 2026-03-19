@@ -3,8 +3,7 @@ import type { FairEvent } from "@/lib/server/odds/types";
 import styles from "./BoardShell.module.css";
 import { BestPriceCell } from "@/components/board/BestPriceCell";
 import { FairOddsCell } from "@/components/board/FairOddsCell";
-import { EdgeBadge } from "@/components/board/EdgeBadge";
-import { MovementPill } from "@/components/board/MovementPill";
+import { EdgeBadge, getEdgeTierLabel } from "@/components/board/EdgeBadge";
 import { Button } from "@/components/ui/Button";
 import { formatCommenceTime, formatMarketLabel, strongestBook, strongestOutcome } from "@/components/board/board-helpers";
 import { Pill } from "@/components/ui/Pill";
@@ -21,6 +20,7 @@ type BoardRowProps = {
 function BoardRowComponent({ event, expanded, onToggle, onOpenDrawer }: BoardRowProps) {
   const outcome = strongestOutcome(event);
   const book = strongestBook(outcome);
+  const edgeTierLabel = book && book.edgePct >= 0 ? getEdgeTierLabel(book.edgePct) : null;
 
   return (
     <tr
@@ -44,15 +44,25 @@ function BoardRowComponent({ event, expanded, onToggle, onOpenDrawer }: BoardRow
           </div>
           <div className={styles.rowPills}>
             <Pill tone="accent">{formatMarketLabel(event.market)}</Pill>
-            <Pill>{outcome.name}</Pill>
           </div>
         </div>
       </td>
       <td>
         <div className={styles.signalCell}>
-          <span className={styles.cellLabel}>Top side</span>
           <span className={styles.cellValue}>{outcome.name}</span>
-          <span className={styles.subtle}>{book ? `${book.title} has the largest current gap.` : "No live comparison available."}</span>
+          <span className={styles.topSideDirective}>{`Best Bet: ${outcome.name}`}</span>
+          <div className={styles.metaLine}>
+            <span className={styles.subtle}>{book ? `Best at ${book.title}` : "No live comparison available."}</span>
+            {book && (book.isSharpBook || book.tier === "sharp") ? (
+              <span
+                className={styles.sharpBookBadge}
+                title="Sharp books reflect more efficient market pricing and are often used as reference points."
+              >
+                <span className={styles.sharpBookBadgeDot} aria-hidden="true" />
+                Sharp Book
+              </span>
+            ) : null}
+          </div>
         </div>
       </td>
       <td>
@@ -64,22 +74,17 @@ function BoardRowComponent({ event, expanded, onToggle, onOpenDrawer }: BoardRow
       <td>
         <div className={styles.signalCell}>
           {book ? <EdgeBadge edgePct={book.edgePct} /> : <Pill>Edge --</Pill>}
-          {book ? <span className={styles.subtle}>{book.title}</span> : null}
-        </div>
-      </td>
-      <td>
-        <div className={styles.movementCell}>
-          <MovementPill outcome={outcome} />
-          <span className={styles.subtle}>{outcome.movementSummary}</span>
+          {book ? <span className={styles.subtle}>{`${book.title} vs Market Average`}</span> : null}
+          {book ? <span className={styles.edgeContextNote}>{book.edgePct >= 0 ? "Better than market average" : "Overpriced at this book"}</span> : null}
+          {edgeTierLabel ? <span className={styles.edgeTierHint}>{edgeTierLabel}</span> : null}
         </div>
       </td>
       <td className={styles.ctaCell}>
         <Button onClick={onToggle} active={expanded}>
-          {expanded ? "Hide books" : "Expand"}
+          {expanded ? "Hide details" : "Show details"}
         </Button>
-        <div style={{ height: 8 }} />
         <Button variant="ghost" onClick={onOpenDrawer}>
-          Quick view
+          Books
         </Button>
       </td>
     </tr>

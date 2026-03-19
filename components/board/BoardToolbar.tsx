@@ -60,28 +60,37 @@ export function BoardToolbar({
 }: BoardToolbarProps) {
   return (
     <section className={styles.toolbar}>
-      <div className={styles.toolbarRow}>
-        <div className={styles.toolbarLeft}>
-          <LeagueSelector value={league} onChange={onLeagueChange} />
-          <MarketTabs value={market} onChange={onMarketChange} marketAvailability={marketAvailability} />
-        </div>
-        <div className={styles.toolbarRight}>
-          <SegmentedControl value={windowKey} options={WINDOW_OPTIONS} onChange={onWindowChange} ariaLabel="Time window" />
-          <Button onClick={onRefresh}>Refresh</Button>
-        </div>
+      <div className={styles.toolbarGroup}>
+        <span className={styles.toolbarLabel}>League</span>
+        <LeagueSelector value={league} onChange={onLeagueChange} />
       </div>
-
-      <div className={styles.toolbarRow}>
-        <div className={styles.toolbarFilters}>
-          <SearchControl value={search} onChange={onSearchChange} className={styles.search} />
-          <SortControl value={sortBy} onChange={onSortChange} className={styles.selectCompact} />
-          <SegmentedControl value={side} options={SIDE_OPTIONS} onChange={onSideChange} ariaLabel="Side filter" />
-        </div>
-        <div className={styles.toolbarRight}>
-          <Button active={positiveOnly} onClick={onTogglePositive}>
-            Value only
-          </Button>
-        </div>
+      <div className={styles.toolbarGroup}>
+        <span className={styles.toolbarLabel}>Market</span>
+        <MarketTabs value={market} onChange={onMarketChange} marketAvailability={marketAvailability} />
+      </div>
+      <div className={styles.toolbarGroup}>
+        <span className={styles.toolbarLabel}>Time</span>
+        <SegmentedControl value={windowKey} options={WINDOW_OPTIONS} onChange={onWindowChange} ariaLabel="Time window" />
+      </div>
+      <div className={styles.toolbarGroup}>
+        <span className={styles.toolbarLabel}>Sort</span>
+        <SortControl value={sortBy} onChange={onSortChange} className={styles.selectCompact} />
+      </div>
+      <div className={styles.toolbarGroup}>
+        <span className={styles.toolbarLabel}>Search</span>
+        <SearchControl value={search} onChange={onSearchChange} className={styles.search} />
+      </div>
+      <div className={styles.toolbarGroup}>
+        <span className={styles.toolbarLabel}>Top Side</span>
+        <SegmentedControl value={side} options={SIDE_OPTIONS} onChange={onSideChange} ariaLabel="Side filter" />
+      </div>
+      <div className={styles.toolbarActions}>
+        <Button active={positiveOnly} onClick={onTogglePositive}>
+          Value only
+        </Button>
+        <Button variant="ghost" onClick={onRefresh}>
+          Refresh
+        </Button>
       </div>
     </section>
   );

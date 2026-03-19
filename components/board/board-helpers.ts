@@ -6,12 +6,12 @@ export type BoardWindowKey = "all" | "today" | "next24";
 export type BoardSideKey = "all" | "favored" | "underdogs";
 
 export const SORT_OPTIONS: Array<{ value: BoardSortKey; label: string }> = [
-  { value: "score", label: "Best edge first" },
-  { value: "edge", label: "Highest edge" },
-  { value: "confidence", label: "Most trusted" },
+  { value: "score", label: "Top opportunities" },
+  { value: "edge", label: "Biggest edge" },
+  { value: "confidence", label: "Most stable market" },
   { value: "best", label: "Best payout" },
   { value: "soonest", label: "Starting soon" },
-  { value: "timing", label: "Time sensitive" }
+  { value: "timing", label: "Closing soon" }
 ];
 
 export function formatAmerican(price?: number | null): string {
