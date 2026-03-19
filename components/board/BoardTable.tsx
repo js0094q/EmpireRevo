@@ -7,12 +7,9 @@ import styles from "./BoardShell.module.css";
 import { BoardRow } from "@/components/board/BoardRow";
 import { Button } from "@/components/ui/Button";
 import { Drawer } from "@/components/ui/Drawer";
-import { BestPriceCell } from "@/components/board/BestPriceCell";
-import { FairOddsCell } from "@/components/board/FairOddsCell";
-import { EdgeBadge, getEdgeTierLabel } from "@/components/board/EdgeBadge";
-import { formatCommenceTime, formatMarketLabel, strongestBook, strongestOutcome } from "@/components/board/board-helpers";
-import { Pill } from "@/components/ui/Pill";
+import { bestPriceBook, formatCommenceTime, formatMarketLabel, formatOffer, strongestBook, strongestOutcome } from "@/components/board/board-helpers";
 import { TeamAvatar } from "@/components/board/TeamAvatar";
+import { cn } from "@/lib/ui/cn";
 
 const BoardRowExpanded = dynamic(() =>
   import("./BoardRowExpanded").then((mod) => ({
@@ -47,8 +44,8 @@ export function BoardTable({
     <section className={styles.tableWrap}>
       <div className={styles.tableHeader}>
         <div>
-          <div className={styles.tableHeadTitle}>Live Board</div>
-          <div className={styles.tableHeadMeta}>Matchups, best prices, fair value, and edge in one view.</div>
+          <div className={styles.tableHeadTitle}>Board</div>
+          <div className={styles.tableHeadMeta}>Matchups, prices, fair value, and edge in one view.</div>
         </div>
       </div>
 
@@ -57,9 +54,7 @@ export function BoardTable({
           <thead>
             <tr>
               <th>Matchup</th>
-              <th>Top Side</th>
-              <th>Best Line</th>
-              <th>Fair Value</th>
+              <th>Board</th>
               <th>Edge</th>
               <th>Details</th>
             </tr>
@@ -77,7 +72,7 @@ export function BoardTable({
                   />
                   {expanded ? (
                     <tr className={styles.rowExpanded}>
-                      <td colSpan={6}>
+                      <td colSpan={4}>
                         <div className={styles.expandPanel}>
                           <BoardRowExpanded event={event} league={league} model={model} />
                         </div>
@@ -95,7 +90,8 @@ export function BoardTable({
         {events.map((event) => {
           const outcome = strongestOutcome(event);
           const book = strongestBook(outcome);
-          const edgeTierLabel = book && book.edgePct >= 0 ? getEdgeTierLabel(book.edgePct) : null;
+          const bestLineBook = bestPriceBook(outcome);
+          const edgePct = book?.edgePct ?? 0;
 
           return (
             <article key={`card-${event.id}`} className={styles.card}>
@@ -108,41 +104,32 @@ export function BoardTable({
                   <strong>
                     {event.awayTeam} @ {event.homeTeam}
                   </strong>
-                  <div className={styles.mobileCardMeta}>
-                    <span className={styles.subtle}>{formatCommenceTime(event.commenceTime)}</span>
-                    <Pill tone="accent">{formatMarketLabel(event.market)}</Pill>
-                    <Pill>{outcome.name}</Pill>
-                  </div>
+                  <div className={styles.metaText}>{formatCommenceTime(event.commenceTime)}</div>
                 </div>
-                {book ? <EdgeBadge edgePct={book.edgePct} /> : null}
+                <p
+                  className={cn(
+                    styles.edgePrimary,
+                    edgePct < 0 ? styles.edgePrimaryNegative : edgePct >= 1.5 ? styles.edgePrimaryStrong : edgePct >= 0.75 ? styles.edgePrimaryModerate : styles.edgePrimaryMuted
+                  )}
+                >
+                  {`${edgePct > 0 ? "+" : ""}${edgePct.toFixed(2)}%`}
+                </p>
               </div>
 
-              <div className={styles.cardSignalGrid}>
-                <BestPriceCell event={event} outcome={outcome} />
-                <FairOddsCell event={event} outcome={outcome} />
-              </div>
+              <p className={styles.mobileDirective}>{book && book.edgePct < 0 ? `Market Mispricing: ${outcome.name} Overpriced` : `Best Bet: ${outcome.name}`}</p>
 
-              <p className={styles.mobileDirective}>{`Best Bet: ${outcome.name}`}</p>
-
-              <div className={styles.mobileCardMeta}>
-                <Pill>{`Top Side: ${outcome.name}`}</Pill>
-                {book && (book.isSharpBook || book.tier === "sharp") ? (
-                  <span
-                    className={styles.sharpBookBadge}
-                    title="Sharp books reflect more efficient market pricing and are often used as reference points."
-                  >
-                    <span className={styles.sharpBookBadgeDot} aria-hidden="true" />
-                    Sharp Book
-                  </span>
-                ) : null}
-                {book ? <span className={styles.edgeContextNote}>{book.edgePct >= 0 ? "Better than market average" : "Overpriced at this book"}</span> : null}
-                {edgeTierLabel ? <span className={styles.edgeTierHint}>{edgeTierLabel}</span> : null}
+              <div className={styles.opportunityPrimary}>
+                <strong>{outcome.name}</strong>
+                <span className={styles.cellValue}>{bestLineBook ? formatOffer(event.market, bestLineBook) : "--"}</span>
+                <span className={styles.metaText}>{bestLineBook ? bestLineBook.title : "No Live Book"}</span>
               </div>
+              <p className={styles.metaText}>{formatMarketLabel(event.market)}</p>
+              <p className={styles.metaText}>{`Fair: ${formatOffer(event.market, outcome)}`}</p>
 
               <div className={styles.stateActions}>
-                <Button onClick={() => onOpenDrawer(event.id)}>View books</Button>
+                <Button onClick={() => onOpenDrawer(event.id)}>View Books</Button>
                 <Button variant="ghost" onClick={() => onToggleExpanded(event.id)}>
-                  {expandedEventId === event.id ? "Hide details" : "Show details"}
+                  {expandedEventId === event.id ? "Hide Details" : "Show Details"}
                 </Button>
               </div>
 
@@ -157,7 +144,7 @@ export function BoardTable({
           <div className={styles.drawerCard}>
             <div className={styles.drawerHeader}>
               <div>
-                <div className={styles.tableHeadTitle}>Books view</div>
+                <div className={styles.tableHeadTitle}>Book Table</div>
                 <div className={styles.tableHeadMeta}>
                   {drawerEvent.awayTeam} @ {drawerEvent.homeTeam}
                 </div>

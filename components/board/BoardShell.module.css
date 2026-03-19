@@ -4,8 +4,8 @@
 
 .stack {
   display: grid;
-  gap: 1rem;
-  margin-top: 1rem;
+  gap: 2rem;
+  margin-top: 0.85rem;
 }
 
 .heroPanel,
@@ -20,10 +20,10 @@
 .stateCard,
 .emptyCard,
 .toolbar {
-  border: 1px solid var(--color-border);
+  border: 1px solid rgba(255, 255, 255, 0.05);
   border-radius: var(--radius-xl);
-  background: linear-gradient(180deg, rgba(13, 19, 28, 0.96), rgba(7, 11, 18, 0.95));
-  box-shadow: var(--shadow-md);
+  background: rgba(11, 16, 24, 0.9);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
 }
 
 .heroPanel,
@@ -58,7 +58,7 @@
   inset: auto -15% -48% auto;
   width: 42rem;
   height: 42rem;
-  background: radial-gradient(circle, rgba(66, 140, 238, 0.16), transparent 58%);
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.03), transparent 58%);
   pointer-events: none;
 }
 
@@ -172,8 +172,15 @@
 .featuredCopy,
 .marketNote,
 .edgeContextNote,
-.edgeTierHint {
+.edgeTierHint,
+.metaText {
   color: var(--color-text-muted);
+}
+
+.metaText {
+  margin: 0;
+  font-size: 0.75rem;
+  opacity: 0.55;
 }
 
 .summaryTimestamp {
@@ -272,9 +279,9 @@
 .analysisItem,
 .opportunityItem {
   width: 100%;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.05);
   border-radius: var(--radius-lg);
-  background: rgba(255, 255, 255, 0.028);
+  background: rgba(255, 255, 255, 0.02);
   color: var(--color-text);
   cursor: pointer;
   text-align: left;
@@ -313,8 +320,8 @@
 .opportunityItem:hover,
 .opportunityItem:focus-visible {
   outline: none;
-  border-color: color-mix(in srgb, var(--color-accent) 68%, white 32%);
-  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
 }
 
 .featuredButton:active,
@@ -383,29 +390,29 @@
 
 .opportunitySection {
   display: grid;
-  gap: 0.75rem;
+  gap: 0.9rem;
 }
 
 .opportunityGrid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 0.65rem;
+  gap: 0.8rem;
 }
 
 .opportunityItem {
   display: grid;
-  gap: 0.55rem;
-  padding: 0.85rem 0.9rem;
+  gap: 0.65rem;
+  padding: 1rem;
 }
 
 .opportunityItemPositive {
-  border-color: rgba(101, 214, 173, 0.24);
-  background: linear-gradient(180deg, rgba(101, 214, 173, 0.15), rgba(255, 255, 255, 0.028));
+  border-color: rgba(124, 227, 191, 0.24);
+  background: rgba(124, 227, 191, 0.08);
 }
 
 .opportunityItemNegative {
-  border-color: rgba(240, 124, 124, 0.24);
-  background: linear-gradient(180deg, rgba(240, 124, 124, 0.12), rgba(255, 255, 255, 0.028));
+  border-color: rgba(255, 141, 141, 0.24);
+  background: rgba(255, 141, 141, 0.07);
 }
 
 .opportunityTop {
@@ -428,6 +435,18 @@
   font-size: 0.74rem;
 }
 
+.opportunityPrimary {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.metaSeparator {
+  color: var(--color-text-dim);
+  opacity: 0.6;
+}
+
 .opportunityCopy {
   margin: 0;
   color: var(--color-text-muted);
@@ -436,9 +455,9 @@
 
 .opportunityDirective {
   margin: 0;
-  font-size: 0.82rem;
+  font-size: 0.8rem;
   color: color-mix(in srgb, var(--color-positive) 84%, white 16%);
-  font-weight: 640;
+  font-weight: 600;
 }
 
 .liveBoardSection {
@@ -450,21 +469,21 @@
   display: flex;
   align-items: flex-end;
   flex-wrap: wrap;
-  gap: 0.65rem;
-  border-color: rgba(255, 255, 255, 0.1);
-  background: rgba(255, 255, 255, 0.03);
+  gap: 0.95rem;
+  border-color: rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.02);
   box-shadow: none;
 }
 
 .toolbarGroup {
   display: grid;
-  gap: 0.3rem;
+  gap: 0.2rem;
   min-width: max-content;
 }
 
 .toolbarLabel {
   color: var(--color-text-dim);
-  font-size: 0.7rem;
+  font-size: 0.66rem;
   letter-spacing: 0.11em;
   text-transform: uppercase;
   padding-inline: 0.1rem;
@@ -474,7 +493,7 @@
   margin-left: auto;
   display: flex;
   align-items: center;
-  gap: 0.45rem;
+  gap: 0.5rem;
   flex-wrap: wrap;
 }
 
@@ -487,12 +506,12 @@
 }
 
 .marketNote {
-  font-size: 0.83rem;
+  font-size: 0.8rem;
   line-height: 1.45;
   padding: 0.45rem 0.65rem;
   border-radius: var(--radius-md);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.02);
 }
 
 .sortReminder {
@@ -509,7 +528,7 @@
 
 .tableWrap {
   overflow: hidden;
-  border-color: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.05);
   background: rgba(255, 255, 255, 0.02);
 }
 
@@ -524,39 +543,39 @@
 }
 
 .tableScroller {
-  overflow: auto;
+  display: none;
 }
 
 .table {
   width: 100%;
   border-collapse: separate;
   border-spacing: 0;
-  min-width: 760px;
+  min-width: 700px;
 }
 
 .table thead th {
   position: sticky;
   top: 0;
   z-index: 2;
-  background: rgba(10, 14, 21, 0.97);
+  background: rgba(10, 14, 21, 0.93);
   color: var(--color-text-dim);
-  font-size: 0.72rem;
+  font-size: 0.68rem;
   letter-spacing: 0.12em;
   text-transform: uppercase;
   text-align: left;
-  padding: 0.82rem 1rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 0.72rem 1rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .tableRow td {
-  padding: 1rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  padding: 0.95rem 1rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
   vertical-align: top;
   transition: background-color 130ms ease;
 }
 
 .tableRow:hover td {
-  background: rgba(255, 255, 255, 0.028);
+  background: rgba(255, 255, 255, 0.022);
 }
 
 .tableRowPositive td:first-child {
@@ -568,8 +587,8 @@
 }
 
 .tableRowActive td {
-  background: rgba(74, 139, 225, 0.11);
-  border-bottom-color: rgba(100, 171, 255, 0.2);
+  background: rgba(255, 255, 255, 0.03);
+  border-bottom-color: rgba(255, 255, 255, 0.08);
 }
 
 .rowExpanded td {
@@ -583,6 +602,7 @@
 
 .matchup,
 .signalCell,
+.edgeCell,
 .priceCell,
 .fairCell,
 .detailPanel,
@@ -604,19 +624,20 @@
 
 .teams span {
   color: var(--color-text-muted);
-  font-size: 0.85rem;
+  font-size: 0.78rem;
+  opacity: 0.72;
 }
 
 .cellValue {
   font-family: var(--font-mono);
-  font-size: 1.04rem;
+  font-size: 1rem;
   font-weight: 640;
 }
 
 .topSideDirective {
-  font-size: 0.8rem;
+  font-size: 0.79rem;
   color: color-mix(in srgb, var(--color-positive) 84%, white 16%);
-  font-weight: 620;
+  font-weight: 600;
 }
 
 .metaLine {
@@ -627,7 +648,7 @@
 }
 
 .edgeContextNote {
-  font-size: 0.79rem;
+  font-size: 0.78rem;
 }
 
 .edgeTierHint {
@@ -635,6 +656,30 @@
   letter-spacing: 0.04em;
   text-transform: uppercase;
   margin-left: 0.2rem;
+}
+
+.edgePrimary {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 1.25rem;
+  line-height: 1;
+  font-weight: 700;
+}
+
+.edgePrimaryStrong {
+  color: #2ee69f;
+}
+
+.edgePrimaryModerate {
+  color: color-mix(in srgb, var(--color-positive) 90%, white 10%);
+}
+
+.edgePrimaryMuted {
+  color: color-mix(in srgb, var(--color-positive) 64%, var(--color-text-muted) 36%);
+}
+
+.edgePrimaryNegative {
+  color: var(--color-danger);
 }
 
 .priceMeta,
@@ -647,15 +692,15 @@
 .priceCell,
 .fairCell,
 .note {
-  border: 1px solid rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.05);
   border-radius: var(--radius-md);
   padding: 0.65rem 0.75rem;
   background: rgba(255, 255, 255, 0.02);
 }
 
 .priceCell {
-  border-color: rgba(100, 171, 255, 0.24);
-  background: linear-gradient(180deg, rgba(100, 171, 255, 0.13), rgba(255, 255, 255, 0.02));
+  border-color: rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.02);
 }
 
 .fairCell {
@@ -671,7 +716,7 @@
 
 .expandedGrid {
   display: grid;
-  grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.08fr);
+  grid-template-columns: minmax(0, 0.82fr) minmax(0, 1.18fr);
   gap: 1rem;
 }
 
@@ -681,8 +726,21 @@
 }
 
 .detailTitle {
-  font-size: 1.05rem;
+  font-size: 1.12rem;
   font-weight: 650;
+}
+
+.expandedSummary {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.summaryStatRow {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  padding-top: 0.2rem;
 }
 
 .detailRow {
@@ -692,8 +750,8 @@
   align-items: center;
   padding: 0.75rem 0.85rem;
   border-radius: var(--radius-md);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.02);
 }
 
 .detailRowBest {
@@ -702,11 +760,10 @@
 }
 
 .detailRowSharp {
-  border-color: rgba(101, 214, 173, 0.34);
-  background: rgba(101, 214, 173, 0.07);
-  box-shadow:
-    inset 0 0 0 1px rgba(101, 214, 173, 0.22),
-    0 0 18px rgba(101, 214, 173, 0.1);
+  border-left: 2px solid #00ff99;
+  border-color: rgba(0, 255, 153, 0.3);
+  background: rgba(0, 255, 153, 0.04);
+  box-shadow: none;
 }
 
 .detailRowSharp .bookLabel {
@@ -731,14 +788,14 @@
 .sharpBookBadge {
   display: inline-flex;
   align-items: center;
-  gap: 0.35rem;
-  min-height: 1.75rem;
-  padding: 0.22rem 0.58rem;
+  gap: 0.28rem;
+  min-height: 1.3rem;
+  padding: 0.1rem 0.42rem;
   border-radius: var(--radius-pill);
-  border: 1px solid rgba(101, 214, 173, 0.42);
-  background: rgba(101, 214, 173, 0.14);
+  border: 1px solid rgba(124, 227, 191, 0.34);
+  background: rgba(124, 227, 191, 0.08);
   color: color-mix(in srgb, var(--color-positive) 84%, white 16%);
-  font-size: 0.72rem;
+  font-size: 0.63rem;
   font-weight: 650;
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -796,9 +853,9 @@
 
 .mobileDirective {
   margin: 0;
-  font-size: 0.82rem;
+  font-size: 0.8rem;
   color: color-mix(in srgb, var(--color-positive) 84%, white 16%);
-  font-weight: 630;
+  font-weight: 610;
 }
 
 .detailPanel {
@@ -814,16 +871,16 @@
 }
 
 .cards {
-  display: none;
+  display: grid;
   padding: 0.85rem;
   gap: 0.75rem;
 }
 
 .card {
-  padding: 0.95rem;
+  padding: 1rem 1.1rem;
   border-radius: var(--radius-lg);
-  border: 1px solid rgba(255, 255, 255, 0.07);
-  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.02);
 }
 
 .cardSignalGrid {
@@ -855,7 +912,7 @@
 .drawerCard {
   padding: 1rem;
   border-radius: var(--radius-lg);
-  border: 1px solid rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.05);
   background: rgba(255, 255, 255, 0.03);
 }
 
@@ -866,16 +923,16 @@
 
 .edgeBadge {
   font-family: var(--font-mono);
-  font-size: 0.76rem;
+  font-size: 0.88rem;
   font-weight: 700;
   letter-spacing: 0.02em;
-  min-height: 1.82rem;
+  min-height: 1.95rem;
 }
 
 .edgeBadgeLg {
-  font-size: 0.84rem;
-  min-height: 2rem;
-  padding-inline: 0.75rem;
+  font-size: 1.25rem;
+  min-height: 2.3rem;
+  padding-inline: 0.8rem;
 }
 
 .edgeBadgePositive {
@@ -887,19 +944,23 @@
 }
 
 .edgeBadgeStrong {
-  border-color: color-mix(in srgb, var(--color-positive) 52%, white 12%);
+  border-color: color-mix(in srgb, var(--color-positive) 70%, white 8%);
   background: color-mix(in srgb, var(--color-positive) 22%, transparent);
+  color: #2ee69f;
   box-shadow:
-    0 0 0 1px color-mix(in srgb, var(--color-positive) 46%, transparent) inset,
-    0 0 14px rgba(101, 214, 173, 0.2);
+    0 0 0 1px color-mix(in srgb, var(--color-positive) 50%, transparent) inset,
+    0 0 12px rgba(124, 227, 191, 0.18);
 }
 
 .edgeBadgeModerate {
-  border-color: color-mix(in srgb, var(--color-positive) 34%, transparent);
+  border-color: color-mix(in srgb, var(--color-positive) 44%, transparent);
+  color: color-mix(in srgb, var(--color-positive) 90%, white 10%);
 }
 
 .edgeBadgeWeak {
-  opacity: 0.84;
+  border-color: color-mix(in srgb, var(--color-positive) 24%, transparent);
+  color: color-mix(in srgb, var(--color-positive) 66%, var(--color-text-muted) 34%);
+  background: rgba(124, 227, 191, 0.07);
 }
 
 .edgeBadgeTier {
@@ -964,14 +1025,8 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid hsl(var(--team-avatar-fallback-hue, 214) 52% 56% / 0.45);
-  background:
-    radial-gradient(circle at 24% 20%, hsl(var(--team-avatar-fallback-hue, 214) 88% 74% / 0.45), transparent 60%),
-    linear-gradient(
-      165deg,
-      hsl(var(--team-avatar-fallback-hue, 214) 48% 34% / 0.95),
-      hsl(calc(var(--team-avatar-fallback-hue, 214) + 22) 62% 20% / 0.98)
-    );
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: linear-gradient(165deg, rgba(95, 108, 126, 0.95), rgba(45, 54, 68, 0.98));
 }
 
 .teamAvatarFallbackText {
@@ -1018,14 +1073,6 @@
 }
 
 @media (max-width: 860px) {
-  .tableScroller {
-    display: none;
-  }
-
-  .cards {
-    display: grid;
-  }
-
   .search,
   .selectCompact {
     min-width: min(100%, 14rem);

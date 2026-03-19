@@ -6,7 +6,7 @@ import type { MarketTimelineResponse, MarketPressureSignal } from "@/lib/server/
 
 type ViewMode = "fair" | "global" | "pinned" | "books";
 
-const COLORS = ["#56cfff", "#7aefc3", "#ffd36a", "#f59666", "#b39aff"];
+const COLORS = ["#7ce3bf", "#d5dce7", "#a8b2c2", "#ff8d8d", "#8f9daf"];
 
 function byBook(timeline: MarketTimelineResponse): Map<string, Array<{ ts: number; priceAmerican: number }>> {
   const map = new Map<string, Array<{ ts: number; priceAmerican: number }>>();
@@ -111,7 +111,7 @@ export function EventTimelinePanel({
           ))}
         </div>
       ) : (
-        <p className="muted">No descriptive pressure signals from current persisted history.</p>
+        <p className="muted">No descriptive pressure values from current persisted history.</p>
       )}
     </section>
   );

@@ -27,7 +27,7 @@ export function EdgeBadge({
   showTierLabel?: boolean;
 }) {
   const tier = getEdgeTier(edgePct);
-  const tone = edgePct < 0 ? "danger" : tier === "weak" ? "warning" : "positive";
+  const tone = edgePct < 0 ? "danger" : tier === "weak" ? "neutral" : "positive";
   const prefix = edgePct > 0 ? "+" : "";
 
   return (

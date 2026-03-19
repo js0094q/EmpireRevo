@@ -65,7 +65,6 @@ export function BoardToolbar({
         <LeagueSelector value={league} onChange={onLeagueChange} />
       </div>
       <div className={styles.toolbarGroup}>
-        <span className={styles.toolbarLabel}>Market</span>
         <MarketTabs value={market} onChange={onMarketChange} marketAvailability={marketAvailability} />
       </div>
       <div className={styles.toolbarGroup}>
@@ -81,12 +80,12 @@ export function BoardToolbar({
         <SearchControl value={search} onChange={onSearchChange} className={styles.search} />
       </div>
       <div className={styles.toolbarGroup}>
-        <span className={styles.toolbarLabel}>Top Side</span>
+        <span className={styles.toolbarLabel}>Side</span>
         <SegmentedControl value={side} options={SIDE_OPTIONS} onChange={onSideChange} ariaLabel="Side filter" />
       </div>
       <div className={styles.toolbarActions}>
         <Button active={positiveOnly} onClick={onTogglePositive}>
-          Value only
+          Positive Edge
         </Button>
         <Button variant="ghost" onClick={onRefresh}>
           Refresh

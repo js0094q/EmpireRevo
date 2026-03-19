@@ -14,7 +14,7 @@ export function SearchControl({
       className={className}
       value={value}
       onChange={(event) => onChange(event.target.value)}
-      placeholder="Search teams or matchup"
+      placeholder="Search Teams or Matchup"
       aria-label="Search matchups"
     />
   );

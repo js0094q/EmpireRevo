@@ -20,9 +20,7 @@ import {
 } from "@/components/board/board-helpers";
 import { filterEvents, sortEvents } from "@/components/board/selectors";
 import { TeamAvatar } from "@/components/board/TeamAvatar";
-import { EdgeBadge, getEdgeTierLabel } from "@/components/board/EdgeBadge";
 import { cn } from "@/lib/ui/cn";
-import { Pill } from "@/components/ui/Pill";
 
 type OpportunityCard = {
   key: string;
@@ -31,9 +29,8 @@ type OpportunityCard = {
   market: string;
   team: string;
   book: string;
-  isSharpBook: boolean;
   edgePct: number;
-  edgeMagnitude: number;
+  scoreMagnitude: number;
   event: FairBoardResponse["events"][number];
 };
 
@@ -49,7 +46,7 @@ function edgeDeltaText(edgePct: number): string {
 
 function directiveText(team: string, edgePct: number): string {
   if (edgePct >= 0) return `Best Bet: ${team}`;
-  return `Market Mispricing: ${team} overpriced`;
+  return `Market Mispricing: ${team} Overpriced`;
 }
 
 type BoardShellProps = {
@@ -120,15 +117,14 @@ export function BoardShell({ board, league, windowKey, mode = "board" }: BoardSh
               market: event.market === "h2h" ? "Moneyline" : event.market === "spreads" ? "Spread" : "Total",
               team: outcome.name,
               book: book.title,
-              isSharpBook: book.isSharpBook || book.tier === "sharp",
               edgePct: book.edgePct,
-              edgeMagnitude: Math.abs(book.edgePct),
+              scoreMagnitude: Math.abs(book.edgePct),
               event
             };
           })
         )
         .filter((entry): entry is OpportunityCard => Boolean(entry))
-        .sort((a, b) => b.edgeMagnitude - a.edgeMagnitude || Date.parse(a.event.commenceTime) - Date.parse(b.event.commenceTime)),
+        .sort((a, b) => b.scoreMagnitude - a.scoreMagnitude || Date.parse(a.event.commenceTime) - Date.parse(b.event.commenceTime)),
     [filteredEvents]
   );
 
@@ -138,8 +134,9 @@ export function BoardShell({ board, league, windowKey, mode = "board" }: BoardSh
   const sharpReferenceTitles = board.sharpBooksUsed.slice(0, 3);
   const sharpReferenceNote =
     sharpReferenceTitles.length > 0
-      ? `Sharp books are used as stronger market reference points when available (${joinTitles(sharpReferenceTitles)}).`
-      : "Sharp books are used as stronger market reference points when available.";
+      ? `Sharp books are weighted as reference prices when available (${joinTitles(sharpReferenceTitles)}).`
+      : "Sharp books are weighted as reference prices when available.";
+  const disclosureCopy = board.disclaimer.replace("Market intelligence only.", "Compare prices only.");
 
   return (
     <AppContainer>
@@ -156,28 +153,14 @@ export function BoardShell({ board, league, windowKey, mode = "board" }: BoardSh
               </div>
               <span className={styles.summaryTimestamp}>Updated {formatUpdatedLabel(board.updatedAt)}</span>
             </div>
-            <p className={styles.heroLead}>Compare sportsbook prices, estimate fair value, and spot where the market is mispriced.</p>
-            <div className={styles.definitionRow}>
-              <div className={styles.definitionItem}>
-                <span className={styles.definitionTerm}>Best Line</span>
-                <span className={styles.definitionCopy}>strongest sportsbook price</span>
-              </div>
-              <div className={styles.definitionItem}>
-                <span className={styles.definitionTerm}>Fair Value</span>
-                <span className={styles.definitionCopy}>consensus market estimate</span>
-              </div>
-              <div className={styles.definitionItem}>
-                <span className={styles.definitionTerm}>Edge</span>
-                <span className={styles.definitionCopy}>difference between sportsbook and fair value</span>
-              </div>
-            </div>
+            <p className={styles.heroLead}>Compare prices, fair value, and edge across active books.</p>
           </section>
 
           <section className={styles.opportunitySection}>
             <div className={styles.sectionHeader}>
               <div>
                 <p className={styles.sectionEyebrow}>Top Opportunities</p>
-                <h2 className={styles.sectionTitle}>Best prices right now</h2>
+                <h2 className={styles.sectionTitle}>Highest Value Right Now</h2>
               </div>
             </div>
 
@@ -185,7 +168,6 @@ export function BoardShell({ board, league, windowKey, mode = "board" }: BoardSh
               <div className={styles.opportunityGrid}>
                 {opportunities.map((item) => {
                   const event = item.event;
-                  const edgeTierLabel = item.edgePct >= 0 ? getEdgeTierLabel(item.edgePct) : null;
                   return (
                     <button
                       key={`opportunity-${item.key}`}
@@ -196,39 +178,26 @@ export function BoardShell({ board, league, windowKey, mode = "board" }: BoardSh
                       }}
                     >
                       <div className={styles.opportunityTopRow}>
-                        <span className={styles.subtle}>{formatCommenceTime(event.commenceTime)}</span>
-                        <EdgeBadge edgePct={item.edgePct} />
-                      </div>
-                      <div className={styles.opportunityMatchup}>
-                        <div className={styles.matchupTeams}>
-                          <TeamAvatar name={event.awayTeam} logoUrl={event.awayLogoUrl} size="sm" showName={false} />
-                          <TeamAvatar name={event.homeTeam} logoUrl={event.homeLogoUrl} size="sm" showName={false} />
+                        <div className={styles.opportunityMatchup}>
+                          <div className={styles.matchupTeams}>
+                            <TeamAvatar name={event.awayTeam} logoUrl={event.awayLogoUrl} size="sm" showName={false} />
+                            <TeamAvatar name={event.homeTeam} logoUrl={event.homeLogoUrl} size="sm" showName={false} />
+                          </div>
+                          <strong>{item.matchup}</strong>
                         </div>
-                        <strong>{item.matchup}</strong>
+                        <span className={styles.metaText}>{formatCommenceTime(event.commenceTime)}</span>
                       </div>
                       <p className={styles.opportunityDirective}>{directiveText(item.team, item.edgePct)}</p>
-                      <div className={styles.opportunityMeta}>
-                        <span className={styles.metaKey}>Top Side:</span>
-                        <span>{item.team}</span>
-                        <span className={styles.metaKey}>Book:</span>
-                        <span>{item.book}</span>
-                        <span className={styles.metaKey}>Market:</span>
-                        <span>{item.market}</span>
-                        {item.isSharpBook ? (
-                          <span
-                            className={styles.sharpBookBadge}
-                            title="Sharp books reflect more efficient market pricing and are often used as reference points."
-                          >
-                            <span className={styles.sharpBookBadgeDot} aria-hidden="true" />
-                            Sharp Book
-                          </span>
-                        ) : null}
+                      <div className={styles.opportunityPrimary}>
+                        <strong>{item.team}</strong>
+                        <span className={styles.metaSeparator}>|</span>
+                        <span className={styles.metaText}>{item.book}</span>
                       </div>
-                      <p className={styles.opportunityCopy}>
-                        {`Edge ${item.edgePct > 0 ? "+" : ""}${item.edgePct.toFixed(2)}%`}
-                        {edgeTierLabel ? <span className={styles.edgeTierHint}>{edgeTierLabel}</span> : null}
-                        {` · ${edgeDeltaText(item.edgePct)}`}
+                      <p className={styles.metaText}>{item.market}</p>
+                      <p className={cn(styles.edgePrimary, item.edgePct < 0 ? styles.edgePrimaryNegative : item.edgePct >= 1.5 ? styles.edgePrimaryStrong : item.edgePct >= 0.75 ? styles.edgePrimaryModerate : styles.edgePrimaryMuted)}>
+                        {`${item.edgePct > 0 ? "+" : ""}${item.edgePct.toFixed(2)}%`}
                       </p>
+                      <p className={styles.metaText}>{edgeDeltaText(item.edgePct)}</p>
                     </button>
                   );
                 })}
@@ -241,9 +210,9 @@ export function BoardShell({ board, league, windowKey, mode = "board" }: BoardSh
           <section className={styles.liveBoardSection}>
             <div className={styles.liveBoardHeader}>
               <div>
-                <p className={styles.sectionEyebrow}>Live Board</p>
-                <h2 className={styles.sectionTitle}>Line comparison board</h2>
-                <p className={styles.sectionMuted}>Filter by league, market, time, and sort order to find the most actionable prices.</p>
+                <p className={styles.sectionEyebrow}>Board</p>
+                <h2 className={styles.sectionTitle}>Live Line Shopping</h2>
+                <p className={styles.sectionMuted}>Scan edge-first rows to find value faster.</p>
               </div>
             </div>
 
@@ -276,7 +245,7 @@ export function BoardShell({ board, league, windowKey, mode = "board" }: BoardSh
               </p>
             ) : null}
             <p className={styles.marketNote}>{sharpReferenceNote}</p>
-            {sortBy === "edge" ? <p className={styles.sortReminder}>Sorted by Best Value</p> : null}
+            {sortBy === "edge" ? <p className={styles.sortReminder}>Sorted by Value</p> : null}
 
             {orderedEvents.length ? (
               <BoardTable
@@ -292,7 +261,7 @@ export function BoardShell({ board, league, windowKey, mode = "board" }: BoardSh
             ) : (
               <EmptyState
                 title="No games match the current filters"
-                message="Try a broader search, switch market, or clear the value-only filter."
+                message="Try a broader search, switch market, or clear the Positive Edge filter."
                 actionLabel="Reset filters"
                 onAction={() => {
                   setSearch("");
@@ -303,7 +272,7 @@ export function BoardShell({ board, league, windowKey, mode = "board" }: BoardSh
             )}
           </section>
 
-          <p className={styles.disclosure}>{board.disclaimer}</p>
+          <p className={styles.disclosure}>{disclosureCopy}</p>
         </div>
       </div>
     </AppContainer>

@@ -1,20 +1,20 @@
 :root {
-  --color-bg: #05080d;
-  --color-surface: #0e1520;
-  --color-surface-muted: #141e2b;
+  --color-bg: #0a0f15;
+  --color-surface: #111822;
+  --color-surface-muted: #171f2b;
   --color-text: #f3f7fb;
-  --color-text-muted: #a5afbc;
-  --color-text-dim: #778293;
-  --color-accent: #6fb8ff;
+  --color-text-muted: #aab3c1;
+  --color-text-dim: #798495;
+  --color-accent: #9ea8b7;
   --color-positive: #7ce3bf;
-  --color-warning: #f2c271;
+  --color-warning: #9fa7b4;
   --color-danger: #ff8d8d;
-  --color-accent-soft: rgba(111, 184, 255, 0.16);
+  --color-accent-soft: rgba(158, 168, 183, 0.14);
   --color-positive-soft: rgba(124, 227, 191, 0.18);
-  --color-warning-soft: rgba(242, 194, 113, 0.18);
+  --color-warning-soft: rgba(159, 167, 180, 0.16);
   --color-danger-soft: rgba(255, 141, 141, 0.16);
-  --color-border: rgba(255, 255, 255, 0.1);
-  --color-highlight: rgba(111, 184, 255, 0.5);
+  --color-border: rgba(255, 255, 255, 0.08);
+  --color-highlight: rgba(158, 168, 183, 0.45);
   --radius-sm: 0.55rem;
   --radius-md: 0.8rem;
   --radius-lg: 1rem;
@@ -40,10 +40,7 @@ body {
 body {
   color: var(--color-text);
   font-family: var(--font-body);
-  background:
-    radial-gradient(72rem 40rem at 14% -12%, rgba(111, 184, 255, 0.14), transparent),
-    radial-gradient(62rem 34rem at 95% -8%, rgba(124, 227, 191, 0.09), transparent),
-    linear-gradient(180deg, #05080d, #0a1119 48%, #05080d);
+  background: linear-gradient(180deg, #090e14, #0d131d 48%, #090e14);
 }
 
 button,

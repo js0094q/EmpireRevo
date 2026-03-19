@@ -76,19 +76,20 @@
 }
 
 .brandMarkBase {
-  fill: rgba(255, 255, 255, 0.03);
-  stroke: rgba(255, 255, 255, 0.1);
+  fill: rgba(255, 255, 255, 0.01);
+  stroke: rgba(255, 255, 255, 0.14);
   stroke-width: 1.5;
 }
 
 .brandMarkLine,
 .brandMarkLineMuted {
   stroke-linecap: round;
-  stroke-width: 3.5;
+  stroke-linejoin: round;
+  stroke-width: 3.25;
 }
 
 .brandMarkLine {
-  stroke: var(--color-text);
+  stroke: var(--color-positive);
 }
 
 .brandMarkLineMuted {

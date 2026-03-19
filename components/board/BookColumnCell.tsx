@@ -30,13 +30,13 @@ export function BookColumnCell({
                 title="Sharp books reflect more efficient market pricing and are often used as reference points."
               >
                 <span className={styles.sharpBookBadgeDot} aria-hidden="true" />
-                Sharp Book
+                Sharp
               </span>
             ) : null}
-            {book.isBestPrice ? <Pill tone="positive">Best Line</Pill> : null}
+            {book.isBestPrice ? <Pill tone="positive">Best Price</Pill> : null}
           </div>
         </div>
-        <div className={styles.bookMeta}>{book.tier === "sharp" ? "Market Average reference pricing" : "Live sportsbook pricing"}</div>
+        <div className={styles.bookMeta}>{book.tier === "sharp" ? "Reference Pricing" : "Live Pricing"}</div>
       </div>
       <div className={styles.bookOdds}>{formatOffer(event.market, book)}</div>
       <div className={styles.edgeStack}>

@@ -25,7 +25,7 @@ function formatProb(prob: number): string {
 
 function formatRole(book: FairOutcomeBook): string {
   if (book.tier === "sharp") return `Sharp market maker · ${book.weight.toFixed(2)}x`;
-  if (book.tier === "signal") return `Signal book · ${book.weight.toFixed(2)}x`;
+  if (book.tier === "signal") return `Reference book · ${book.weight.toFixed(2)}x`;
   if (book.tier === "mainstream") return `Mainstream book · ${book.weight.toFixed(2)}x`;
   if (book.tier === "promo") return `Promo book · ${book.weight.toFixed(2)}x`;
   return `Book weight ${book.weight.toFixed(2)}x`;
@@ -252,7 +252,7 @@ export default async function GamePage({
       <div className={styles.page}>
         <AppHeader
           eyebrow="EmpirePicks"
-          title="Event detail"
+          title="Event Detail"
           subtitle="Compare live sportsbook prices against the consensus fair line."
           breadcrumbs={[
             { label: "Board", href: `/?league=${league}&market=${event.market}&model=${model}` },
@@ -293,7 +293,7 @@ export default async function GamePage({
             </div>
 
             {currentMarketStatus === "limited" ? (
-              <p className={styles.marketHint}>This market is live, but comparable line coverage is limited right now.</p>
+              <p className={styles.marketHint}>This market is live, but comparable line availability is limited right now.</p>
             ) : null}
 
             {showRepresentativeNote ? (
@@ -314,7 +314,7 @@ export default async function GamePage({
             </div>
 
             <div className={styles.noteCard}>
-              <span className={styles.eyebrow}>Editors Note</span>
+              <span className={styles.eyebrow}>Editor Note</span>
               <p className={styles.noteCopy}>
                 {featuredBook
                   ? `${featuredBook.title} is pricing ${featuredOutcome.name} ${edgeDeltaText(featuredBook.edgePct)}.`
@@ -331,7 +331,7 @@ export default async function GamePage({
 
             <div className={styles.backRow}>
               <Link href={`/?league=${league}&market=${event.market}&model=${model}`} className="app-link">
-                Back to board
+                Back to Board
               </Link>
             </div>
           </section>
@@ -382,7 +382,7 @@ export default async function GamePage({
 
                   {showSignals ? (
                     <details className={styles.disclosure}>
-                      <summary className={styles.disclosureSummary}>Market signals</summary>
+                      <summary className={styles.disclosureSummary}>Market Value</summary>
                       <div className={styles.disclosureBody}>
                         <EventTimelinePanel
                           outcome={outcome.name}
@@ -398,7 +398,7 @@ export default async function GamePage({
 
             {(event.excludedBooks.length || methodologyCopy) ? (
               <details className={styles.disclosure}>
-                <summary className={styles.disclosureSummary}>Board details</summary>
+                <summary className={styles.disclosureSummary}>Board Notes</summary>
                 <div className={styles.disclosureBody}>
                   {methodologyCopy ? <p className={styles.disclosureCopy}>{methodologyCopy}</p> : null}
                   {event.excludedBooks.length ? (

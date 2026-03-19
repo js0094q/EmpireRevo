@@ -7,7 +7,7 @@ export function LoadingState({ message = "Building the latest board..." }: { mes
   return (
     <div className={styles.stateShell}>
       <AppContainer>
-        <AppHeader eyebrow="EmpirePicks" title="Loading board" subtitle={message} />
+        <AppHeader eyebrow="EmpirePicks" title="Loading Board" subtitle={message} />
         <section className={styles.stateCard}>
           <div className={styles.loadingGrid}>
             {[0, 1, 2, 3].map((item) => (

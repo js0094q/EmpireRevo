@@ -5,10 +5,9 @@ export function BrandMark({ compact = false, className }: { compact?: boolean; c
   return (
     <span className={cn(layoutStyles.brandMark, compact && layoutStyles.brandMarkCompact, className)} aria-hidden="true">
       <svg viewBox="0 0 48 48" fill="none">
-        <rect x="2" y="2" width="44" height="44" rx="14" className={layoutStyles.brandMarkBase} />
-        <path d="M14 31h20" className={layoutStyles.brandMarkLine} />
-        <path d="M16 24h16" className={layoutStyles.brandMarkLineMuted} />
-        <path d="M16 17h16" className={layoutStyles.brandMarkLineMuted} />
+        <rect x="3" y="3" width="42" height="42" rx="12" className={layoutStyles.brandMarkBase} />
+        <path d="M12 31l10-9 6 5 8-10" className={layoutStyles.brandMarkLine} />
+        <path d="M31 17h6v6" className={layoutStyles.brandMarkLine} />
       </svg>
     </span>
   );

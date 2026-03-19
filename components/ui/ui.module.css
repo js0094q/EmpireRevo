@@ -1,12 +1,12 @@
 .button {
   appearance: none;
-  border: 1px solid var(--color-border);
-  background: var(--color-surface-muted);
-  color: var(--color-text);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  background: rgba(255, 255, 255, 0.02);
+  color: var(--color-text-muted);
   border-radius: var(--radius-pill);
-  padding: 0.625rem 0.95rem;
+  padding: 0.5rem 0.78rem;
   font: inherit;
-  font-size: 0.9rem;
+  font-size: 0.82rem;
   line-height: 1;
   cursor: pointer;
   transition:
@@ -20,6 +20,7 @@
 .button:focus-visible {
   border-color: var(--color-highlight);
   background: var(--color-hover, rgba(255, 255, 255, 0.06));
+  color: var(--color-text);
   outline: none;
 }
 
@@ -53,39 +54,41 @@
 
 .buttonGhost {
   background: transparent;
+  border-color: rgba(255, 255, 255, 0.05);
 }
 
 .buttonSubtle {
-  background: rgba(255, 255, 255, 0.03);
+  background: rgba(255, 255, 255, 0.015);
+  border-color: rgba(255, 255, 255, 0.04);
 }
 
 .buttonActive {
-  background: color-mix(in srgb, var(--color-accent) 14%, var(--color-surface-muted));
-  border-color: color-mix(in srgb, var(--color-accent) 50%, white 20%);
+  background: rgba(0, 255, 153, 0.12);
+  border-color: #00ff99;
   color: var(--color-text);
 }
 
 .segmented {
   display: inline-flex;
   flex-wrap: wrap;
-  gap: 0.35rem;
-  padding: 0.25rem;
+  gap: 0.2rem;
+  padding: 0.18rem;
   border-radius: var(--radius-pill);
-  background: var(--color-surface-muted);
-  border: 1px solid var(--color-border);
+  background: rgba(255, 255, 255, 0.015);
+  border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .pill {
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
-  min-height: 1.75rem;
-  padding: 0.28rem 0.55rem;
+  min-height: 1.55rem;
+  padding: 0.2rem 0.5rem;
   border-radius: var(--radius-pill);
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  background: rgba(255, 255, 255, 0.02);
   color: var(--color-text);
-  font-size: 0.74rem;
+  font-size: 0.7rem;
   font-weight: 600;
   letter-spacing: 0.02em;
   white-space: nowrap;
@@ -118,12 +121,12 @@
 .field,
 .select {
   width: 100%;
-  min-height: 2.6rem;
+  min-height: 2.35rem;
   border-radius: var(--radius-md);
-  border: 1px solid var(--color-border);
-  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  background: rgba(255, 255, 255, 0.02);
   color: var(--color-text);
-  padding: 0.72rem 0.9rem;
+  padding: 0.62rem 0.8rem;
   font: inherit;
   transition:
     border-color 140ms ease,

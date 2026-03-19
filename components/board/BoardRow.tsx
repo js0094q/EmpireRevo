@@ -1,12 +1,9 @@
 import { memo } from "react";
 import type { FairEvent } from "@/lib/server/odds/types";
 import styles from "./BoardShell.module.css";
-import { BestPriceCell } from "@/components/board/BestPriceCell";
-import { FairOddsCell } from "@/components/board/FairOddsCell";
-import { EdgeBadge, getEdgeTierLabel } from "@/components/board/EdgeBadge";
+import { EdgeBadge } from "@/components/board/EdgeBadge";
 import { Button } from "@/components/ui/Button";
-import { formatCommenceTime, formatMarketLabel, strongestBook, strongestOutcome } from "@/components/board/board-helpers";
-import { Pill } from "@/components/ui/Pill";
+import { bestPriceBook, formatCommenceTime, formatMarketLabel, formatOffer, strongestBook, strongestOutcome } from "@/components/board/board-helpers";
 import { cn } from "@/lib/ui/cn";
 import { TeamAvatar } from "@/components/board/TeamAvatar";
 
@@ -20,7 +17,9 @@ type BoardRowProps = {
 function BoardRowComponent({ event, expanded, onToggle, onOpenDrawer }: BoardRowProps) {
   const outcome = strongestOutcome(event);
   const book = strongestBook(outcome);
-  const edgeTierLabel = book && book.edgePct >= 0 ? getEdgeTierLabel(book.edgePct) : null;
+  const bestLineBook = bestPriceBook(outcome);
+  const directive = book && book.edgePct < 0 ? `Market Mispricing: ${outcome.name} Overpriced` : `Best Bet: ${outcome.name}`;
+  const edgeContext = book ? (book.edgePct >= 0 ? "Better than market average" : "Overpriced at this book") : "No live comparison available.";
 
   return (
     <tr
@@ -42,46 +41,29 @@ function BoardRowComponent({ event, expanded, onToggle, onOpenDrawer }: BoardRow
             </strong>
             <span>{formatCommenceTime(event.commenceTime)}</span>
           </div>
-          <div className={styles.rowPills}>
-            <Pill tone="accent">{formatMarketLabel(event.market)}</Pill>
-          </div>
+          <span className={styles.metaText}>{formatMarketLabel(event.market)}</span>
         </div>
       </td>
       <td>
         <div className={styles.signalCell}>
           <span className={styles.cellValue}>{outcome.name}</span>
-          <span className={styles.topSideDirective}>{`Best Bet: ${outcome.name}`}</span>
+          <span className={styles.topSideDirective}>{directive}</span>
           <div className={styles.metaLine}>
-            <span className={styles.subtle}>{book ? `Best at ${book.title}` : "No live comparison available."}</span>
-            {book && (book.isSharpBook || book.tier === "sharp") ? (
-              <span
-                className={styles.sharpBookBadge}
-                title="Sharp books reflect more efficient market pricing and are often used as reference points."
-              >
-                <span className={styles.sharpBookBadgeDot} aria-hidden="true" />
-                Sharp Book
-              </span>
-            ) : null}
+            <span className={styles.cellValue}>{bestLineBook ? formatOffer(event.market, bestLineBook) : "--"}</span>
+            <span className={styles.metaText}>{bestLineBook ? bestLineBook.title : "No Live Book"}</span>
           </div>
+          <span className={styles.metaText}>{`Fair: ${formatOffer(event.market, outcome)}`}</span>
         </div>
       </td>
       <td>
-        <BestPriceCell event={event} outcome={outcome} />
-      </td>
-      <td>
-        <FairOddsCell event={event} outcome={outcome} />
-      </td>
-      <td>
-        <div className={styles.signalCell}>
-          {book ? <EdgeBadge edgePct={book.edgePct} /> : <Pill>Edge --</Pill>}
-          {book ? <span className={styles.subtle}>{`${book.title} vs Market Average`}</span> : null}
-          {book ? <span className={styles.edgeContextNote}>{book.edgePct >= 0 ? "Better than market average" : "Overpriced at this book"}</span> : null}
-          {edgeTierLabel ? <span className={styles.edgeTierHint}>{edgeTierLabel}</span> : null}
+        <div className={styles.edgeCell}>
+          {book ? <EdgeBadge edgePct={book.edgePct} size="lg" /> : <span className={styles.cellValue}>--</span>}
+          <span className={styles.metaText}>{edgeContext}</span>
         </div>
       </td>
       <td className={styles.ctaCell}>
         <Button onClick={onToggle} active={expanded}>
-          {expanded ? "Hide details" : "Show details"}
+          {expanded ? "Hide Details" : "Show Details"}
         </Button>
         <Button variant="ghost" onClick={onOpenDrawer}>
           Books
