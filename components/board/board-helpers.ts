@@ -84,6 +84,72 @@ export function bestPriceBook(outcome: FairOutcome): FairOutcomeBook | null {
   return outcome.books.find((book) => book.isBestPrice) ?? outcome.books[0] ?? null;
 }
 
+export type PickStatus = "Favorite" | "Underdog";
+export type PickSummary = {
+  outcome: FairOutcome;
+  book: FairOutcomeBook | null;
+  label: "Recommended Pick" | "Current Best Number";
+  status: PickStatus;
+  hasRecommendation: boolean;
+  whyThisPick: string;
+};
+
+export function recommendedOutcome(event: FairEvent): FairOutcome {
+  return [...event.outcomes].sort((a, b) => {
+    const aEdge = bestPriceBook(a)?.edgePct ?? Number.NEGATIVE_INFINITY;
+    const bEdge = bestPriceBook(b)?.edgePct ?? Number.NEGATIVE_INFINITY;
+    return bEdge - aEdge || b.opportunityScore - a.opportunityScore;
+  })[0]!;
+}
+
+export function pickStatus(outcome: FairOutcome): PickStatus {
+  if (outcome.consensusDirection === "favored") return "Favorite";
+  if (outcome.consensusDirection === "underdog") return "Underdog";
+  return outcome.fairAmerican > 0 ? "Underdog" : "Favorite";
+}
+
+export function whyThisPickText(params: {
+  status: PickStatus;
+  edgePct: number;
+  hasRecommendation: boolean;
+}): string {
+  if (params.hasRecommendation) {
+    if (params.status === "Underdog") {
+      return "This underdog is paying better than the market-implied fair line.";
+    }
+    return "This favorite is still priced better than the market-implied fair line.";
+  }
+
+  if (params.status === "Underdog") {
+    return "The market still favors the other side, and this underdog is not paying above fair value right now.";
+  }
+  if (params.edgePct < 0) {
+    return "This is still the favorite, but this line is not better than fair value right now.";
+  }
+  return "This book is offering the strongest available number versus consensus fair value.";
+}
+
+export function buildPickSummary(event: FairEvent): PickSummary {
+  const outcome = recommendedOutcome(event);
+  const book = bestPriceBook(outcome);
+  const status = pickStatus(outcome);
+  const edgePct = book?.edgePct ?? 0;
+  const hasRecommendation = edgePct > 0;
+
+  return {
+    outcome,
+    book,
+    label: hasRecommendation ? "Recommended Pick" : "Current Best Number",
+    status,
+    hasRecommendation,
+    whyThisPick: whyThisPickText({
+      status,
+      edgePct,
+      hasRecommendation
+    })
+  };
+}
+
 export function formatOffer(
   market: FairEvent["market"],
   book: Pick<FairOutcomeBook, "priceAmerican" | "point"> | Pick<FairOutcome, "fairAmerican" | "books">

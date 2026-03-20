@@ -543,6 +543,7 @@
 }
 
 .tableScroller {
+  overflow-x: auto;
   display: none;
 }
 
@@ -832,6 +833,36 @@
   flex-wrap: wrap;
 }
 
+.pickStatus {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.3rem;
+  padding: 0.1rem 0.42rem;
+  border-radius: var(--radius-pill);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--color-text);
+  font-size: 0.67rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 640;
+}
+
+.whyPickCopy {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
+.whyPickLabel {
+  color: var(--color-text-dim);
+  font-size: 0.66rem;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  margin-right: 0.25rem;
+}
+
 .bookGroupBlock {
   display: grid;
   gap: 0.45rem;
@@ -919,6 +950,45 @@
 .disclosure {
   font-size: 0.77rem;
   text-align: center;
+}
+
+.ctaLink {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2rem;
+  padding: 0.48rem 0.82rem;
+  border-radius: var(--radius-pill);
+  border: 1px solid color-mix(in srgb, var(--color-accent) 68%, white 12%);
+  background: color-mix(in srgb, var(--color-accent) 26%, rgba(255, 255, 255, 0.02));
+  color: var(--color-text);
+  font-size: 0.76rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 650;
+  transition:
+    border-color 140ms ease,
+    background-color 140ms ease,
+    transform 140ms ease;
+}
+
+.ctaLink:hover,
+.ctaLink:focus-visible {
+  border-color: color-mix(in srgb, var(--color-accent) 82%, white 18%);
+  background: color-mix(in srgb, var(--color-accent) 34%, rgba(255, 255, 255, 0.03));
+  outline: none;
+}
+
+.ctaLink:active {
+  transform: translateY(1px);
+}
+
+.inlineCta {
+  color: color-mix(in srgb, var(--color-accent) 88%, white 12%);
+  font-size: 0.67rem;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  font-weight: 700;
 }
 
 .edgeBadge {
@@ -1104,6 +1174,16 @@
 
   .opportunityGrid {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (min-width: 980px) {
+  .tableScroller {
+    display: block;
+  }
+
+  .cards {
+    display: none;
   }
 }
 

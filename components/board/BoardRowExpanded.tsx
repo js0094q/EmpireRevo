@@ -3,12 +3,12 @@ import type { FairEvent } from "@/lib/server/odds/types";
 import styles from "./BoardShell.module.css";
 import { BookColumnCell } from "@/components/board/BookColumnCell";
 import {
+  buildPickSummary,
   bestPriceBook,
   eventDetailHref,
   formatCommenceTime,
   formatOffer,
-  strongestBook,
-  strongestOutcome
+  strongestBook
 } from "@/components/board/board-helpers";
 import { EdgeBadge, getEdgeTierLabel } from "@/components/board/EdgeBadge";
 import { Button } from "@/components/ui/Button";
@@ -27,12 +27,12 @@ export function BoardRowExpanded({
   compact?: boolean;
   onClose?: () => void;
 }) {
-  const outcome = strongestOutcome(event);
-  const summaryBook = strongestBook(outcome);
-  const bestLineBook = bestPriceBook(outcome);
+  const pick = buildPickSummary(event);
+  const outcome = pick.outcome;
+  const summaryBook = pick.book ?? strongestBook(outcome);
+  const bestLineBook = pick.book ?? bestPriceBook(outcome);
   const edgeTierLabel = summaryBook && summaryBook.edgePct >= 0 ? getEdgeTierLabel(summaryBook.edgePct) : "Watch";
-  const summaryDirective =
-    summaryBook && summaryBook.edgePct < 0 ? `Market Mispricing: ${outcome.name} Overpriced` : `Best Bet: ${outcome.name}`;
+  const summaryDirective = `${pick.label}: ${outcome.name} (${pick.status})`;
   const href = event.outcomes.length
     ? eventDetailHref({
         eventId: event.id,
@@ -57,7 +57,7 @@ export function BoardRowExpanded({
           <div className={styles.topSideDirective}>{summaryDirective}</div>
 
           <div className={styles.summaryStatRow}>
-            <span className={styles.cellLabel}>Best Line</span>
+            <span className={styles.cellLabel}>Best Available Line</span>
             <span className={styles.detailCopy}>{bestLineBook ? `${formatOffer(event.market, bestLineBook)} (${bestLineBook.title})` : "--"}</span>
           </div>
           <div className={styles.summaryStatRow}>
@@ -69,12 +69,15 @@ export function BoardRowExpanded({
             {summaryBook ? <EdgeBadge edgePct={summaryBook.edgePct} size="lg" /> : <span className={styles.detailCopy}>--</span>}
             {summaryBook ? <span className={styles.metaText}>{edgeTierLabel}</span> : null}
           </div>
+          <p className={styles.whyPickCopy}>
+            <strong className={styles.whyPickLabel}>Why This Pick:</strong> {pick.whyThisPick}
+          </p>
         </div>
 
         <div className={styles.stateActions}>
           {href ? (
             <Link href={href} className="app-link">
-              Open Event Page
+              View Game Detail
             </Link>
           ) : null}
           {onClose ? <Button onClick={onClose}>Close</Button> : null}

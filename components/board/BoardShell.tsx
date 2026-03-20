@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { startTransition, useDeferredValue, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import type { FairBoardResponse } from "@/lib/server/odds/types";
@@ -10,10 +11,12 @@ import { BoardToolbar } from "@/components/board/BoardToolbar";
 import { BoardTable } from "@/components/board/BoardTable";
 import { EmptyState } from "@/components/board/EmptyState";
 import {
+  buildPickSummary,
+  eventDetailHref,
   formatCommenceTime,
   formatMarketLabel,
+  formatOffer,
   formatUpdatedLabel,
-  strongestBook,
   type BoardMode,
   type BoardSideKey,
   type BoardSortKey
@@ -24,13 +27,18 @@ import { cn } from "@/lib/ui/cn";
 
 type OpportunityCard = {
   key: string;
-  eventId: string;
   matchup: string;
   market: string;
   team: string;
+  status: "Favorite" | "Underdog";
+  label: "Recommended Pick" | "Current Best Number";
+  lineLabel: string;
+  fairLabel: string;
   book: string;
   edgePct: number;
   scoreMagnitude: number;
+  whyThisPick: string;
+  href: string;
   event: FairBoardResponse["events"][number];
 };
 
@@ -38,15 +46,6 @@ function joinTitles(values: string[]): string {
   if (values.length <= 1) return values[0] ?? "";
   if (values.length === 2) return `${values[0]} and ${values[1]}`;
   return `${values.slice(0, -1).join(", ")}, and ${values[values.length - 1]}`;
-}
-
-function edgeDeltaText(edgePct: number): string {
-  return edgePct >= 0 ? "Better than market average" : "Overpriced at this book";
-}
-
-function directiveText(team: string, edgePct: number): string {
-  if (edgePct >= 0) return `Best Bet: ${team}`;
-  return `Market Mispricing: ${team} Overpriced`;
 }
 
 type BoardShellProps = {
@@ -63,8 +62,6 @@ export function BoardShell({ board, league, windowKey, mode = "board" }: BoardSh
   const [search, setSearch] = useState("");
   const [side, setSide] = useState<BoardSideKey>("all");
   const [positiveOnly, setPositiveOnly] = useState(false);
-  const [expandedEventId, setExpandedEventId] = useState<string | null>(null);
-  const [drawerEventId, setDrawerEventId] = useState<string | null>(null);
   const deferredSearch = useDeferredValue(search);
 
   function replaceParam(key: string, value: string) {
@@ -106,26 +103,32 @@ export function BoardShell({ board, league, windowKey, mode = "board" }: BoardSh
   const rankedOpportunities = useMemo<OpportunityCard[]>(
     () =>
       filteredEvents
-        .flatMap((event) =>
-          event.outcomes.map((outcome) => {
-            const book = strongestBook(outcome);
-            if (!book) return null;
-            return {
-              key: `${event.id}:${outcome.name}:${book.bookKey}`,
+        .map((event) => {
+          const pick = buildPickSummary(event);
+          return {
+            key: `${event.id}:${pick.outcome.name}:${pick.book?.bookKey ?? "no-book"}`,
+            matchup: `${event.awayTeam} @ ${event.homeTeam}`,
+            market: event.market === "h2h" ? "Moneyline" : event.market === "spreads" ? "Spread" : "Total",
+            team: pick.outcome.name,
+            status: pick.status,
+            label: pick.label,
+            lineLabel: pick.book ? formatOffer(event.market, pick.book) : "--",
+            fairLabel: formatOffer(event.market, pick.outcome),
+            book: pick.book?.title ?? "No live book",
+            edgePct: pick.book?.edgePct ?? 0,
+            scoreMagnitude: Math.abs(pick.book?.edgePct ?? 0),
+            whyThisPick: pick.whyThisPick,
+            href: eventDetailHref({
               eventId: event.id,
-              matchup: `${event.awayTeam} @ ${event.homeTeam}`,
-              market: event.market === "h2h" ? "Moneyline" : event.market === "spreads" ? "Spread" : "Total",
-              team: outcome.name,
-              book: book.title,
-              edgePct: book.edgePct,
-              scoreMagnitude: Math.abs(book.edgePct),
-              event
-            };
-          })
-        )
-        .filter((entry): entry is OpportunityCard => Boolean(entry))
+              league,
+              market: event.market,
+              model: board.model
+            }),
+            event
+          };
+        })
         .sort((a, b) => b.scoreMagnitude - a.scoreMagnitude || Date.parse(a.event.commenceTime) - Date.parse(b.event.commenceTime)),
-    [filteredEvents]
+    [board.model, filteredEvents, league]
   );
 
   const opportunities = rankedOpportunities.slice(0, 4);
@@ -134,8 +137,8 @@ export function BoardShell({ board, league, windowKey, mode = "board" }: BoardSh
   const sharpReferenceTitles = board.sharpBooksUsed.slice(0, 3);
   const sharpReferenceNote =
     sharpReferenceTitles.length > 0
-      ? `Sharp books are weighted as reference prices when available (${joinTitles(sharpReferenceTitles)}).`
-      : "Sharp books are weighted as reference prices when available.";
+      ? `Sharp books are used as reference prices when available (${joinTitles(sharpReferenceTitles)}).`
+      : "Sharp books are used as reference prices when available.";
   const disclosureCopy = board.disclaimer.replace("Market intelligence only.", "Compare prices only.");
 
   return (
@@ -169,13 +172,10 @@ export function BoardShell({ board, league, windowKey, mode = "board" }: BoardSh
                 {opportunities.map((item) => {
                   const event = item.event;
                   return (
-                    <button
+                    <Link
                       key={`opportunity-${item.key}`}
+                      href={item.href}
                       className={cn(styles.opportunityItem, item.edgePct >= 0 ? styles.opportunityItemPositive : styles.opportunityItemNegative)}
-                      onClick={() => {
-                        setExpandedEventId(item.eventId);
-                        setDrawerEventId(null);
-                      }}
                     >
                       <div className={styles.opportunityTopRow}>
                         <div className={styles.opportunityMatchup}>
@@ -187,23 +187,40 @@ export function BoardShell({ board, league, windowKey, mode = "board" }: BoardSh
                         </div>
                         <span className={styles.metaText}>{formatCommenceTime(event.commenceTime)}</span>
                       </div>
-                      <p className={styles.opportunityDirective}>{directiveText(item.team, item.edgePct)}</p>
+                      <div className={styles.recommendationRow}>
+                        <span className={styles.cellLabel}>{item.label}</span>
+                        <span className={styles.pickStatus}>{item.status}</span>
+                      </div>
                       <div className={styles.opportunityPrimary}>
                         <strong>{item.team}</strong>
-                        <span className={styles.metaSeparator}>|</span>
-                        <span className={styles.metaText}>{item.book}</span>
                       </div>
+                      <p className={styles.metaText}>{`Best Available Line: ${item.lineLabel} at ${item.book}`}</p>
+                      <p className={styles.metaText}>{`Fair Value: ${item.fairLabel}`}</p>
                       <p className={styles.metaText}>{item.market}</p>
-                      <p className={cn(styles.edgePrimary, item.edgePct < 0 ? styles.edgePrimaryNegative : item.edgePct >= 1.5 ? styles.edgePrimaryStrong : item.edgePct >= 0.75 ? styles.edgePrimaryModerate : styles.edgePrimaryMuted)}>
+                      <p
+                        className={cn(
+                          styles.edgePrimary,
+                          item.edgePct < 0
+                            ? styles.edgePrimaryNegative
+                            : item.edgePct >= 1.5
+                              ? styles.edgePrimaryStrong
+                              : item.edgePct >= 0.75
+                                ? styles.edgePrimaryModerate
+                                : styles.edgePrimaryMuted
+                        )}
+                      >
                         {`${item.edgePct > 0 ? "+" : ""}${item.edgePct.toFixed(2)}%`}
                       </p>
-                      <p className={styles.metaText}>{edgeDeltaText(item.edgePct)}</p>
-                    </button>
+                      <p className={styles.whyPickCopy}>
+                        <strong className={styles.whyPickLabel}>Why This Pick:</strong> {item.whyThisPick}
+                      </p>
+                      <span className={styles.inlineCta}>View Game Detail</span>
+                    </Link>
                   );
                 })}
               </div>
             ) : (
-              <p className={styles.sectionMuted}>No standout opportunities right now. Use filters below to expand the board.</p>
+              <p className={styles.sectionMuted}>No standout opportunities right now. Use filters below to scan the full board.</p>
             )}
           </section>
 
@@ -250,13 +267,8 @@ export function BoardShell({ board, league, windowKey, mode = "board" }: BoardSh
             {orderedEvents.length ? (
               <BoardTable
                 events={orderedEvents}
-                expandedEventId={expandedEventId}
-                drawerEventId={drawerEventId}
                 league={league}
                 model={board.model}
-                onToggleExpanded={(eventId) => setExpandedEventId((current) => (current === eventId ? null : eventId))}
-                onOpenDrawer={setDrawerEventId}
-                onCloseDrawer={() => setDrawerEventId(null)}
               />
             ) : (
               <EmptyState

@@ -14,14 +14,10 @@ import { buildMarketTimeline } from "@/lib/server/odds/timeline";
 import { detectMarketPressureForMarket } from "@/lib/server/odds/marketPressure";
 import { buildFairEventsForNormalizedEvent, LIMITED_MARKET_MIN_BOOKS } from "@/lib/server/odds/fairEngine";
 import { getNormalizedOdds } from "@/lib/server/odds/oddsService";
-import { eventDetailHref, formatMarketLabel, formatOffer, strongestBook, strongestOutcome } from "@/components/board/board-helpers";
+import { buildPickSummary, eventDetailHref, formatMarketLabel, formatOffer, strongestBook } from "@/components/board/board-helpers";
 import type { FairEvent, FairOutcomeBook } from "@/lib/server/odds/types";
 import type { MarketKey } from "@/lib/odds/schemas";
 import styles from "./page.module.css";
-
-function formatProb(prob: number): string {
-  return `${(prob * 100).toFixed(2)}%`;
-}
 
 function formatRole(book: FairOutcomeBook): string {
   if (book.tier === "sharp") return `Sharp market maker · ${book.weight.toFixed(2)}x`;
@@ -48,10 +44,6 @@ function joinTitles(values: string[]): string {
   if (values.length <= 1) return values[0] ?? "";
   if (values.length === 2) return `${values[0]} and ${values[1]}`;
   return `${values.slice(0, -1).join(", ")}, and ${values[values.length - 1]}`;
-}
-
-function edgeDeltaText(edgePct: number): string {
-  return `${Math.abs(edgePct).toFixed(2)}% ${edgePct >= 0 ? "above" : "below"} consensus fair value`;
 }
 
 function sortBooks(books: FairOutcomeBook[]): FairOutcomeBook[] {
@@ -211,8 +203,9 @@ export default async function GamePage({
   const currentMarketStatus = pageData.marketAvailability.find((entry) => entry.market === event.market)?.status ?? "active";
   const showRepresentativeNote = event.market !== "h2h" && (currentMarketSwitch?.pointGroups ?? 0) > 1;
 
-  const featuredOutcome = strongestOutcome(event);
-  const featuredBook = strongestBook(featuredOutcome);
+  const pickSummary = buildPickSummary(event);
+  const featuredOutcome = pickSummary.outcome;
+  const featuredBook = pickSummary.book;
   const methodologyCopy = board.sharpBooksUsed.length
     ? `Consensus fair prices lean on sharper market-making books when available, including ${joinTitles(board.sharpBooksUsed.slice(0, 3))}.`
     : null;
@@ -300,28 +293,29 @@ export default async function GamePage({
               <p className={styles.marketHint}>Default market view reflects the most widely available comparable line for this matchup.</p>
             ) : null}
 
-            <div className={styles.priceGrid}>
-              <div className={styles.priceCard}>
-                <span className={styles.eyebrow}>Consensus Fair Price</span>
-                <strong>{formatOffer(event.market, featuredOutcome)}</strong>
-                <small>{formatProb(featuredOutcome.fairProb)} fair probability</small>
+            <div className={styles.decisionSummary}>
+              <div className={styles.recommendationRow}>
+                <span className={styles.eyebrow}>{pickSummary.label}</span>
+                <span className={styles.pickStatus}>{pickSummary.status}</span>
               </div>
-              <div className={styles.priceCard}>
-                <span className={styles.eyebrow}>Best Available</span>
-                <strong>{featuredBook ? formatOffer(event.market, featuredBook) : "--"}</strong>
-                <small>{featuredBook ? featuredBook.title : "No live book"}</small>
-              </div>
-            </div>
+              <strong className={styles.pickName}>{featuredOutcome.name}</strong>
 
-            <div className={styles.noteCard}>
-              <span className={styles.eyebrow}>Editor Note</span>
-              <p className={styles.noteCopy}>
-                {featuredBook
-                  ? `${featuredBook.title} is pricing ${featuredOutcome.name} ${edgeDeltaText(featuredBook.edgePct)}.`
-                  : "No standout dislocation is available on the current board."}
+              <div className={styles.decisionRow}>
+                <span className={styles.eyebrow}>Best Available Line</span>
+                <span className={styles.decisionValue}>{featuredBook ? `${formatOffer(event.market, featuredBook)} at ${featuredBook.title}` : "--"}</span>
+              </div>
+              <div className={styles.decisionRow}>
+                <span className={styles.eyebrow}>Fair Value</span>
+                <span className={styles.decisionValue}>{formatOffer(event.market, featuredOutcome)}</span>
+              </div>
+              <div className={styles.decisionRow}>
+                <span className={styles.eyebrow}>Edge</span>
+                {featuredBook ? <EdgeBadge edgePct={featuredBook.edgePct} /> : <span className={styles.decisionValue}>--</span>}
+              </div>
+              <p className={styles.whyPickCopy}>
+                <strong className={styles.whyPickLabel}>Why This Pick:</strong> {pickSummary.whyThisPick}
               </p>
               <div className={styles.noteMeta}>
-                <EdgeBadge edgePct={featuredBook?.edgePct ?? 0} />
                 {featuredOutcome.timingSignal.label !== "Weak timing signal" ? <MovementPill outcome={featuredOutcome} /> : null}
                 <ConfidencePill label={featuredOutcome.confidenceLabel} />
               </div>
@@ -341,6 +335,9 @@ export default async function GamePage({
               const timelineEntry = timelineByOutcome.get(outcome.name);
               const showSignals =
                 (timelineEntry?.timeline?.points.length ?? 0) >= 2 || Boolean(timelineEntry?.pressureSignals?.length);
+              const sortedOutcomeBooks = sortBooks(outcome.books);
+              const sharpBooks = sortedOutcomeBooks.filter((book) => book.isSharpBook || book.tier === "sharp");
+              const otherBooks = sortedOutcomeBooks.filter((book) => !(book.isSharpBook || book.tier === "sharp"));
 
               return (
                 <section key={outcome.name} className={styles.outcomeSection}>
@@ -355,29 +352,66 @@ export default async function GamePage({
                     </div>
                   </div>
 
-                  <div className={styles.bookTable}>
-                    <div className={styles.bookTableHeader}>
-                      <span>Sportsbook</span>
-                      <span>Line</span>
-                      <span>Edge</span>
-                      <span>Role</span>
-                    </div>
-                    {sortBooks(outcome.books).map((book) => (
-                      <div key={`${outcome.name}-${book.bookKey}`} className={styles.bookRow}>
-                        <div className={styles.bookPrimary}>
-                          <strong>{book.title}</strong>
-                          <small>{book.isBestPrice ? "Best live line" : "Live board listing"}</small>
+                  <div className={styles.bookGroups}>
+                    {sharpBooks.length ? (
+                      <section className={styles.bookGroup}>
+                        <h3 className={styles.bookGroupTitle}>Sharp Books</h3>
+                        <div className={styles.bookTable}>
+                          <div className={styles.bookTableHeader}>
+                            <span>Sportsbook</span>
+                            <span>Line</span>
+                            <span>Edge</span>
+                            <span>Role</span>
+                          </div>
+                          {sharpBooks.map((book) => (
+                            <div key={`${outcome.name}-sharp-${book.bookKey}`} className={styles.bookRow}>
+                              <div className={styles.bookPrimary}>
+                                <strong>{book.title}</strong>
+                                <small>{book.isBestPrice ? "Best live line" : "Live board listing"}</small>
+                              </div>
+                              <div className={styles.bookLine}>{formatOffer(event.market, book)}</div>
+                              <div className={styles.bookEdge}>
+                                <EdgeBadge edgePct={book.edgePct} />
+                              </div>
+                              <div className={styles.bookRole}>
+                                <span>{formatRole(book)}</span>
+                                {book.staleSummary && book.staleFlag !== "none" ? <small>{book.staleSummary}</small> : null}
+                              </div>
+                            </div>
+                          ))}
                         </div>
-                        <div className={styles.bookLine}>{formatOffer(event.market, book)}</div>
-                        <div className={styles.bookEdge}>
-                          <EdgeBadge edgePct={book.edgePct} />
+                      </section>
+                    ) : null}
+
+                    {otherBooks.length ? (
+                      <section className={styles.bookGroup}>
+                        <h3 className={styles.bookGroupTitle}>Other Books</h3>
+                        <div className={styles.bookTable}>
+                          <div className={styles.bookTableHeader}>
+                            <span>Sportsbook</span>
+                            <span>Line</span>
+                            <span>Edge</span>
+                            <span>Role</span>
+                          </div>
+                          {otherBooks.map((book) => (
+                            <div key={`${outcome.name}-other-${book.bookKey}`} className={styles.bookRow}>
+                              <div className={styles.bookPrimary}>
+                                <strong>{book.title}</strong>
+                                <small>{book.isBestPrice ? "Best live line" : "Live board listing"}</small>
+                              </div>
+                              <div className={styles.bookLine}>{formatOffer(event.market, book)}</div>
+                              <div className={styles.bookEdge}>
+                                <EdgeBadge edgePct={book.edgePct} />
+                              </div>
+                              <div className={styles.bookRole}>
+                                <span>{formatRole(book)}</span>
+                                {book.staleSummary && book.staleFlag !== "none" ? <small>{book.staleSummary}</small> : null}
+                              </div>
+                            </div>
+                          ))}
                         </div>
-                        <div className={styles.bookRole}>
-                          <span>{formatRole(book)}</span>
-                          {book.staleSummary && book.staleFlag !== "none" ? <small>{book.staleSummary}</small> : null}
-                        </div>
-                      </div>
-                    ))}
+                      </section>
+                    ) : null}
                   </div>
 
                   {showSignals ? (
