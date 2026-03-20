@@ -119,7 +119,7 @@ export function BoardShell({ board, league, windowKey, mode = "board" }: BoardSh
             scoreMagnitude: Math.abs(pick.book?.edgePct ?? 0),
             whyThisPick: pick.whyThisPick,
             href: eventDetailHref({
-              eventId: event.id,
+              event,
               league,
               market: event.market,
               model: board.model

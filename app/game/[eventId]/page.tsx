@@ -8,12 +8,13 @@ import { EventTimelinePanel } from "@/components/board/EventTimelinePanel";
 import { MovementPill } from "@/components/board/MovementPill";
 import { TeamAvatar } from "@/components/board/TeamAvatar";
 import { getPersistenceStatus } from "@/lib/server/odds/persistence";
-import { fetchFairBoardPageData, hasOddsKey, toSportKey } from "@/lib/server/odds/pageData";
+import { hasOddsKey, resolveRequestedMarket, toSportKey } from "@/lib/server/odds/pageData";
 import { buildOutcomeMarketKey } from "@/lib/server/odds/snapshotPersistence";
 import { buildMarketTimeline } from "@/lib/server/odds/timeline";
 import { detectMarketPressureForMarket } from "@/lib/server/odds/marketPressure";
-import { buildFairEventsForNormalizedEvent, LIMITED_MARKET_MIN_BOOKS } from "@/lib/server/odds/fairEngine";
+import { buildFairEventsForNormalizedEvent, getMarketAvailabilityForBoard, LIMITED_MARKET_MIN_BOOKS } from "@/lib/server/odds/fairEngine";
 import { getNormalizedOdds } from "@/lib/server/odds/oddsService";
+import { matchesEventRouteId, toEventRouteId } from "@/lib/server/odds/eventRoute";
 import { buildPickSummary, eventDetailHref, formatMarketLabel, formatOffer, strongestBook } from "@/components/board/board-helpers";
 import type { FairEvent, FairOutcomeBook } from "@/lib/server/odds/types";
 import type { MarketKey } from "@/lib/odds/schemas";
@@ -52,34 +53,102 @@ function sortBooks(books: FairOutcomeBook[]): FairOutcomeBook[] {
     .sort((a, b) => Number(b.isBestPrice) - Number(a.isBestPrice) || Math.abs(b.edgePct) - Math.abs(a.edgePct));
 }
 
-function pickRelatedMarketEvent(params: {
-  relatedEvents: FairEvent[];
-  currentEventId: string;
-}): FairEvent | null {
-  if (!params.relatedEvents.length) return null;
-  return params.relatedEvents.find((candidate) => candidate.id === params.currentEventId) ?? params.relatedEvents[0] ?? null;
+type NormalizedEvent = Awaited<ReturnType<typeof getNormalizedOdds>>["normalized"][number];
+type EventCandidate = {
+  source: NormalizedEvent;
+  event: FairEvent;
+};
+
+function decodeRouteId(routeId: string): string {
+  try {
+    return decodeURIComponent(routeId);
+  } catch {
+    return routeId;
+  }
 }
 
-function findEventFromNormalized(params: {
-  eventId: string;
-  market: MarketKey;
+function collectEventCandidates(params: {
+  normalized: NormalizedEvent[];
   sportKey: string;
+  market: MarketKey;
   model: "sharp" | "equal" | "weighted";
   minBooks: number;
-  normalized: Awaited<ReturnType<typeof getNormalizedOdds>>["normalized"];
-}): FairEvent | null {
-  for (const event of params.normalized) {
-    const relatedEvents = buildFairEventsForNormalizedEvent({
-      normalized: event,
+}): EventCandidate[] {
+  return params.normalized.flatMap((source) =>
+    buildFairEventsForNormalizedEvent({
+      normalized: source,
       sportKey: params.sportKey,
       market: params.market,
       model: params.model,
       minBooks: params.minBooks
-    });
-    const match = relatedEvents.find((candidate) => candidate.id === params.eventId);
-    if (match) return match;
+    }).map((event) => ({ source, event }))
+  );
+}
+
+function resolveEventCandidate(params: {
+  candidates: EventCandidate[];
+  routeId: string;
+}): EventCandidate | null {
+  const decodedRouteId = decodeRouteId(params.routeId);
+  const exactLegacyMatch =
+    params.candidates.find((candidate) => candidate.event.id === decodedRouteId) ??
+    params.candidates.find((candidate) => candidate.event.baseEventId === decodedRouteId);
+  if (exactLegacyMatch) return exactLegacyMatch;
+
+  return params.candidates.find((candidate) => matchesEventRouteId(candidate.event, params.routeId)) ?? null;
+}
+
+function routeTokens(routeId: string): Set<string> {
+  return new Set(
+    routeId
+      .toLowerCase()
+      .split(/[^a-z0-9]+/)
+      .map((token) => token.trim())
+      .filter((token) => token.length >= 2)
+  );
+}
+
+function nearestCandidateRouteIds(params: {
+  candidates: EventCandidate[];
+  requestedRouteId: string;
+  limit?: number;
+}): string[] {
+  const requestedTokens = routeTokens(params.requestedRouteId);
+  const uniqueRouteIds = Array.from(new Set(params.candidates.map((candidate) => toEventRouteId(candidate.event))));
+
+  return uniqueRouteIds
+    .map((routeId) => {
+      const candidateTokens = routeTokens(routeId);
+      const overlap = Array.from(requestedTokens).reduce((total, token) => total + Number(candidateTokens.has(token)), 0);
+      return { routeId, overlap };
+    })
+    .sort((a, b) => b.overlap - a.overlap || a.routeId.localeCompare(b.routeId))
+    .slice(0, params.limit ?? 5)
+    .map((entry) => entry.routeId);
+}
+
+function pickRelatedMarketEvent(params: {
+  relatedEvents: FairEvent[];
+  currentEvent: FairEvent;
+  requestedRouteId: string;
+}): FairEvent | null {
+  if (!params.relatedEvents.length) return null;
+  const currentPoint = Number(params.currentEvent.linePoint);
+
+  const exactLineMatch = params.relatedEvents.find((candidate) => candidate.id === params.currentEvent.id);
+  if (exactLineMatch) return exactLineMatch;
+
+  const routeMatch = params.relatedEvents.find((candidate) => matchesEventRouteId(candidate, params.requestedRouteId));
+  if (routeMatch) return routeMatch;
+
+  if (Number.isFinite(currentPoint)) {
+    const closestByPoint = params.relatedEvents
+      .slice()
+      .sort((a, b) => Math.abs(Number(a.linePoint ?? currentPoint) - currentPoint) - Math.abs(Number(b.linePoint ?? currentPoint) - currentPoint))[0];
+    if (closestByPoint) return closestByPoint;
   }
-  return null;
+
+  return params.relatedEvents[0] ?? null;
 }
 
 export default async function GamePage({
@@ -108,24 +177,6 @@ export default async function GamePage({
   const model = query.model === "sharp" || query.model === "equal" || query.model === "weighted" ? query.model : "weighted";
   const minBooks = 4;
 
-  const pageData = await fetchFairBoardPageData({
-    league,
-    market,
-    model,
-    windowHours: 24,
-    historyWindowHours: 72,
-    minBooks
-  });
-
-  if (pageData.resolvedMarket !== market) {
-    const nextParams = new URLSearchParams({
-      league,
-      market: pageData.resolvedMarket,
-      model
-    });
-    redirect(`/game/${encodeURIComponent(eventId)}?${nextParams.toString()}`);
-  }
-
   const sportKey = toSportKey(league);
   const normalizedResult = await getNormalizedOdds({
     sportKey,
@@ -134,31 +185,68 @@ export default async function GamePage({
     oddsFormat: "american"
   });
 
-  const board = pageData.board;
-  const eventFromBoard = board.events.find((entry) => entry.id === eventId) ?? null;
-  const event =
-    eventFromBoard ??
-    findEventFromNormalized({
-      eventId,
-      market: pageData.resolvedMarket,
-      sportKey,
-      model,
-      minBooks,
-      normalized: normalizedResult.normalized
+  const marketAvailability = getMarketAvailabilityForBoard({
+    normalized: normalizedResult.normalized,
+    model,
+    minBooks
+  });
+  const { resolvedMarket, resolvedStatus } = resolveRequestedMarket({
+    requestedMarket: market,
+    marketAvailability
+  });
+  if (resolvedMarket !== market) {
+    const nextParams = new URLSearchParams({
+      league,
+      market: resolvedMarket,
+      model
     });
+    redirect(`/game/${encodeURIComponent(eventId)}?${nextParams.toString()}`);
+  }
+  const effectiveMinBooks = resolvedStatus === "limited" ? LIMITED_MARKET_MIN_BOOKS : minBooks;
+  const eventCandidates = collectEventCandidates({
+    normalized: normalizedResult.normalized,
+    sportKey,
+    market: resolvedMarket,
+    model,
+    minBooks: effectiveMinBooks
+  });
+  const resolvedCandidate = resolveEventCandidate({
+    candidates: eventCandidates,
+    routeId: eventId
+  });
+  const event = resolvedCandidate?.event ?? null;
 
   if (!event) {
+    const nearestCandidates = nearestCandidateRouteIds({
+      candidates: eventCandidates,
+      requestedRouteId: eventId,
+      limit: 5
+    });
+
     return (
       <main className="grid-shell">
         <p>Event not found in the live board.</p>
-        <Link href={`/?league=${league}&market=${market}&model=${model}`}>Back to board</Link>
+        {process.env.NODE_ENV !== "production" ? (
+          <section>
+            <p>
+              Requested route id: <code>{eventId}</code>
+            </p>
+            <p>Loaded events: {eventCandidates.length}</p>
+            {nearestCandidates.length ? (
+              <p>
+                Nearest route ids: <code>{nearestCandidates.join(", ")}</code>
+              </p>
+            ) : null}
+          </section>
+        ) : null}
+        <Link href={`/?league=${league}&market=${resolvedMarket}&model=${model}`}>Back to board</Link>
       </main>
     );
   }
 
-  const sourceEvent = normalizedResult.normalized.find((entry) => entry.event.id === event.baseEventId) ?? null;
+  const sourceEvent = resolvedCandidate?.source ?? null;
   const marketSwitchOptions = sourceEvent
-    ? pageData.marketAvailability
+    ? marketAvailability
         .filter((entry) => entry.status !== "unavailable")
         .map((availability) => {
           const selectionMinBooks = availability.status === "limited" ? LIMITED_MARKET_MIN_BOOKS : minBooks;
@@ -169,13 +257,17 @@ export default async function GamePage({
             model,
             minBooks: selectionMinBooks
           });
-          const relatedEvent = pickRelatedMarketEvent({ relatedEvents, currentEventId: event.id });
+          const relatedEvent = pickRelatedMarketEvent({
+            relatedEvents,
+            currentEvent: event,
+            requestedRouteId: eventId
+          });
           if (!relatedEvent && availability.status === "active") return null;
           return {
             market: availability.market,
             href: relatedEvent
               ? eventDetailHref({
-                  eventId: relatedEvent.id,
+                  event: relatedEvent,
                   league,
                   market: relatedEvent.market,
                   model
@@ -190,7 +282,7 @@ export default async function GamePage({
         {
           market: event.market,
           href: eventDetailHref({
-            eventId: event.id,
+            event,
             league,
             market: event.market,
             model
@@ -200,14 +292,21 @@ export default async function GamePage({
         }
       ];
   const currentMarketSwitch = marketSwitchOptions.find((entry) => entry.market === event.market) ?? null;
-  const currentMarketStatus = pageData.marketAvailability.find((entry) => entry.market === event.market)?.status ?? "active";
+  const currentMarketStatus = marketAvailability.find((entry) => entry.market === event.market)?.status ?? "active";
   const showRepresentativeNote = event.market !== "h2h" && (currentMarketSwitch?.pointGroups ?? 0) > 1;
 
   const pickSummary = buildPickSummary(event);
   const featuredOutcome = pickSummary.outcome;
   const featuredBook = pickSummary.book;
-  const methodologyCopy = board.sharpBooksUsed.length
-    ? `Consensus fair prices lean on sharper market-making books when available, including ${joinTitles(board.sharpBooksUsed.slice(0, 3))}.`
+  const sharpBooksUsed = Array.from(
+    new Set(
+      event.outcomes.flatMap((outcome) =>
+        outcome.books.filter((book) => book.isSharpBook || book.tier === "sharp").map((book) => book.title)
+      )
+    )
+  );
+  const methodologyCopy = sharpBooksUsed.length
+    ? `Consensus fair prices lean on sharper market-making books when available, including ${joinTitles(sharpBooksUsed.slice(0, 3))}.`
     : null;
 
   const persistence = getPersistenceStatus();

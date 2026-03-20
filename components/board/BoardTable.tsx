@@ -40,7 +40,7 @@ export function BoardTable({ events, league, model }: BoardTableProps) {
                 key={event.id}
                 event={event}
                 detailHref={eventDetailHref({
-                  eventId: event.id,
+                  event,
                   league,
                   market: event.market,
                   model
@@ -55,7 +55,7 @@ export function BoardTable({ events, league, model }: BoardTableProps) {
         {events.map((event) => {
           const pick = buildPickSummary(event);
           const detailHref = eventDetailHref({
-            eventId: event.id,
+            event,
             league,
             market: event.market,
             model

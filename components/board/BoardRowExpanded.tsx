@@ -35,7 +35,7 @@ export function BoardRowExpanded({
   const summaryDirective = `${pick.label}: ${outcome.name} (${pick.status})`;
   const href = event.outcomes.length
     ? eventDetailHref({
-        eventId: event.id,
+        event,
         league,
         market: event.market,
         model

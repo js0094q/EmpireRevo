@@ -1,4 +1,5 @@
 import type { FairBoardResponse, FairEvent, FairOutcome, FairOutcomeBook } from "@/lib/server/odds/types";
+import { toEventRouteId } from "@/lib/server/odds/eventRoute";
 
 export type BoardMode = "board" | "games";
 export type BoardSortKey = "score" | "edge" | "confidence" | "best" | "soonest" | "timing";
@@ -190,7 +191,7 @@ export function eventHasPartialData(event: FairEvent): boolean {
 }
 
 export function eventDetailHref(params: {
-  eventId: string;
+  event: FairEvent;
   league: string;
   market: FairEvent["market"];
   model: "sharp" | "equal" | "weighted";
@@ -200,5 +201,5 @@ export function eventDetailHref(params: {
     market: params.market,
     model: params.model
   });
-  return `/game/${encodeURIComponent(params.eventId)}?${query.toString()}`;
+  return `/game/${encodeURIComponent(toEventRouteId(params.event))}?${query.toString()}`;
 }
