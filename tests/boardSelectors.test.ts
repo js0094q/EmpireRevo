@@ -203,3 +203,41 @@ test("filterEvents can require stale opportunities and pinned-book actionability
   });
   assert.deepEqual(filtered.map((event) => event.id), ["stale"]);
 });
+
+test("filterEvents side filter matches the displayed recommended pick side", () => {
+  const favoritePick = mockEvent("favorite-pick", { edge: 1.2 });
+  const underdogPick = mockEvent("underdog-pick", { edge: 1.2 });
+  underdogPick.outcomes[0].books[0].edgePct = -0.4;
+  underdogPick.outcomes[0].books[0].evPct = -0.2;
+  underdogPick.outcomes[1].books[0].edgePct = 1.1;
+  underdogPick.outcomes[1].books[0].evPct = 0.8;
+
+  const baseOptions = {
+    teamQuery: "",
+    visibleBookKeys: new Set(["booka"]),
+    edgeThresholdPct: 0,
+    minContributingBooks: 1,
+    minConfidenceScore: 0,
+    minSharpParticipation: 0,
+    startWindow: "all" as const,
+    positiveEvOnly: false,
+    bestEdgesOnly: false,
+    staleOnly: false,
+    highCoverageOnly: false,
+    trustedBooksOnly: false,
+    pinnedOnly: false,
+    pinnedBooks: new Set<string>()
+  };
+
+  const favoredOnly = filterEvents([favoritePick, underdogPick], {
+    ...baseOptions,
+    sideFilter: "favored"
+  });
+  const underdogsOnly = filterEvents([favoritePick, underdogPick], {
+    ...baseOptions,
+    sideFilter: "underdogs"
+  });
+
+  assert.deepEqual(favoredOnly.map((event) => event.id), ["favorite-pick"]);
+  assert.deepEqual(underdogsOnly.map((event) => event.id), ["underdog-pick"]);
+});
