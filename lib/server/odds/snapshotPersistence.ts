@@ -97,13 +97,11 @@ export async function persistBoardSnapshots(params: {
         try {
           const ref = await writeMarketSnapshot(snapshot);
           refs.set(snapshotLookupKey(event.id, marketKey), ref);
-        } catch (error) {
-          const message = error instanceof Error ? error.message : "unknown";
+        } catch {
           recordWriteFailure("empire:odds:snapshot");
           console.error("[snapshotPersistence] failed to persist snapshot", {
             eventId: event.id,
-            marketKey,
-            message
+            marketKey
           });
         }
       })

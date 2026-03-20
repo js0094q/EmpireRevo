@@ -53,7 +53,7 @@ test("GET /api/fair returns a stable payload", async () => {
   process.env.ODDS_API_KEY = "test-key";
 
   const response = await GET(
-    new Request("http://localhost/api/fair?sportKey=basketball_nba_teststable&model=weighted&windowHours=17&minBooks=2")
+    new Request("http://localhost/api/fair?sportKey=basketball_nba&regions=us&model=weighted&windowHours=17&minBooks=2")
   );
   const payload = await response.json();
 
@@ -88,13 +88,64 @@ test("GET /api/fair maps upstream rate-limit failures", async () => {
   process.env.ODDS_API_KEY = "test-key";
 
   const response = await GET(
-    new Request("http://localhost/api/fair?sportKey=basketball_nba_ratelimit&model=equal&windowHours=5&minBooks=2")
+    new Request("http://localhost/api/fair?sportKey=basketball_nba&regions=eu&model=equal&windowHours=5&minBooks=2")
   );
   const payload = await response.json();
 
   assert.equal(response.status, 429);
   assert.equal(payload.ok, false);
   assert.equal(payload.error.code, "UPSTREAM_RATE_LIMIT");
+
+  fetchMock.mock.restore();
+  if (originalKey === undefined) {
+    delete process.env.ODDS_API_KEY;
+  } else {
+    process.env.ODDS_API_KEY = originalKey;
+  }
+});
+
+test("GET /api/fair rejects invalid query values", async () => {
+  const response = await GET(new Request("http://localhost/api/fair?model=unsupported-model"));
+  const payload = await response.json();
+
+  assert.equal(response.status, 400);
+  assert.equal(payload.ok, false);
+  assert.equal(payload.error.code, "BAD_REQUEST");
+});
+
+test("GET /api/fair rejects invalid query values before upstream fetch", async () => {
+  let fetchCalled = false;
+  const fetchMock = mock.method(globalThis, "fetch", async () => {
+    fetchCalled = true;
+    return new Response("[]", { status: 200 });
+  });
+
+  const response = await GET(new Request("http://localhost/api/fair?sportKey=unknown_sport"));
+  const payload = await response.json();
+
+  assert.equal(response.status, 400);
+  assert.equal(payload.ok, false);
+  assert.equal(payload.error.code, "BAD_REQUEST");
+  assert.equal(fetchCalled, false);
+  fetchMock.mock.restore();
+});
+
+test("GET /api/fair sanitizes upstream 5xx payload details", async () => {
+  const fetchMock = mock.method(globalThis, "fetch", async () => {
+    return new Response("secret upstream payload should never leak", { status: 500 });
+  });
+
+  const originalKey = process.env.ODDS_API_KEY;
+  process.env.ODDS_API_KEY = "test-key";
+
+  const response = await GET(new Request("http://localhost/api/fair?sportKey=basketball_nba&regions=uk&model=weighted&minBooks=2"));
+  const payload = await response.json();
+
+  assert.equal(response.status, 502);
+  assert.equal(payload.ok, false);
+  assert.equal(payload.error.code, "UPSTREAM_ERROR");
+  assert.equal(typeof payload.error.message, "string");
+  assert.equal(payload.error.message.includes("secret upstream payload"), false);
 
   fetchMock.mock.restore();
   if (originalKey === undefined) {

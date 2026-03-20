@@ -22,8 +22,12 @@ const MAX_RETENTION_HOURS = 7 * 24;
 const DEFAULT_MOVEMENT_POINTS = 1200;
 const MIN_MOVEMENT_POINTS = 100;
 const MAX_MOVEMENT_POINTS = 5000;
+const UPSTREAM_FAILURE_BACKOFF_MS = 5_000;
+const STALE_NORMALIZED_MAX_AGE_MS = 5 * 60 * 1000;
 
 const MARKET_WHITELIST: MarketKey[] = ["h2h", "spreads", "totals"];
+const staleNormalizedFallback = new Map<string, { value: NormalizedOddsResult; storedAtMs: number }>();
+const normalizedBackoffUntil = new Map<string, number>();
 
 export type NormalizedOddsQuery = {
   sportKey?: string;
@@ -110,6 +114,22 @@ function canonicalIncludeBooks(includeBooks?: Set<string>): { set: Set<string> |
   return { set: normalized, key };
 }
 
+function isRecoverableUpstreamError(error: unknown): boolean {
+  if (!(error instanceof Error)) return false;
+  const code = (error as Error & { code?: string }).code;
+  return Boolean(code && code.startsWith("UPSTREAM_"));
+}
+
+function readStaleNormalized(key: string, nowMs: number): NormalizedOddsResult | null {
+  const stale = staleNormalizedFallback.get(key);
+  if (!stale) return null;
+  if (nowMs - stale.storedAtMs > STALE_NORMALIZED_MAX_AGE_MS) {
+    staleNormalizedFallback.delete(key);
+    return null;
+  }
+  return stale.value;
+}
+
 export async function getNormalizedOdds(params: NormalizedOddsQuery): Promise<NormalizedOddsResult> {
   const sportKey = params.sportKey && params.sportKey.trim().length ? params.sportKey : DEFAULT_SPORT_KEY;
   const regions = canonicalCsv(params.regions, DEFAULT_REGIONS);
@@ -118,29 +138,53 @@ export async function getNormalizedOdds(params: NormalizedOddsQuery): Promise<No
 
   const cacheBaseParts = ["odds", sportKey, markets, regions, oddsFormat];
   const normalizedKey = cacheKey(["normalized", ...cacheBaseParts]);
+  const nowMs = Date.now();
   const cached = await cacheGet<NormalizedOddsResult>(normalizedKey);
-  if (cached) return cached;
+  if (cached) {
+    staleNormalizedFallback.set(normalizedKey, { value: cached, storedAtMs: nowMs });
+    return cached;
+  }
 
-  const raw = await fetchOddsFromUpstream({
-    sportKey,
-    regions,
-    markets,
-    oddsFormat
-  });
+  const backoffUntil = normalizedBackoffUntil.get(normalizedKey) ?? 0;
+  if (backoffUntil > nowMs) {
+    const stale = readStaleNormalized(normalizedKey, nowMs);
+    if (stale) return stale;
+    const err = new Error("Upstream service unavailable");
+    (err as Error & { code?: string }).code = "UPSTREAM_UNAVAILABLE";
+    throw err;
+  }
 
-  const league = sportKeyToLeague(sportKey);
-  const normalized = normalizeOddsApiResponse({ league, raw });
-  const result: NormalizedOddsResult = {
-    sportKey,
-    league,
-    normalized,
-    fetchedAt: new Date().toISOString(),
-    query: { sportKey, regions, markets, oddsFormat },
-    cacheBaseParts
-  };
+  try {
+    const raw = await fetchOddsFromUpstream({
+      sportKey,
+      regions,
+      markets,
+      oddsFormat
+    });
 
-  await cacheSet(normalizedKey, result, RAW_NORMALIZED_TTL_MS);
-  return result;
+    const league = sportKeyToLeague(sportKey);
+    const normalized = normalizeOddsApiResponse({ league, raw });
+    const result: NormalizedOddsResult = {
+      sportKey,
+      league,
+      normalized,
+      fetchedAt: new Date().toISOString(),
+      query: { sportKey, regions, markets, oddsFormat },
+      cacheBaseParts
+    };
+
+    normalizedBackoffUntil.delete(normalizedKey);
+    staleNormalizedFallback.set(normalizedKey, { value: result, storedAtMs: nowMs });
+    await cacheSet(normalizedKey, result, RAW_NORMALIZED_TTL_MS);
+    return result;
+  } catch (error) {
+    if (isRecoverableUpstreamError(error)) {
+      normalizedBackoffUntil.set(normalizedKey, nowMs + UPSTREAM_FAILURE_BACKOFF_MS);
+      const stale = readStaleNormalized(normalizedKey, nowMs);
+      if (stale) return stale;
+    }
+    throw error;
+  }
 }
 
 export async function getFairBoard(params: FairBoardQuery): Promise<FairBoardResponse> {

@@ -6,6 +6,8 @@ import { resetPersistenceForTests, setRedisOverrideForTests } from "../lib/serve
 import { persistValidationEvent } from "../lib/server/odds/validationStore";
 import type { PersistedValidationEvent } from "../lib/server/odds/types";
 
+const INTERNAL_TEST_KEY = "internal-test-key";
+
 function event(id: string): PersistedValidationEvent {
   return {
     version: 1,
@@ -53,10 +55,47 @@ function event(id: string): PersistedValidationEvent {
 test.beforeEach(() => {
   resetPersistenceForTests();
   setRedisOverrideForTests(null);
+  process.env.EMPIRE_INTERNAL_API_KEY = INTERNAL_TEST_KEY;
 });
 
-test("internal diagnostics route fails closed when durable persistence unavailable", async () => {
+test.after(() => {
+  delete process.env.EMPIRE_INTERNAL_API_KEY;
+});
+
+test("internal diagnostics route rejects unauthenticated requests", async () => {
   const res = await GET(new Request("http://localhost/api/internal/diagnostics"));
+  const payload = await res.json();
+
+  assert.equal(res.status, 401);
+  assert.equal(payload.ok, false);
+  assert.equal(payload.error.code, "UNAUTHORIZED");
+});
+
+test("internal diagnostics route fails closed when internal auth key is missing", async () => {
+  delete process.env.EMPIRE_INTERNAL_API_KEY;
+
+  const res = await GET(
+    new Request("http://localhost/api/internal/diagnostics", {
+      headers: {
+        "x-empire-internal-key": INTERNAL_TEST_KEY
+      }
+    })
+  );
+  const payload = await res.json();
+
+  assert.equal(res.status, 503);
+  assert.equal(payload.ok, false);
+  assert.equal(payload.error.code, "INTERNAL_AUTH_UNAVAILABLE");
+});
+
+test("internal diagnostics route returns persistence unavailable with valid internal auth", async () => {
+  const res = await GET(
+    new Request("http://localhost/api/internal/diagnostics", {
+      headers: {
+        "x-empire-internal-key": INTERNAL_TEST_KEY
+      }
+    })
+  );
   const payload = await res.json();
 
   assert.equal(res.status, 503);
@@ -65,12 +104,33 @@ test("internal diagnostics route fails closed when durable persistence unavailab
   assert.ok(payload.persistenceHealth);
 });
 
+test("internal diagnostics route accepts internal session cookie auth", async () => {
+  const res = await GET(
+    new Request("http://localhost/api/internal/diagnostics", {
+      headers: {
+        cookie: "empire_internal_session=internal-test-key"
+      }
+    })
+  );
+  const payload = await res.json();
+
+  assert.equal(res.status, 503);
+  assert.equal(payload.ok, false);
+  assert.equal(payload.error.code, "PERSISTENCE_UNAVAILABLE");
+});
+
 test("internal diagnostics route returns stable JSON when persistence is available", async () => {
   const redis = createMockRedis();
   setRedisOverrideForTests(redis.client);
   await persistValidationEvent(event("validation-route-1"));
 
-  const res = await GET(new Request("http://localhost/api/internal/diagnostics"));
+  const res = await GET(
+    new Request("http://localhost/api/internal/diagnostics", {
+      headers: {
+        "x-empire-internal-key": INTERNAL_TEST_KEY
+      }
+    })
+  );
   const payload = await res.json();
 
   assert.equal(res.status, 200);

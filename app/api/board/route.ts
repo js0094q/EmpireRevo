@@ -1,11 +1,13 @@
 import { NextResponse } from "next/server";
-import type { BoardResponse, LeagueKey } from "@/lib/odds/schemas";
+import type { BoardResponse } from "@/lib/odds/schemas";
+import { isValidationError, mapPublicError, publicErrorResponse, validationErrorResponse } from "@/lib/server/odds/apiErrors";
 import { buildEditorNote, BOARD_DISCLAIMER } from "@/lib/server/odds/editor";
 import { cacheGet, cacheKey, cacheSet } from "@/lib/server/odds/cache";
 import { leagueToSportKey } from "@/lib/server/odds/client";
 import { cacheControlHeader } from "@/lib/server/odds/env";
 import { getNormalizedOdds } from "@/lib/server/odds/oddsService";
 import { buildFeed, deriveGames, selectBestValue, selectComingUp } from "@/lib/server/odds/derive";
+import { parseLeague, parseMarketsCsv, parseRegionsCsv } from "@/lib/server/odds/requestValidation";
 
 export const runtime = "nodejs";
 
@@ -16,22 +18,14 @@ const movementState = {
 
 const WINDOW_HOURS = 24;
 
-function toLeague(input: string): LeagueKey {
-  const value = input.toLowerCase();
-  if (value === "nfl" || value === "nba" || value === "nhl" || value === "ncaab" || value === "mlb") {
-    return value;
-  }
-  return "nba";
-}
-
 export async function GET(req: Request) {
-  const url = new URL(req.url);
-  const league = toLeague(url.searchParams.get("sport") || "nba");
-  const regions = url.searchParams.get("regions") || "us";
-  const markets = url.searchParams.get("markets") || "h2h,spreads,totals";
-  const sportKey = leagueToSportKey(league);
-
   try {
+    const url = new URL(req.url);
+    const league = parseLeague(url.searchParams.get("sport"), "nba");
+    const regions = parseRegionsCsv(url.searchParams.get("regions"), "us");
+    const markets = parseMarketsCsv(url.searchParams.get("markets"), "h2h,spreads,totals");
+    const sportKey = leagueToSportKey(league);
+
     const normalized = await getNormalizedOdds({
       sportKey,
       regions,
@@ -72,29 +66,11 @@ export async function GET(req: Request) {
     await cacheSet(cacheId, payload, 20_000);
     return NextResponse.json(payload, { headers: cacheControlHeader(30, 120) });
   } catch (error) {
-    const e = error as Error & { code?: string; status?: number; body?: string };
-
-    if (e.code === "MISSING_KEY") {
-      return NextResponse.json({ error: "Missing ODDS_API_KEY" }, { status: 500 });
+    if (isValidationError(error)) {
+      return validationErrorResponse(error);
     }
 
-    if (e.code === "UPSTREAM_ERROR") {
-      return NextResponse.json(
-        {
-          error: "Upstream error",
-          status: e.status || 502,
-          body: e.body || ""
-        },
-        { status: 502 }
-      );
-    }
-
-    return NextResponse.json(
-      {
-        error: "Unexpected server error",
-        message: e.message
-      },
-      { status: 500 }
-    );
+    const mapped = mapPublicError(error);
+    return publicErrorResponse(mapped);
   }
 }

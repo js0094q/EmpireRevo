@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { cacheStatus } from "@/lib/server/odds/cache";
-import { getOddsApiKey } from "@/lib/server/odds/env";
+import { getOddsApiBaseUrl, getOddsApiKey } from "@/lib/server/odds/env";
 
 export const runtime = "nodejs";
 
@@ -12,8 +12,8 @@ async function checkOddsApi(): Promise<{ configured: boolean; reachable: boolean
     return { configured: false, reachable: false };
   }
 
-  const base = process.env.ODDS_API_BASE || "https://api.the-odds-api.com";
-  const url = new URL(`${base}/v4/sports`);
+  const base = getOddsApiBaseUrl();
+  const url = new URL("/v4/sports", base);
   url.searchParams.set("apiKey", apiKey);
 
   try {

@@ -1,28 +1,21 @@
 import { NextResponse } from "next/server";
-import { authorizeInternalRequest } from "@/lib/server/odds/internalAuth";
+import { internalUnexpectedErrorResponse, isValidationError, validationErrorResponse } from "@/lib/server/odds/apiErrors";
+import { authorizeInternalRequest, toInternalAuthError } from "@/lib/server/odds/internalAuth";
 import { getPersistenceStatus } from "@/lib/server/odds/persistence";
 import { buildMarketTimeline } from "@/lib/server/odds/timeline";
 import { detectMarketPressureForMarket } from "@/lib/server/odds/marketPressure";
+import { parseBookList, parseOpaqueIdentifier, parseRollingPoints } from "@/lib/server/odds/requestValidation";
 
 export const runtime = "nodejs";
-
-function parseRolling(value: string | null): number | undefined {
-  if (!value) return undefined;
-  const parsed = Number(value);
-  if (!Number.isFinite(parsed)) return undefined;
-  return Math.max(1, Math.floor(parsed));
-}
 
 export async function GET(req: Request) {
   const auth = authorizeInternalRequest(req);
   if (!auth.ok) {
+    const authError = toInternalAuthError(auth);
     return NextResponse.json(
       {
         ok: false,
-        error: {
-          code: auth.code,
-          message: auth.message
-        }
+        error: authError
       },
       { status: auth.status }
     );
@@ -45,33 +38,25 @@ export async function GET(req: Request) {
 
   try {
     const url = new URL(req.url);
-    const sportKey = url.searchParams.get("sportKey") || "";
-    const eventId = url.searchParams.get("eventId") || "";
-    const marketKey = url.searchParams.get("marketKey") || "";
-
-    if (!sportKey || !eventId || !marketKey) {
-      return NextResponse.json(
-        {
-          ok: false,
-          error: {
-            code: "BAD_REQUEST",
-            message: "sportKey, eventId, and marketKey are required"
-          }
-        },
-        { status: 400 }
-      );
-    }
-
-    const books = (url.searchParams.get("books") || "")
-      .split(",")
-      .map((book) => book.trim())
-      .filter(Boolean);
+    const sportKey = parseOpaqueIdentifier(url.searchParams.get("sportKey"), "sportKey", {
+      required: true,
+      maxLength: 64
+    });
+    const eventId = parseOpaqueIdentifier(url.searchParams.get("eventId"), "eventId", {
+      required: true,
+      maxLength: 180
+    });
+    const marketKey = parseOpaqueIdentifier(url.searchParams.get("marketKey"), "marketKey", {
+      required: true,
+      maxLength: 140
+    });
+    const books = parseBookList(url.searchParams.get("books"), 20);
 
     const timeline = await buildMarketTimeline({
       sportKey,
       eventId,
       marketKey,
-      rollingPoints: parseRolling(url.searchParams.get("rolling")),
+      rollingPoints: parseRollingPoints(url.searchParams.get("rolling")),
       bookKeys: books.length ? books : undefined
     });
 
@@ -87,16 +72,9 @@ export async function GET(req: Request) {
       pressureSignals
     });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Unexpected internal timeline error";
-    return NextResponse.json(
-      {
-        ok: false,
-        error: {
-          code: "UNEXPECTED_ERROR",
-          message
-        }
-      },
-      { status: 500 }
-    );
+    if (isValidationError(error)) {
+      return validationErrorResponse(error);
+    }
+    return internalUnexpectedErrorResponse();
   }
 }

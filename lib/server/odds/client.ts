@@ -1,7 +1,8 @@
 import type { LeagueKey } from "@/lib/odds/schemas";
-import { getOddsApiKey } from "@/lib/server/odds/env";
+import { getOddsApiBaseUrl, getOddsApiKey } from "@/lib/server/odds/env";
 
-const DEFAULT_BASE = "https://api.the-odds-api.com";
+const UPSTREAM_TIMEOUT_MS = 5000;
+const MAX_UPSTREAM_ATTEMPTS = 2;
 
 export function leagueToSportKey(league: LeagueKey): string {
   switch (league) {
@@ -42,23 +43,19 @@ export async function fetchOddsFromUpstream(params: {
     throw err;
   }
 
-  const base = process.env.ODDS_API_BASE || DEFAULT_BASE;
-  const upstream = new URL(`${base}/v4/sports/${params.sportKey}/odds`);
+  const base = getOddsApiBaseUrl();
+  const upstream = new URL(`/v4/sports/${encodeURIComponent(params.sportKey)}/odds`, base);
   upstream.searchParams.set("regions", params.regions);
   upstream.searchParams.set("markets", params.markets);
   upstream.searchParams.set("oddsFormat", params.oddsFormat || "american");
   upstream.searchParams.set("apiKey", apiKey);
 
-  const response = await fetch(upstream.toString(), {
-    headers: { Accept: "application/json" }
-  });
+  const response = await fetchWithRetry(upstream.toString());
 
   const text = await response.text();
   if (!response.ok) {
     const err = new Error(`Upstream error ${response.status}`);
-    const e = err as Error & { status?: number; body?: string; code?: string };
-    e.status = response.status;
-    e.body = text.slice(0, 500);
+    const e = err as Error & { code?: string };
     if (response.status === 401 || response.status === 403) {
       e.code = "UPSTREAM_AUTH_FAILURE";
     } else if (response.status === 429) {
@@ -68,11 +65,61 @@ export async function fetchOddsFromUpstream(params: {
     }
     throw err;
   }
-  const parsed = JSON.parse(text);
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(text);
+  } catch {
+    const err = new Error("Upstream payload is not valid JSON");
+    (err as Error & { code?: string }).code = "UPSTREAM_EMPTY_PAYLOAD";
+    throw err;
+  }
   if (!Array.isArray(parsed)) {
     const err = new Error("Upstream payload is not an array");
     (err as Error & { code?: string }).code = "UPSTREAM_EMPTY_PAYLOAD";
     throw err;
   }
   return parsed;
+}
+
+async function fetchWithRetry(url: string): Promise<Response> {
+  let lastFailure: unknown = null;
+  for (let attempt = 1; attempt <= MAX_UPSTREAM_ATTEMPTS; attempt += 1) {
+    try {
+      const response = await fetchWithTimeout(url, UPSTREAM_TIMEOUT_MS);
+      if (response.status >= 500 && attempt < MAX_UPSTREAM_ATTEMPTS) {
+        await wait(100 * attempt);
+        continue;
+      }
+      return response;
+    } catch (error) {
+      lastFailure = error;
+      if (attempt < MAX_UPSTREAM_ATTEMPTS) {
+        await wait(100 * attempt);
+        continue;
+      }
+    }
+  }
+
+  const err = new Error("Upstream service unavailable");
+  const e = err as Error & { code?: string; cause?: unknown };
+  e.code = "UPSTREAM_UNAVAILABLE";
+  e.cause = lastFailure;
+  throw err;
+}
+
+async function fetchWithTimeout(url: string, timeoutMs: number): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, {
+      signal: controller.signal,
+      headers: { Accept: "application/json" }
+    });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+function wait(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }

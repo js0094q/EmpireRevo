@@ -6,6 +6,8 @@ import { createMockRedis } from "./mockRedis";
 import { writeMarketSnapshot } from "../lib/server/odds/historyStore";
 import type { PersistedMarketSnapshot } from "../lib/server/odds/types";
 
+const INTERNAL_TEST_KEY = "internal-test-key";
+
 function snapshot(capturedAt: number): PersistedMarketSnapshot {
   return {
     version: 1,
@@ -56,11 +58,31 @@ function snapshot(capturedAt: number): PersistedMarketSnapshot {
 test.beforeEach(() => {
   resetPersistenceForTests();
   setRedisOverrideForTests(null);
+  process.env.EMPIRE_INTERNAL_API_KEY = INTERNAL_TEST_KEY;
+});
+
+test.after(() => {
+  delete process.env.EMPIRE_INTERNAL_API_KEY;
+});
+
+test("timeline route rejects unauthenticated requests", async () => {
+  const res = await GET(
+    new Request("http://localhost/api/internal/timeline?sportKey=basketball_nba&eventId=evt&marketKey=h2h%3Aaway")
+  );
+  const payload = await res.json();
+
+  assert.equal(res.status, 401);
+  assert.equal(payload.ok, false);
+  assert.equal(payload.error.code, "UNAUTHORIZED");
 });
 
 test("timeline route fails closed when persistence unavailable", async () => {
   const res = await GET(
-    new Request("http://localhost/api/internal/timeline?sportKey=basketball_nba&eventId=evt&marketKey=h2h%3Aaway")
+    new Request("http://localhost/api/internal/timeline?sportKey=basketball_nba&eventId=evt&marketKey=h2h%3Aaway", {
+      headers: {
+        "x-empire-internal-key": INTERNAL_TEST_KEY
+      }
+    })
   );
   const payload = await res.json();
 
@@ -78,7 +100,12 @@ test("timeline route returns persisted timeline and pressure signals", async () 
 
   const res = await GET(
     new Request(
-      "http://localhost/api/internal/timeline?sportKey=basketball_nba&eventId=evt-timeline-route&marketKey=h2h%3Aaway&rolling=50"
+      "http://localhost/api/internal/timeline?sportKey=basketball_nba&eventId=evt-timeline-route&marketKey=h2h%3Aaway&rolling=50",
+      {
+        headers: {
+          "x-empire-internal-key": INTERNAL_TEST_KEY
+        }
+      }
     )
   );
   const payload = await res.json();

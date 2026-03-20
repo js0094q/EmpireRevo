@@ -1,25 +1,19 @@
 import { NextResponse } from "next/server";
-import { authorizeInternalRequest } from "@/lib/server/odds/internalAuth";
+import { internalUnexpectedErrorResponse, isValidationError, validationErrorResponse } from "@/lib/server/odds/apiErrors";
+import { authorizeInternalRequest, toInternalAuthError } from "@/lib/server/odds/internalAuth";
 import { getInternalDiagnostics } from "@/lib/server/odds/internalDiagnostics";
+import { parseIntegerParam } from "@/lib/server/odds/requestValidation";
 
 export const runtime = "nodejs";
-
-function parseLimit(value: string | null, fallback = 400): number {
-  const parsed = Number(value);
-  if (!Number.isFinite(parsed)) return fallback;
-  return Math.max(25, Math.min(1000, Math.floor(parsed)));
-}
 
 export async function GET(req: Request) {
   const auth = authorizeInternalRequest(req);
   if (!auth.ok) {
+    const authError = toInternalAuthError(auth);
     return NextResponse.json(
       {
         ok: false,
-        error: {
-          code: auth.code,
-          message: auth.message
-        }
+        error: authError
       },
       { status: auth.status }
     );
@@ -27,7 +21,13 @@ export async function GET(req: Request) {
 
   try {
     const url = new URL(req.url);
-    const limit = parseLimit(url.searchParams.get("limit"), 400);
+    const limit = parseIntegerParam({
+      name: "limit",
+      value: url.searchParams.get("limit"),
+      fallback: 400,
+      min: 25,
+      max: 1000
+    });
     const payload = await getInternalDiagnostics(limit);
     if (!payload.ok) {
       return NextResponse.json(
@@ -46,16 +46,9 @@ export async function GET(req: Request) {
 
     return NextResponse.json(payload);
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Unexpected internal diagnostics error";
-    return NextResponse.json(
-      {
-        ok: false,
-        error: {
-          code: "UNEXPECTED_ERROR",
-          message
-        }
-      },
-      { status: 500 }
-    );
+    if (isValidationError(error)) {
+      return validationErrorResponse(error);
+    }
+    return internalUnexpectedErrorResponse();
   }
 }

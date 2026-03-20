@@ -1,30 +1,24 @@
 import { NextResponse } from "next/server";
-import { authorizeInternalRequest } from "@/lib/server/odds/internalAuth";
+import { internalUnexpectedErrorResponse, isValidationError, validationErrorResponse } from "@/lib/server/odds/apiErrors";
+import { authorizeInternalRequest, toInternalAuthError } from "@/lib/server/odds/internalAuth";
 import { getPersistenceStatus } from "@/lib/server/odds/persistence";
 import { buildFactorAnalytics } from "@/lib/server/odds/factorAnalytics";
 import { buildFactorPerformance } from "@/lib/server/odds/factorPerformance";
 import { buildProbabilityCalibration } from "@/lib/server/odds/calibrationAnalysis";
 import { buildEvaluationReports } from "@/lib/server/odds/evaluationReport";
 import { getEvaluationSummary, parseCloseReference } from "@/lib/server/odds/evaluationRunner";
+import { parseIntegerParam } from "@/lib/server/odds/requestValidation";
 
 export const runtime = "nodejs";
-
-function parseLimit(value: string | null, fallback = 300): number {
-  const parsed = Number(value);
-  if (!Number.isFinite(parsed)) return fallback;
-  return Math.max(25, Math.min(1000, Math.floor(parsed)));
-}
 
 export async function GET(req: Request) {
   const auth = authorizeInternalRequest(req);
   if (!auth.ok) {
+    const authError = toInternalAuthError(auth);
     return NextResponse.json(
       {
         ok: false,
-        error: {
-          code: auth.code,
-          message: auth.message
-        }
+        error: authError
       },
       { status: auth.status }
     );
@@ -47,7 +41,13 @@ export async function GET(req: Request) {
 
   try {
     const url = new URL(req.url);
-    const limit = parseLimit(url.searchParams.get("limit"), 300);
+    const limit = parseIntegerParam({
+      name: "limit",
+      value: url.searchParams.get("limit"),
+      fallback: 300,
+      min: 25,
+      max: 1000
+    });
     const closeReference = parseCloseReference(url.searchParams.get("closeReference"));
 
     const [evaluation, factorAnalytics, probabilityCalibration, factorPerformance, evaluationReports] = await Promise.all([
@@ -69,16 +69,9 @@ export async function GET(req: Request) {
       evaluationReports
     });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Unexpected evaluation summary error";
-    return NextResponse.json(
-      {
-        ok: false,
-        error: {
-          code: "UNEXPECTED_ERROR",
-          message
-        }
-      },
-      { status: 500 }
-    );
+    if (isValidationError(error)) {
+      return validationErrorResponse(error);
+    }
+    return internalUnexpectedErrorResponse();
   }
 }
