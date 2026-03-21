@@ -24,9 +24,8 @@ export function MarketTabs({
     return [
       {
         value: option.value,
-        label: option.label,
-        disabled: availability?.status === "limited" && option.value !== value,
-        title: availability?.status === "limited" ? "Limited live availability" : undefined
+        label: availability?.status === "limited" ? `${option.label} (Limited)` : option.label,
+        title: availability?.status === "limited" ? "Limited live availability; representative comparable lines shown" : undefined
       }
     ];
   });

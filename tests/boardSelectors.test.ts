@@ -270,3 +270,29 @@ test("filterEvents positive-edge filter follows the displayed pick edge instead 
 
   assert.deepEqual(filtered.map((event) => event.id), ["edge-only"]);
 });
+
+test("filterEvents time window excludes already-started events", () => {
+  const past = mockEvent("past", { commenceTime: new Date(Date.now() - 5 * 60 * 1000).toISOString() });
+  const soon = mockEvent("soon", { commenceTime: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString() });
+  const later = mockEvent("later", { commenceTime: new Date(Date.now() + 30 * 60 * 60 * 1000).toISOString() });
+
+  const filtered = filterEvents([past, soon, later], {
+    teamQuery: "",
+    visibleBookKeys: new Set(["booka"]),
+    edgeThresholdPct: 0,
+    minContributingBooks: 1,
+    minConfidenceScore: 0,
+    minSharpParticipation: 0,
+    startWindow: "24h",
+    positiveEdgeOnly: false,
+    sideFilter: "all",
+    bestEdgesOnly: false,
+    staleOnly: false,
+    highCoverageOnly: false,
+    trustedBooksOnly: false,
+    pinnedOnly: false,
+    pinnedBooks: new Set<string>()
+  });
+
+  assert.deepEqual(filtered.map((event) => event.id), ["soon"]);
+});

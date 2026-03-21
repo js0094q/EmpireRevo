@@ -5,12 +5,20 @@ export type BoardMode = "board" | "games";
 export type BoardSortKey = "score" | "edge" | "confidence" | "best" | "soonest" | "timing";
 export type BoardWindowKey = "all" | "today" | "next24";
 export type BoardSideKey = "all" | "favored" | "underdogs";
+export type BoardNavigationContext = {
+  mode?: BoardMode;
+  windowKey?: Exclude<BoardWindowKey, "all">;
+  sortBy?: BoardSortKey;
+  side?: BoardSideKey;
+  search?: string;
+  positiveEdgeOnly?: boolean;
+};
 
 export const SORT_OPTIONS: Array<{ value: BoardSortKey; label: string }> = [
   { value: "score", label: "Top Opportunities" },
   { value: "edge", label: "Biggest Edge" },
   { value: "confidence", label: "Most Stable Market" },
-  { value: "best", label: "Best Payout" },
+  { value: "best", label: "Highest Listed Odds" },
   { value: "soonest", label: "Starting Soon" },
   { value: "timing", label: "Closing Soon" }
 ];
@@ -198,11 +206,19 @@ export function eventDetailHref(params: {
   league: string;
   market: FairEvent["market"];
   model: "sharp" | "equal" | "weighted";
+  context?: BoardNavigationContext;
 }): string {
   const query = new URLSearchParams({
     league: params.league,
     market: params.market,
     model: params.model
   });
+  if (params.context?.mode === "games") query.set("mode", "games");
+  if (params.context?.windowKey === "today") query.set("window", "today");
+  if (params.context?.sortBy && params.context.sortBy !== "score") query.set("sort", params.context.sortBy);
+  if (params.context?.side && params.context.side !== "all") query.set("side", params.context.side);
+  const search = params.context?.search?.trim();
+  if (search) query.set("search", search);
+  if (params.context?.positiveEdgeOnly) query.set("edge", "1");
   return `/game/${encodeURIComponent(toEventRouteId(params.event))}?${query.toString()}`;
 }

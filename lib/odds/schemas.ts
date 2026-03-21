@@ -88,6 +88,7 @@ export type DerivedSide = {
 
 export type DerivedMarket = {
   market: MarketKey;
+  linePoint?: number;
   sides: DerivedSide[];
 };
 

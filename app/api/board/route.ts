@@ -14,7 +14,7 @@ import { parseIntegerParam, parseLeague, parseMarketsCsv, parseModel, parseRegio
 export const runtime = "nodejs";
 
 const WINDOW_HOURS = 24;
-const DEFAULT_MIN_BOOKS = 2;
+const DEFAULT_MIN_BOOKS = 4;
 
 export async function GET(req: Request) {
   try {

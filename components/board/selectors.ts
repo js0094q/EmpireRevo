@@ -160,7 +160,7 @@ export function filterEvents(events: FairEvent[], options: EventFilterOptions): 
   if (options.startWindow !== "all") {
     filtered = filtered.filter((event) => {
       const kickoffTs = Date.parse(event.commenceTime);
-      return Number.isFinite(kickoffTs) && kickoffTs - now <= cutoffMs;
+      return Number.isFinite(kickoffTs) && kickoffTs >= now && kickoffTs - now <= cutoffMs;
     });
   }
 
@@ -229,11 +229,13 @@ export function sortEvents(
   }
 
   if (sortBy === "best") {
-    return [...events].sort((a, b) => {
-      const aBest = Math.max(...a.outcomes.map((outcome) => outcome.bestPrice));
-      const bBest = Math.max(...b.outcomes.map((outcome) => outcome.bestPrice));
-      return bBest - aBest;
-    });
+    return [...events]
+      .map((event) => ({
+        event,
+        price: buildPickSummary(event).book?.priceAmerican ?? Number.NEGATIVE_INFINITY
+      }))
+      .sort((a, b) => b.price - a.price || b.event.maxAbsEdgePct - a.event.maxAbsEdgePct)
+      .map((entry) => entry.event);
   }
 
   if (sortBy === "confidence") {

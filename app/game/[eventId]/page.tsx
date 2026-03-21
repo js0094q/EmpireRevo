@@ -15,7 +15,17 @@ import { detectMarketPressureForMarket } from "@/lib/server/odds/marketPressure"
 import { buildFairEventsForNormalizedEvent, getMarketAvailabilityForBoard, LIMITED_MARKET_MIN_BOOKS } from "@/lib/server/odds/fairEngine";
 import { getNormalizedOdds } from "@/lib/server/odds/oddsService";
 import { matchesEventRouteId, toEventRouteId } from "@/lib/server/odds/eventRoute";
-import { buildPickSummary, eventDetailHref, formatMarketLabel, formatOffer, strongestBook } from "@/components/board/board-helpers";
+import {
+  buildPickSummary,
+  eventDetailHref,
+  formatMarketLabel,
+  formatOffer,
+  strongestBook,
+  type BoardMode,
+  type BoardSideKey,
+  type BoardSortKey,
+  type BoardNavigationContext
+} from "@/components/board/board-helpers";
 import type { FairEvent, FairOutcomeBook } from "@/lib/server/odds/types";
 import type { MarketKey } from "@/lib/odds/schemas";
 import styles from "./page.module.css";
@@ -151,12 +161,65 @@ function pickRelatedMarketEvent(params: {
   return params.relatedEvents[0] ?? null;
 }
 
+function parseBoardMode(value?: string): BoardMode {
+  return value === "games" ? "games" : "board";
+}
+
+function parseBoardWindow(value?: string): "today" | "next24" {
+  return value === "today" ? "today" : "next24";
+}
+
+function parseBoardSort(value?: string): BoardSortKey {
+  if (value === "edge" || value === "confidence" || value === "best" || value === "soonest" || value === "timing") return value;
+  return "score";
+}
+
+function parseBoardSide(value?: string): BoardSideKey {
+  if (value === "favored" || value === "underdogs") return value;
+  return "all";
+}
+
+function boardContextSearch(value?: string): string {
+  return (value || "").trim();
+}
+
+function boardReturnHref(params: {
+  league: string;
+  market: MarketKey;
+  model: "sharp" | "equal" | "weighted";
+  context: BoardNavigationContext;
+}): string {
+  const basePath = params.context.mode === "games" ? "/games" : "/";
+  const query = new URLSearchParams({
+    league: params.league,
+    market: params.market,
+    model: params.model
+  });
+  if (params.context.windowKey === "today") query.set("window", "today");
+  if (params.context.sortBy && params.context.sortBy !== "score") query.set("sort", params.context.sortBy);
+  if (params.context.side && params.context.side !== "all") query.set("side", params.context.side);
+  const search = params.context.search?.trim();
+  if (search) query.set("search", search);
+  if (params.context.positiveEdgeOnly) query.set("edge", "1");
+  return `${basePath}?${query.toString()}`;
+}
+
 export default async function GamePage({
   params,
   searchParams
 }: {
   params: Promise<{ eventId: string }>;
-  searchParams?: Promise<{ league?: string; market?: string; model?: string }>;
+  searchParams?: Promise<{
+    league?: string;
+    market?: string;
+    model?: string;
+    mode?: string;
+    window?: string;
+    sort?: string;
+    side?: string;
+    search?: string;
+    edge?: string;
+  }>;
 }) {
   const { eventId } = await params;
   const query = (await searchParams) || {};
@@ -175,6 +238,14 @@ export default async function GamePage({
   const league = query.league || "nba";
   const market = query.market === "spreads" || query.market === "totals" ? query.market : "h2h";
   const model = query.model === "sharp" || query.model === "equal" || query.model === "weighted" ? query.model : "weighted";
+  const boardContext: BoardNavigationContext = {
+    mode: parseBoardMode(query.mode),
+    windowKey: parseBoardWindow(query.window),
+    sortBy: parseBoardSort(query.sort),
+    side: parseBoardSide(query.side),
+    search: boardContextSearch(query.search),
+    positiveEdgeOnly: query.edge === "1" || query.edge === "true"
+  };
   const minBooks = 4;
 
   const sportKey = toSportKey(league);
@@ -200,6 +271,12 @@ export default async function GamePage({
       market: resolvedMarket,
       model
     });
+    if (boardContext.mode === "games") nextParams.set("mode", "games");
+    if (boardContext.windowKey === "today") nextParams.set("window", "today");
+    if (boardContext.sortBy && boardContext.sortBy !== "score") nextParams.set("sort", boardContext.sortBy);
+    if (boardContext.side && boardContext.side !== "all") nextParams.set("side", boardContext.side);
+    if (boardContext.search?.trim()) nextParams.set("search", boardContext.search.trim());
+    if (boardContext.positiveEdgeOnly) nextParams.set("edge", "1");
     redirect(`/game/${encodeURIComponent(eventId)}?${nextParams.toString()}`);
   }
   const effectiveMinBooks = resolvedStatus === "limited" ? LIMITED_MARKET_MIN_BOOKS : minBooks;
@@ -239,7 +316,16 @@ export default async function GamePage({
             ) : null}
           </section>
         ) : null}
-        <Link href={`/?league=${league}&market=${resolvedMarket}&model=${model}`}>Back to board</Link>
+        <Link
+          href={boardReturnHref({
+            league,
+            market: resolvedMarket,
+            model,
+            context: boardContext
+          })}
+        >
+          Back to board
+        </Link>
       </main>
     );
   }
@@ -270,7 +356,8 @@ export default async function GamePage({
                   event: relatedEvent,
                   league,
                   market: relatedEvent.market,
-                  model
+                  model,
+                  context: boardContext
                 })
               : null,
             status: availability.status,
@@ -285,7 +372,8 @@ export default async function GamePage({
             event,
             league,
             market: event.market,
-            model
+            model,
+            context: boardContext
           }),
           status: "active" as const,
           pointGroups: 1
@@ -338,6 +426,12 @@ export default async function GamePage({
       )
     : [];
   const timelineByOutcome = new Map(outcomeTimeline.map((entry) => [entry.outcomeName, entry]));
+  const backToBoardHref = boardReturnHref({
+    league,
+    market: event.market,
+    model,
+    context: boardContext
+  });
 
   return (
     <AppContainer>
@@ -347,7 +441,7 @@ export default async function GamePage({
           title="Event Detail"
           subtitle="Compare live sportsbook prices against the consensus fair line."
           breadcrumbs={[
-            { label: "Board", href: `/?league=${league}&market=${event.market}&model=${model}` },
+            { label: boardContext.mode === "games" ? "Games" : "Board", href: backToBoardHref },
             { label: `${event.awayTeam} @ ${event.homeTeam}` }
           ]}
         />
@@ -423,7 +517,7 @@ export default async function GamePage({
             {methodologyCopy ? <p className={styles.methodology}>{methodologyCopy}</p> : null}
 
             <div className={styles.backRow}>
-              <Link href={`/?league=${league}&market=${event.market}&model=${model}`} className="app-link">
+              <Link href={backToBoardHref} className="app-link">
                 Back to Board
               </Link>
             </div>

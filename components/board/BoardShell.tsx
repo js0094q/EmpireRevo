@@ -11,12 +11,14 @@ import { BoardToolbar } from "@/components/board/BoardToolbar";
 import { BoardTable } from "@/components/board/BoardTable";
 import { EmptyState } from "@/components/board/EmptyState";
 import {
+  buildPickSummary,
   buildOutcomeSummary,
   eventDetailHref,
   formatCommenceTime,
   formatMarketLabel,
   formatOffer,
   formatUpdatedLabel,
+  type BoardNavigationContext,
   type BoardMode,
   type BoardSideKey,
   type BoardSortKey
@@ -47,6 +49,24 @@ function joinTitles(values: string[]): string {
   return `${values.slice(0, -1).join(", ")}, and ${values[values.length - 1]}`;
 }
 
+function parseSortParam(value: string | null): BoardSortKey {
+  if (value === "edge" || value === "confidence" || value === "best" || value === "soonest" || value === "timing") return value;
+  return "score";
+}
+
+function parseSideParam(value: string | null): BoardSideKey {
+  if (value === "favored" || value === "underdogs") return value;
+  return "all";
+}
+
+function parseSearchParam(value: string | null): string {
+  return (value || "").trim();
+}
+
+function parsePositiveEdgeParam(value: string | null): boolean {
+  return value === "1" || value === "true";
+}
+
 type BoardShellProps = {
   board: FairBoardResponse;
   league: string;
@@ -57,11 +77,22 @@ type BoardShellProps = {
 export function BoardShell({ board, league, windowKey, mode = "board" }: BoardShellProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [sortBy, setSortBy] = useState<BoardSortKey>("score");
-  const [search, setSearch] = useState("");
-  const [side, setSide] = useState<BoardSideKey>("all");
-  const [positiveEdgeOnly, setPositiveEdgeOnly] = useState(false);
+  const [sortBy, setSortBy] = useState<BoardSortKey>(() => parseSortParam(searchParams?.get("sort") ?? null));
+  const [search, setSearch] = useState(() => parseSearchParam(searchParams?.get("search") ?? null));
+  const [side, setSide] = useState<BoardSideKey>(() => parseSideParam(searchParams?.get("side") ?? null));
+  const [positiveEdgeOnly, setPositiveEdgeOnly] = useState(() => parsePositiveEdgeParam(searchParams?.get("edge") ?? null));
   const deferredSearch = useDeferredValue(search);
+  const navigationContext = useMemo<BoardNavigationContext>(
+    () => ({
+      mode,
+      windowKey,
+      sortBy,
+      side,
+      search,
+      positiveEdgeOnly
+    }),
+    [mode, positiveEdgeOnly, search, side, sortBy, windowKey]
+  );
 
   function replaceParam(key: string, value: string) {
     const params = new URLSearchParams(searchParams?.toString() || "");
@@ -98,11 +129,27 @@ export function BoardShell({ board, league, windowKey, mode = "board" }: BoardSh
     [allBookKeys, board.diagnostics.calibration.pinned.actionableEdgePct, board.events, deferredSearch, positiveEdgeOnly, side, windowFilter]
   );
 
-  const orderedEvents = useMemo(() => sortEvents(filteredEvents, sortBy), [filteredEvents, sortBy]);
   const filteredEventIds = useMemo(() => new Set(filteredEvents.map((event) => event.id)), [filteredEvents]);
+  const topOpportunityRank = useMemo(() => {
+    const rank = new Map<string, number>();
+    for (const [index, opportunity] of board.topOpportunities.entries()) {
+      if (!filteredEventIds.has(opportunity.eventId) || rank.has(opportunity.eventId)) continue;
+      rank.set(opportunity.eventId, index);
+    }
+    return rank;
+  }, [board.topOpportunities, filteredEventIds]);
+  const orderedEvents = useMemo(() => {
+    if (sortBy !== "score") return sortEvents(filteredEvents, sortBy);
+    return [...filteredEvents].sort((a, b) => {
+      const aRank = topOpportunityRank.get(a.id) ?? Number.POSITIVE_INFINITY;
+      const bRank = topOpportunityRank.get(b.id) ?? Number.POSITIVE_INFINITY;
+      if (aRank !== bRank) return aRank - bRank;
+      return b.opportunityScore - a.opportunityScore;
+    });
+  }, [filteredEvents, sortBy, topOpportunityRank]);
   const eventsById = useMemo(() => new Map(board.events.map((event) => [event.id, event])), [board.events]);
 
-  const rankedOpportunities = useMemo<OpportunityCard[]>(
+  const canonicalOpportunities = useMemo<OpportunityCard[]>(
     () => {
       const cards: OpportunityCard[] = [];
 
@@ -134,7 +181,8 @@ export function BoardShell({ board, league, windowKey, mode = "board" }: BoardSh
             event,
             league,
             market: event.market,
-            model: board.model
+            model: board.model,
+            context: navigationContext
           }),
           event
         });
@@ -142,10 +190,47 @@ export function BoardShell({ board, league, windowKey, mode = "board" }: BoardSh
 
       return cards;
     },
-    [board.model, board.topOpportunities, eventsById, filteredEventIds, league, positiveEdgeOnly, side]
+    [board.model, board.topOpportunities, eventsById, filteredEventIds, league, navigationContext, positiveEdgeOnly, side]
   );
+  const opportunities = useMemo<OpportunityCard[]>(() => {
+    if (sortBy === "score") return canonicalOpportunities.slice(0, 4);
 
-  const opportunities = rankedOpportunities.slice(0, 4);
+    const canonicalByEventId = new Map(canonicalOpportunities.map((card) => [card.event.id, card]));
+    const cards: OpportunityCard[] = [];
+
+    for (const event of orderedEvents) {
+      const canonicalCard = canonicalByEventId.get(event.id);
+      if (canonicalCard) {
+        cards.push(canonicalCard);
+      } else {
+        const pick = buildPickSummary(event);
+        cards.push({
+          key: `${event.id}:${pick.outcome.name}`,
+          matchup: `${event.awayTeam} @ ${event.homeTeam}`,
+          market: event.market === "h2h" ? "Moneyline" : event.market === "spreads" ? "Spread" : "Total",
+          team: pick.outcome.name,
+          status: pick.status,
+          label: pick.label,
+          lineLabel: pick.book ? formatOffer(event.market, pick.book) : "--",
+          fairLabel: formatOffer(event.market, pick.outcome),
+          book: pick.book?.title ?? "--",
+          edgePct: pick.book?.edgePct ?? 0,
+          whyThisPick: pick.whyThisPick,
+          href: eventDetailHref({
+            event,
+            league,
+            market: event.market,
+            model: board.model,
+            context: navigationContext
+          }),
+          event
+        });
+      }
+      if (cards.length >= 4) break;
+    }
+
+    return cards;
+  }, [board.model, canonicalOpportunities, league, navigationContext, orderedEvents, sortBy]);
   const currentMarketAvailability = board.marketAvailability.find((entry) => entry.market === board.market) ?? null;
   const limitedMarkets = board.marketAvailability.filter((entry) => entry.status === "limited");
   const sharpReferenceTitles = board.sharpBooksUsed.slice(0, 3);
@@ -283,6 +368,7 @@ export function BoardShell({ board, league, windowKey, mode = "board" }: BoardSh
                 events={orderedEvents}
                 league={league}
                 model={board.model}
+                navContext={navigationContext}
               />
             ) : (
               <EmptyState

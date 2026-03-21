@@ -4,7 +4,14 @@ import Link from "next/link";
 import type { FairEvent } from "@/lib/server/odds/types";
 import styles from "./BoardShell.module.css";
 import { BoardRow } from "@/components/board/BoardRow";
-import { buildPickSummary, eventDetailHref, formatCommenceTime, formatMarketLabel, formatOffer } from "@/components/board/board-helpers";
+import {
+  buildPickSummary,
+  eventDetailHref,
+  formatCommenceTime,
+  formatMarketLabel,
+  formatOffer,
+  type BoardNavigationContext
+} from "@/components/board/board-helpers";
 import { TeamAvatar } from "@/components/board/TeamAvatar";
 import { EdgeBadge } from "@/components/board/EdgeBadge";
 
@@ -12,9 +19,10 @@ type BoardTableProps = {
   events: FairEvent[];
   league: string;
   model: "sharp" | "equal" | "weighted";
+  navContext: BoardNavigationContext;
 };
 
-export function BoardTable({ events, league, model }: BoardTableProps) {
+export function BoardTable({ events, league, model, navContext }: BoardTableProps) {
   return (
     <section className={styles.tableWrap}>
       <div className={styles.tableHeader}>
@@ -43,7 +51,8 @@ export function BoardTable({ events, league, model }: BoardTableProps) {
                   event,
                   league,
                   market: event.market,
-                  model
+                  model,
+                  context: navContext
                 })}
               />
             ))}
@@ -58,7 +67,8 @@ export function BoardTable({ events, league, model }: BoardTableProps) {
             event,
             league,
             market: event.market,
-            model
+            model,
+            context: navContext
           });
 
           return (

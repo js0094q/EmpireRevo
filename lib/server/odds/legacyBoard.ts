@@ -1,4 +1,4 @@
-import type { BoardResponse, DerivedGame, DerivedMarket, DerivedSide, DriverRef, EventRef, LeagueKey, MarketKey } from "@/lib/odds/schemas";
+import type { DerivedGame, DerivedMarket, DerivedSide, DriverRef, EventRef, LeagueKey, MarketKey } from "@/lib/odds/schemas";
 import type { FairBoardResponse, FairEvent, FairOutcome, FairOutcomeBook } from "@/lib/server/odds/types";
 
 const MARKET_ORDER: Record<MarketKey, number> = {
@@ -148,8 +148,18 @@ function deriveEventStatus(commenceTime: string, nowMs: number): EventRef["statu
   return kickoffMs <= nowMs ? "live" : "upcoming";
 }
 
-function selectRepresentativeEvents(boards: FairBoardResponse[]): Map<string, { template: FairEvent; markets: Map<MarketKey, FairEvent> }> {
-  const grouped = new Map<string, { template: FairEvent; markets: Map<MarketKey, FairEvent> }>();
+function compareMarketEvents(a: FairEvent, b: FairEvent): number {
+  const aPoint = Number(a.linePoint);
+  const bPoint = Number(b.linePoint);
+  const aHasPoint = Number.isFinite(aPoint);
+  const bHasPoint = Number.isFinite(bPoint);
+  if (aHasPoint && bHasPoint && aPoint !== bPoint) return aPoint - bPoint;
+  if (aHasPoint !== bHasPoint) return aHasPoint ? -1 : 1;
+  return a.id.localeCompare(b.id);
+}
+
+function selectRepresentativeEvents(boards: FairBoardResponse[]): Map<string, { template: FairEvent; markets: Map<MarketKey, FairEvent[]> }> {
+  const grouped = new Map<string, { template: FairEvent; markets: Map<MarketKey, FairEvent[]> }>();
 
   for (const board of boards) {
     for (const event of board.events) {
@@ -158,13 +168,16 @@ function selectRepresentativeEvents(boards: FairBoardResponse[]): Map<string, { 
       if (!existing) {
         grouped.set(key, {
           template: event,
-          markets: new Map([[event.market, event]])
+          markets: new Map([[event.market, [event]]])
         });
         continue;
       }
 
-      if (!existing.markets.has(event.market)) {
-        existing.markets.set(event.market, event);
+      const marketEvents = existing.markets.get(event.market) ?? [];
+      if (!marketEvents.some((candidate) => candidate.id === event.id)) {
+        marketEvents.push(event);
+        marketEvents.sort(compareMarketEvents);
+        existing.markets.set(event.market, marketEvents);
       }
     }
   }
@@ -182,17 +195,22 @@ export function buildLegacyBoardGames(params: {
 
   return Array.from(groups.values())
     .map(({ template, markets }) => {
-      const derivedMarkets = Array.from(markets.values())
-        .sort((a, b) => MARKET_ORDER[a.market] - MARKET_ORDER[b.market])
-        .map<DerivedMarket>((event) => ({
-          market: event.market,
-          sides: event.outcomes.map(buildDerivedSide).sort((a, b) => b.evPct - a.evPct)
-        }));
+      const derivedMarkets = Array.from(markets.entries())
+        .sort(([a], [b]) => MARKET_ORDER[a] - MARKET_ORDER[b])
+        .flatMap(([marketKey, marketEvents]) =>
+          marketEvents.map<DerivedMarket>((event) => ({
+            market: marketKey,
+            linePoint: Number.isFinite(Number(event.linePoint)) ? Number(event.linePoint) : undefined,
+            sides: event.outcomes.map(buildDerivedSide).sort((a, b) => b.evPct - a.evPct)
+          }))
+        );
 
-      const marketUpdatedMs = Array.from(markets.values()).reduce((latest, event) => {
-        const outcomeLatest = event.outcomes.reduce((max, outcome) => Math.max(max, latestUpdateMs(outcome.books)), 0);
-        return Math.max(latest, outcomeLatest);
-      }, 0);
+      const marketUpdatedMs = Array.from(markets.values())
+        .flat()
+        .reduce((latest, event) => {
+          const outcomeLatest = event.outcomes.reduce((max, outcome) => Math.max(max, latestUpdateMs(outcome.books)), 0);
+          return Math.max(latest, outcomeLatest);
+        }, 0);
       const updatedAt = marketUpdatedMs ? new Date(marketUpdatedMs).toISOString() : params.fallbackUpdatedAt;
 
       return {
@@ -227,9 +245,3 @@ export function latestBoardUpdatedAt(boards: FairBoardResponse[], fallback: stri
   }, 0);
   return latest ? new Date(latest).toISOString() : fallback;
 }
-
-export function legacyBoardDisclaimer(boards: FairBoardResponse[]): string {
-  return boards[0]?.disclaimer ?? "Market intelligence only. This is not financial advice or a guaranteed outcome.";
-}
-
-export type LegacyBoardPayload = BoardResponse;
