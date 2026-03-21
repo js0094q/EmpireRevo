@@ -130,8 +130,7 @@ export function whyThisPickText(params: {
   return "This book is offering the strongest available number versus consensus fair value.";
 }
 
-export function buildPickSummary(event: FairEvent): PickSummary {
-  const outcome = recommendedOutcome(event);
+export function buildOutcomeSummary(outcome: FairOutcome): PickSummary {
   const book = bestPriceBook(outcome);
   const status = pickStatus(outcome);
   const edgePct = book?.edgePct ?? 0;
@@ -149,6 +148,10 @@ export function buildPickSummary(event: FairEvent): PickSummary {
       hasRecommendation
     })
   };
+}
+
+export function buildPickSummary(event: FairEvent): PickSummary {
+  return buildOutcomeSummary(recommendedOutcome(event));
 }
 
 export function formatOffer(

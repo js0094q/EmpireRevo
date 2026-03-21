@@ -131,7 +131,7 @@ test("pinned-only filter keeps only events bettable at pinned books", () => {
     minConfidenceScore: 0,
     minSharpParticipation: 0,
     startWindow: "all",
-    positiveEvOnly: false,
+    positiveEdgeOnly: false,
     sideFilter: "all",
     bestEdgesOnly: false,
     staleOnly: false,

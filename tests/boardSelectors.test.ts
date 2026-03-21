@@ -142,7 +142,7 @@ test("filterEvents applies edge and minimum-book thresholds", () => {
     minConfidenceScore: 0,
     minSharpParticipation: 0,
     startWindow: "all",
-    positiveEvOnly: false,
+    positiveEdgeOnly: false,
     sideFilter: "all",
     bestEdgesOnly: false,
     staleOnly: false,
@@ -192,7 +192,7 @@ test("filterEvents can require stale opportunities and pinned-book actionability
     minConfidenceScore: 0,
     minSharpParticipation: 0,
     startWindow: "all",
-    positiveEvOnly: false,
+    positiveEdgeOnly: false,
     sideFilter: "all",
     bestEdgesOnly: false,
     staleOnly: true,
@@ -220,7 +220,7 @@ test("filterEvents side filter matches the displayed recommended pick side", () 
     minConfidenceScore: 0,
     minSharpParticipation: 0,
     startWindow: "all" as const,
-    positiveEvOnly: false,
+    positiveEdgeOnly: false,
     bestEdgesOnly: false,
     staleOnly: false,
     highCoverageOnly: false,
@@ -240,4 +240,33 @@ test("filterEvents side filter matches the displayed recommended pick side", () 
 
   assert.deepEqual(favoredOnly.map((event) => event.id), ["favorite-pick"]);
   assert.deepEqual(underdogsOnly.map((event) => event.id), ["underdog-pick"]);
+});
+
+test("filterEvents positive-edge filter follows the displayed pick edge instead of EV", () => {
+  const edgeOnly = mockEvent("edge-only", { edge: 1.1, ev: -0.4 });
+  const evOnly = mockEvent("ev-only", { edge: -0.2, ev: 1.6 });
+  evOnly.outcomes[0].books[0].edgePct = -0.2;
+  evOnly.outcomes[0].books[0].evPct = 1.6;
+  evOnly.outcomes[1].books[0].edgePct = -0.6;
+  evOnly.outcomes[1].books[0].evPct = -0.3;
+
+  const filtered = filterEvents([edgeOnly, evOnly], {
+    teamQuery: "",
+    visibleBookKeys: new Set(["booka"]),
+    edgeThresholdPct: 0,
+    minContributingBooks: 1,
+    minConfidenceScore: 0,
+    minSharpParticipation: 0,
+    startWindow: "all",
+    positiveEdgeOnly: true,
+    sideFilter: "all",
+    bestEdgesOnly: false,
+    staleOnly: false,
+    highCoverageOnly: false,
+    trustedBooksOnly: false,
+    pinnedOnly: false,
+    pinnedBooks: new Set<string>()
+  });
+
+  assert.deepEqual(filtered.map((event) => event.id), ["edge-only"]);
 });

@@ -11,7 +11,7 @@ import { BoardToolbar } from "@/components/board/BoardToolbar";
 import { BoardTable } from "@/components/board/BoardTable";
 import { EmptyState } from "@/components/board/EmptyState";
 import {
-  buildPickSummary,
+  buildOutcomeSummary,
   eventDetailHref,
   formatCommenceTime,
   formatMarketLabel,
@@ -36,7 +36,6 @@ type OpportunityCard = {
   fairLabel: string;
   book: string;
   edgePct: number;
-  scoreMagnitude: number;
   whyThisPick: string;
   href: string;
   event: FairBoardResponse["events"][number];
@@ -61,7 +60,7 @@ export function BoardShell({ board, league, windowKey, mode = "board" }: BoardSh
   const [sortBy, setSortBy] = useState<BoardSortKey>("score");
   const [search, setSearch] = useState("");
   const [side, setSide] = useState<BoardSideKey>("all");
-  const [positiveOnly, setPositiveOnly] = useState(false);
+  const [positiveEdgeOnly, setPositiveEdgeOnly] = useState(false);
   const deferredSearch = useDeferredValue(search);
 
   function replaceParam(key: string, value: string) {
@@ -74,6 +73,7 @@ export function BoardShell({ board, league, windowKey, mode = "board" }: BoardSh
   }
 
   const allBookKeys = useMemo(() => new Set(board.books.map((book) => book.key)), [board.books]);
+  const windowFilter = windowKey === "today" ? "12h" : "24h";
 
   const filteredEvents = useMemo(
     () =>
@@ -84,8 +84,8 @@ export function BoardShell({ board, league, windowKey, mode = "board" }: BoardSh
         minContributingBooks: 1,
         minConfidenceScore: 0,
         minSharpParticipation: 0,
-        startWindow: "all",
-        positiveEvOnly: positiveOnly,
+        startWindow: windowFilter,
+        positiveEdgeOnly,
         sideFilter: side,
         bestEdgesOnly: false,
         staleOnly: false,
@@ -95,40 +95,54 @@ export function BoardShell({ board, league, windowKey, mode = "board" }: BoardSh
         pinnedBooks: new Set<string>(),
         pinnedActionableEdgeThreshold: board.diagnostics.calibration.pinned.actionableEdgePct
       }),
-    [allBookKeys, board.diagnostics.calibration.pinned.actionableEdgePct, board.events, deferredSearch, positiveOnly, side]
+    [allBookKeys, board.diagnostics.calibration.pinned.actionableEdgePct, board.events, deferredSearch, positiveEdgeOnly, side, windowFilter]
   );
 
   const orderedEvents = useMemo(() => sortEvents(filteredEvents, sortBy), [filteredEvents, sortBy]);
+  const filteredEventIds = useMemo(() => new Set(filteredEvents.map((event) => event.id)), [filteredEvents]);
+  const eventsById = useMemo(() => new Map(board.events.map((event) => [event.id, event])), [board.events]);
 
   const rankedOpportunities = useMemo<OpportunityCard[]>(
-    () =>
-      filteredEvents
-        .map((event) => {
-          const pick = buildPickSummary(event);
-          return {
-            key: `${event.id}:${pick.outcome.name}:${pick.book?.bookKey ?? "no-book"}`,
-            matchup: `${event.awayTeam} @ ${event.homeTeam}`,
-            market: event.market === "h2h" ? "Moneyline" : event.market === "spreads" ? "Spread" : "Total",
-            team: pick.outcome.name,
-            status: pick.status,
-            label: pick.label,
-            lineLabel: pick.book ? formatOffer(event.market, pick.book) : "--",
-            fairLabel: formatOffer(event.market, pick.outcome),
-            book: pick.book?.title ?? "No live book",
-            edgePct: pick.book?.edgePct ?? 0,
-            scoreMagnitude: Math.abs(pick.book?.edgePct ?? 0),
-            whyThisPick: pick.whyThisPick,
-            href: eventDetailHref({
-              event,
-              league,
-              market: event.market,
-              model: board.model
-            }),
-            event
-          };
-        })
-        .sort((a, b) => b.scoreMagnitude - a.scoreMagnitude || Date.parse(a.event.commenceTime) - Date.parse(b.event.commenceTime)),
-    [board.model, filteredEvents, league]
+    () => {
+      const cards: OpportunityCard[] = [];
+
+      for (const opportunity of board.topOpportunities) {
+        if (!filteredEventIds.has(opportunity.eventId)) continue;
+        const event = eventsById.get(opportunity.eventId);
+        if (!event) continue;
+        const outcome = event.outcomes.find((candidate) => candidate.name === opportunity.outcome);
+        if (!outcome) continue;
+
+        const pick = buildOutcomeSummary(outcome);
+        if (positiveEdgeOnly && (pick.book?.edgePct ?? 0) <= 0) continue;
+        if (side === "favored" && pick.status !== "Favorite") continue;
+        if (side === "underdogs" && pick.status !== "Underdog") continue;
+
+        cards.push({
+          key: `${opportunity.eventId}:${opportunity.outcome}`,
+          matchup: `${event.awayTeam} @ ${event.homeTeam}`,
+          market: event.market === "h2h" ? "Moneyline" : event.market === "spreads" ? "Spread" : "Total",
+          team: outcome.name,
+          status: pick.status,
+          label: pick.label,
+          lineLabel: pick.book ? formatOffer(event.market, pick.book) : "--",
+          fairLabel: formatOffer(event.market, outcome),
+          book: pick.book?.title ?? opportunity.bestBook,
+          edgePct: pick.book?.edgePct ?? opportunity.edgePct,
+          whyThisPick: pick.whyThisPick,
+          href: eventDetailHref({
+            event,
+            league,
+            market: event.market,
+            model: board.model
+          }),
+          event
+        });
+      }
+
+      return cards;
+    },
+    [board.model, board.topOpportunities, eventsById, filteredEventIds, league, positiveEdgeOnly, side]
   );
 
   const opportunities = rankedOpportunities.slice(0, 4);
@@ -241,14 +255,14 @@ export function BoardShell({ board, league, windowKey, mode = "board" }: BoardSh
               sortBy={sortBy}
               search={search}
               side={side}
-              positiveOnly={positiveOnly}
+              positiveEdgeOnly={positiveEdgeOnly}
               onLeagueChange={(value) => replaceParam("league", value)}
               onMarketChange={(value) => replaceParam("market", value)}
               onWindowChange={(value) => replaceParam("window", value)}
               onSortChange={setSortBy}
               onSearchChange={setSearch}
               onSideChange={setSide}
-              onTogglePositive={() => setPositiveOnly((value) => !value)}
+              onTogglePositive={() => setPositiveEdgeOnly((value) => !value)}
               onRefresh={() => router.refresh()}
             />
 
@@ -277,7 +291,7 @@ export function BoardShell({ board, league, windowKey, mode = "board" }: BoardSh
                 actionLabel="Reset filters"
                 onAction={() => {
                   setSearch("");
-                  setPositiveOnly(false);
+                  setPositiveEdgeOnly(false);
                   setSide("all");
                 }}
               />

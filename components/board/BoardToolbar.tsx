@@ -29,7 +29,7 @@ type BoardToolbarProps = {
   sortBy: BoardSortKey;
   search: string;
   side: BoardSideKey;
-  positiveOnly: boolean;
+  positiveEdgeOnly: boolean;
   onLeagueChange: (league: string) => void;
   onMarketChange: (market: FairBoardResponse["market"]) => void;
   onWindowChange: (windowKey: Exclude<BoardWindowKey, "all">) => void;
@@ -48,7 +48,7 @@ export function BoardToolbar({
   sortBy,
   search,
   side,
-  positiveOnly,
+  positiveEdgeOnly,
   onLeagueChange,
   onMarketChange,
   onWindowChange,
@@ -84,7 +84,7 @@ export function BoardToolbar({
         <SegmentedControl value={side} options={SIDE_OPTIONS} onChange={onSideChange} ariaLabel="Side filter" />
       </div>
       <div className={styles.toolbarActions}>
-        <Button active={positiveOnly} onClick={onTogglePositive}>
+        <Button active={positiveEdgeOnly} onClick={onTogglePositive}>
           Positive Edge
         </Button>
         <Button variant="ghost" onClick={onRefresh}>

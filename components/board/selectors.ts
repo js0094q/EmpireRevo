@@ -14,7 +14,7 @@ export type EventFilterOptions = {
   minConfidenceScore: number;
   minSharpParticipation: number;
   startWindow: StartWindowKey;
-  positiveEvOnly: boolean;
+  positiveEdgeOnly: boolean;
   sideFilter: SideFilter;
   bestEdgesOnly: boolean;
   staleOnly: boolean;
@@ -47,10 +47,9 @@ function eventMaxVisibleEdge(event: FairEvent, visibleBookKeys: Set<string>): nu
   return maxAbs;
 }
 
-function eventHasPositiveEv(event: FairEvent, visibleBookKeys: Set<string>): boolean {
-  return event.outcomes.some((outcome) =>
-    outcome.books.some((book) => visibleBookKeys.has(book.bookKey) && book.evQualified && book.evPct > 0)
-  );
+function eventHasPositiveEdge(event: FairEvent, visibleBookKeys: Set<string>): boolean {
+  const pick = buildPickSummary(event);
+  return Boolean(pick.book && visibleBookKeys.has(pick.book.bookKey) && pick.book.edgePct > 0);
 }
 
 function eventMatchesSideFilter(event: FairEvent, sideFilter: SideFilter): boolean {
@@ -183,8 +182,8 @@ export function filterEvents(events: FairEvent[], options: EventFilterOptions): 
     );
   }
 
-  if (options.positiveEvOnly) {
-    filtered = filtered.filter((event) => eventHasPositiveEv(event, options.visibleBookKeys));
+  if (options.positiveEdgeOnly) {
+    filtered = filtered.filter((event) => eventHasPositiveEdge(event, options.visibleBookKeys));
   }
 
   if (options.staleOnly) {

@@ -154,7 +154,7 @@ Fair probability → American odds.
 
 EV should be calculated as:
 
-EV = (Sportsbook Probability / Fair Probability) - 1
+EV = (Fair Probability * Decimal Odds) - 1
 
 Positive EV indicates value.
 
@@ -349,4 +349,3 @@ Agents may propose improvements but should not implement large features without 
 ---
 
 # End of AGENTS.md
-
