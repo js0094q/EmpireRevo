@@ -41,7 +41,6 @@ export const themeTokens = {
 
 export const LEAGUES = [
   { key: "nba", label: "NBA" },
-  { key: "nfl", label: "NFL" },
   { key: "nhl", label: "NHL" },
   { key: "ncaab", label: "NCAAB" },
   { key: "mlb", label: "MLB" }
