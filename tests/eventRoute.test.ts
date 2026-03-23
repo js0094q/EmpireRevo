@@ -126,7 +126,7 @@ test("eventDetailHref route ids resolve against the same event candidates used b
     market: "h2h",
     model: "weighted"
   });
-  const encodedRouteId = href.split("/game/")[1]?.split("?")[0] ?? "";
+  const encodedRouteId = href.split("/games/")[1]?.split("?")[0] ?? "";
   const decodedRouteId = decodeURIComponent(encodedRouteId);
   const resolved = allEvents.find((candidate) => matchesEventRouteId(candidate, decodedRouteId));
 

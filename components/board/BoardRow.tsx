@@ -3,7 +3,7 @@ import Link from "next/link";
 import type { FairEvent } from "@/lib/server/odds/types";
 import styles from "./BoardShell.module.css";
 import { EdgeBadge } from "@/components/board/EdgeBadge";
-import { buildPickSummary, formatCommenceTime, formatMarketLabel, formatOffer } from "@/components/board/board-helpers";
+import { buildPickSummary, formatCommenceTime, formatMarketLabel, formatOffer, marketVsModelCopy } from "@/components/board/board-helpers";
 import { cn } from "@/lib/ui/cn";
 import { TeamAvatar } from "@/components/board/TeamAvatar";
 
@@ -15,6 +15,13 @@ type BoardRowProps = {
 function BoardRowComponent({ event, detailHref }: BoardRowProps) {
   const pick = buildPickSummary(event);
   const edgePct = pick.book?.edgePct ?? 0;
+  const marketPriceLabel = pick.book ? `${formatOffer(event.market, pick.book)} at ${pick.book.title}` : "--";
+  const fairValueLabel = `${formatOffer(event.market, pick.outcome)} (model)`;
+  const valueStatement = marketVsModelCopy({
+    market: event.market,
+    outcome: pick.outcome,
+    book: pick.book
+  });
 
   return (
     <tr
@@ -41,29 +48,24 @@ function BoardRowComponent({ event, detailHref }: BoardRowProps) {
       <td>
         <div className={styles.signalCell} aria-label="Decision summary">
           <div className={styles.recommendationRow}>
-            <span className={styles.cellLabel}>{pick.label}</span>
+            <span className={styles.pickDirectiveLabel}>Recommended Pick</span>
             <span className={styles.pickStatus}>{pick.status}</span>
           </div>
-          <span className={styles.cellValue}>{pick.outcome.name}</span>
-
-          <div className={styles.summaryStatRow}>
-            <span className={styles.cellLabel}>Best Available Line</span>
-            <span className={styles.detailCopy}>{pick.book ? `${formatOffer(event.market, pick.book)} at ${pick.book.title}` : "--"}</span>
-          </div>
-
-          <div className={styles.summaryStatRow}>
-            <span className={styles.cellLabel}>Fair Value</span>
-            <span className={styles.detailCopy}>{formatOffer(event.market, pick.outcome)}</span>
-          </div>
-
+          <strong className={styles.pickOutcomeName}>{pick.outcome.name}</strong>
+          <div className={styles.pickLineValue}>{pick.book ? formatOffer(event.market, pick.book) : "--"}</div>
           <div className={styles.summaryStatRow}>
             <span className={styles.cellLabel}>Edge</span>
-            <span className={styles.detailCopy}>{pick.book ? `${edgePct > 0 ? "+" : ""}${edgePct.toFixed(2)}%` : "--"}</span>
+            <span className={styles.edgeInlineValue}>{pick.book ? `${edgePct > 0 ? "+" : ""}${edgePct.toFixed(2)}%` : "--"}</span>
           </div>
-
-          <p className={styles.whyPickCopy}>
-            <strong className={styles.whyPickLabel}>Why This Pick:</strong> {pick.whyThisPick}
-          </p>
+          <div className={styles.marketModelMeta}>
+            <span>
+              <strong>Market Price:</strong> {marketPriceLabel}
+            </span>
+            <span>
+              <strong>Model Fair Value:</strong> {fairValueLabel}
+            </span>
+          </div>
+          <p className={styles.whyPickCopy}>{valueStatement}</p>
         </div>
       </td>
       <td>

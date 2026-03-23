@@ -1,5 +1,6 @@
 .page {
   padding: 1rem 0 3rem;
+  animation: pageFade 140ms ease-out;
 }
 
 .stack {
@@ -22,8 +23,8 @@
 .toolbar {
   border: 1px solid rgba(255, 255, 255, 0.05);
   border-radius: var(--radius-xl);
-  background: rgba(11, 16, 24, 0.9);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+  background: rgba(13, 19, 28, 0.94);
+  box-shadow: none;
 }
 
 .heroPanel,
@@ -42,7 +43,7 @@
 
 .heroPanel {
   display: grid;
-  gap: 0.85rem;
+  gap: 0.5rem;
 }
 
 .summaryPanel {
@@ -186,6 +187,7 @@
 .summaryTimestamp {
   font-size: 0.82rem;
   text-align: right;
+  font-family: var(--font-mono);
 }
 
 .sectionEyebrow,
@@ -462,7 +464,7 @@
 
 .liveBoardSection {
   display: grid;
-  gap: 0.75rem;
+  gap: 0.65rem;
 }
 
 .toolbar {
@@ -529,7 +531,7 @@
 .tableWrap {
   overflow: hidden;
   border-color: rgba(255, 255, 255, 0.05);
-  background: rgba(255, 255, 255, 0.02);
+  background: rgba(255, 255, 255, 0.015);
 }
 
 .tableHeader {
@@ -544,14 +546,14 @@
 
 .tableScroller {
   overflow-x: auto;
-  display: none;
+  display: block;
 }
 
 .table {
   width: 100%;
   border-collapse: separate;
   border-spacing: 0;
-  min-width: 700px;
+  min-width: 960px;
 }
 
 .table thead th {
@@ -572,19 +574,22 @@
   padding: 0.95rem 1rem;
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
   vertical-align: top;
-  transition: background-color 130ms ease;
+  transition:
+    background-color 130ms ease,
+    box-shadow 130ms ease;
 }
 
 .tableRow:hover td {
-  background: rgba(255, 255, 255, 0.022);
+  background: rgba(124, 227, 191, 0.06);
+  box-shadow: inset 0 -1px 0 rgba(124, 227, 191, 0.25);
 }
 
 .tableRowPositive td:first-child {
-  border-left: 2px solid color-mix(in srgb, var(--color-positive) 72%, transparent);
+  border-left: 2px solid color-mix(in srgb, var(--color-positive) 76%, transparent);
 }
 
 .tableRowNegative td:first-child {
-  border-left: 2px solid color-mix(in srgb, var(--color-danger) 72%, transparent);
+  border-left: 2px solid rgba(255, 255, 255, 0.18);
 }
 
 .tableRowActive td {
@@ -615,7 +620,7 @@
 .drawerDetail,
 .card {
   display: grid;
-  gap: 0.5rem;
+  gap: 0.38rem;
 }
 
 .teams {
@@ -632,6 +637,48 @@
 .cellValue {
   font-family: var(--font-mono);
   font-size: 1rem;
+  font-weight: 640;
+}
+
+.pickDirectiveLabel {
+  margin: 0;
+  color: color-mix(in srgb, var(--color-positive) 88%, white 12%);
+  font-size: 0.67rem;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  font-weight: 700;
+}
+
+.pickOutcomeName {
+  font-size: 1.02rem;
+  line-height: 1.2;
+}
+
+.pickLineValue {
+  font-family: var(--font-mono);
+  font-size: clamp(1.22rem, 1.75vw, 1.46rem);
+  line-height: 1;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.edgeInlineValue {
+  font-family: var(--font-mono);
+  font-size: 0.92rem;
+  color: color-mix(in srgb, var(--color-positive) 88%, white 12%);
+  font-weight: 650;
+}
+
+.marketModelMeta {
+  display: grid;
+  gap: 0.12rem;
+  color: var(--color-text-muted);
+  font-size: 0.77rem;
+  line-height: 1.42;
+}
+
+.marketModelMeta strong {
+  color: var(--color-text-dim);
   font-weight: 640;
 }
 
@@ -851,8 +898,8 @@
 .whyPickCopy {
   margin: 0;
   color: var(--color-text-muted);
-  font-size: 0.8rem;
-  line-height: 1.45;
+  font-size: 0.76rem;
+  line-height: 1.4;
 }
 
 .whyPickLabel {
@@ -1125,6 +1172,18 @@
   font-size: 0.88rem;
 }
 
+@keyframes pageFade {
+  from {
+    opacity: 0.55;
+    transform: translateY(3px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 @media (max-width: 1200px) {
   .definitionRow,
   .opportunityGrid {
@@ -1174,16 +1233,6 @@
 
   .opportunityGrid {
     grid-template-columns: 1fr;
-  }
-}
-
-@media (min-width: 980px) {
-  .tableScroller {
-    display: block;
-  }
-
-  .cards {
-    display: none;
   }
 }
 

@@ -1,20 +1,20 @@
 :root {
-  --color-bg: #0a0f15;
-  --color-surface: #111822;
-  --color-surface-muted: #171f2b;
+  --color-bg: #0a1118;
+  --color-surface: #111a24;
+  --color-surface-muted: #17212e;
   --color-text: #f3f7fb;
   --color-text-muted: #aab3c1;
   --color-text-dim: #798495;
-  --color-accent: #9ea8b7;
+  --color-accent: #7ce3bf;
   --color-positive: #7ce3bf;
   --color-warning: #9fa7b4;
   --color-danger: #ff8d8d;
-  --color-accent-soft: rgba(158, 168, 183, 0.14);
+  --color-accent-soft: rgba(124, 227, 191, 0.16);
   --color-positive-soft: rgba(124, 227, 191, 0.18);
   --color-warning-soft: rgba(159, 167, 180, 0.16);
   --color-danger-soft: rgba(255, 141, 141, 0.16);
   --color-border: rgba(255, 255, 255, 0.08);
-  --color-highlight: rgba(158, 168, 183, 0.45);
+  --color-highlight: rgba(124, 227, 191, 0.45);
   --radius-sm: 0.55rem;
   --radius-md: 0.8rem;
   --radius-lg: 1rem;
@@ -40,7 +40,7 @@ body {
 body {
   color: var(--color-text);
   font-family: var(--font-body);
-  background: linear-gradient(180deg, #090e14, #0d131d 48%, #090e14);
+  background: var(--color-bg);
 }
 
 button,

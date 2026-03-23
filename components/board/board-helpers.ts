@@ -123,19 +123,31 @@ export function whyThisPickText(params: {
   hasRecommendation: boolean;
 }): string {
   if (params.hasRecommendation) {
-    if (params.status === "Underdog") {
-      return "This underdog is paying better than the market-implied fair line.";
-    }
-    return "This favorite is still priced better than the market-implied fair line.";
+    return "Market price is better than model fair value at the best available book.";
   }
 
-  if (params.status === "Underdog") {
-    return "The market still favors the other side, and this underdog is not paying above fair value right now.";
+  if (params.edgePct < 0) return "Market price is below model fair value right now.";
+  return params.status === "Underdog"
+    ? "Underdog pricing is close to model fair value and currently has limited edge."
+    : "Favorite pricing is close to model fair value and currently has limited edge.";
+}
+
+export function marketVsModelCopy(params: {
+  market: FairEvent["market"];
+  outcome: FairOutcome;
+  book: FairOutcomeBook | null;
+}): string {
+  const fairValue = formatOffer(params.market, params.outcome);
+  if (!params.book) return `Market pricing is unavailable. Model fair value is ${fairValue}.`;
+
+  const marketValue = formatOffer(params.market, params.book);
+  if (params.book.edgePct > 0) {
+    return `Market is pricing this outcome at ${marketValue}, model estimates fair at ${fairValue} -> positive EV.`;
   }
-  if (params.edgePct < 0) {
-    return "This is still the favorite, but this line is not better than fair value right now.";
+  if (params.book.edgePct < 0) {
+    return `Market is pricing this outcome at ${marketValue}, model estimates fair at ${fairValue} -> below model value.`;
   }
-  return "This book is offering the strongest available number versus consensus fair value.";
+  return `Market is pricing this outcome at ${marketValue}, model estimates fair at ${fairValue} -> neutral value.`;
 }
 
 export function buildOutcomeSummary(outcome: FairOutcome): PickSummary {
@@ -220,5 +232,5 @@ export function eventDetailHref(params: {
   const search = params.context?.search?.trim();
   if (search) query.set("search", search);
   if (params.context?.positiveEdgeOnly) query.set("edge", "1");
-  return `/game/${encodeURIComponent(toEventRouteId(params.event))}?${query.toString()}`;
+  return `/games/${encodeURIComponent(toEventRouteId(params.event))}?${query.toString()}`;
 }
