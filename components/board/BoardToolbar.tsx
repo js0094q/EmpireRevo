@@ -5,15 +5,9 @@ import styles from "./BoardShell.module.css";
 import { LeagueSelector } from "@/components/board/LeagueSelector";
 import { MarketTabs } from "@/components/board/MarketTabs";
 import { SearchControl } from "@/components/board/SearchControl";
-import { SortControl } from "@/components/board/SortControl";
-import type { BoardSideKey, BoardSortKey, BoardWindowKey } from "@/components/board/board-helpers";
+import type { BoardSideKey } from "@/components/board/board-helpers";
 import { Button } from "@/components/ui/Button";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
-
-const WINDOW_OPTIONS = [
-  { value: "today", label: "Today" },
-  { value: "next24", label: "Next 24h" }
-] as const;
 
 const SIDE_OPTIONS = [
   { value: "all", label: "All sides" },
@@ -25,15 +19,11 @@ type BoardToolbarProps = {
   league: string;
   market: FairBoardResponse["market"];
   marketAvailability: FairBoardResponse["marketAvailability"];
-  windowKey: Exclude<BoardWindowKey, "all">;
-  sortBy: BoardSortKey;
   search: string;
   side: BoardSideKey;
   positiveEdgeOnly: boolean;
   onLeagueChange: (league: string) => void;
   onMarketChange: (market: FairBoardResponse["market"]) => void;
-  onWindowChange: (windowKey: Exclude<BoardWindowKey, "all">) => void;
-  onSortChange: (sortBy: BoardSortKey) => void;
   onSearchChange: (search: string) => void;
   onSideChange: (side: BoardSideKey) => void;
   onTogglePositive: () => void;
@@ -44,15 +34,11 @@ export function BoardToolbar({
   league,
   market,
   marketAvailability,
-  windowKey,
-  sortBy,
   search,
   side,
   positiveEdgeOnly,
   onLeagueChange,
   onMarketChange,
-  onWindowChange,
-  onSortChange,
   onSearchChange,
   onSideChange,
   onTogglePositive,
@@ -66,14 +52,6 @@ export function BoardToolbar({
       </div>
       <div className={styles.toolbarGroup}>
         <MarketTabs value={market} onChange={onMarketChange} marketAvailability={marketAvailability} />
-      </div>
-      <div className={styles.toolbarGroup}>
-        <span className={styles.toolbarLabel}>Time</span>
-        <SegmentedControl value={windowKey} options={WINDOW_OPTIONS} onChange={onWindowChange} ariaLabel="Time window" />
-      </div>
-      <div className={styles.toolbarGroup}>
-        <span className={styles.toolbarLabel}>Sort</span>
-        <SortControl value={sortBy} onChange={onSortChange} className={styles.selectCompact} />
       </div>
       <div className={styles.toolbarGroup}>
         <span className={styles.toolbarLabel}>Search</span>

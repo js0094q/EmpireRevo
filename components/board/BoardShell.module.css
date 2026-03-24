@@ -1,11 +1,39 @@
 .page {
   padding: 1rem 0 3rem;
   animation: pageFade 140ms ease-out;
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+}
+
+.page::before,
+.page::after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  pointer-events: none;
+  filter: blur(34px);
+}
+
+.page::before {
+  width: 26rem;
+  height: 26rem;
+  inset: -9rem auto auto -6rem;
+  background: radial-gradient(circle, color-mix(in srgb, var(--color-accent) 34%, rgba(78, 135, 218, 0.2)), transparent 70%);
+  animation: auraShift 8s ease-in-out infinite;
+}
+
+.page::after {
+  width: 28rem;
+  height: 28rem;
+  inset: auto -8rem -13rem auto;
+  background: radial-gradient(circle, color-mix(in srgb, var(--color-positive) 28%, rgba(50, 106, 190, 0.18)), transparent 72%);
+  animation: auraShift 10s ease-in-out infinite reverse;
 }
 
 .stack {
   display: grid;
-  gap: 2rem;
+  gap: 1.25rem;
   margin-top: 0.85rem;
 }
 
@@ -21,10 +49,12 @@
 .stateCard,
 .emptyCard,
 .toolbar {
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  border: 1px solid color-mix(in srgb, var(--color-border) 92%, rgba(255, 255, 255, 0.03));
   border-radius: var(--radius-xl);
-  background: rgba(13, 19, 28, 0.94);
-  box-shadow: none;
+  background: linear-gradient(165deg, rgba(14, 24, 36, 0.95), rgba(8, 15, 26, 0.94));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.03),
+    0 18px 36px rgba(2, 8, 15, 0.32);
 }
 
 .heroPanel,
@@ -43,7 +73,11 @@
 
 .heroPanel {
   display: grid;
-  gap: 0.5rem;
+  gap: 0.65rem;
+  border-color: color-mix(in srgb, var(--color-accent) 40%, rgba(255, 255, 255, 0.06));
+  background:
+    radial-gradient(120% 150% at 0% 0%, color-mix(in srgb, var(--color-accent) 26%, rgba(68, 136, 216, 0.16)), transparent 60%),
+    linear-gradient(165deg, rgba(12, 22, 35, 0.97), rgba(8, 16, 27, 0.95));
 }
 
 .summaryPanel {
@@ -65,7 +99,7 @@
 
 .heroTopRow {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: 0.85rem;
   flex-wrap: wrap;
@@ -73,37 +107,40 @@
 
 .heroBrand {
   display: flex;
-  align-items: center;
-  gap: 0.9rem;
+  align-items: flex-start;
+  gap: 0.95rem;
 }
 
 .heroBrandMark {
-  width: 3rem;
-  height: 3rem;
+  width: 3.25rem;
+  height: 3.25rem;
+  filter: drop-shadow(0 0 15px color-mix(in srgb, var(--color-accent) 42%, rgba(88, 164, 255, 0.25)));
+  animation: markFloat 4.6s ease-in-out infinite;
 }
 
 .heroBrandCopy {
   display: grid;
-  gap: 0.08rem;
+  gap: 0.16rem;
 }
 
 .heroTitle {
   margin: 0;
-  font-size: clamp(1.7rem, 2.2vw, 2.2rem);
-  line-height: 1.04;
+  font-size: clamp(1.5rem, 2.2vw, 2rem);
+  line-height: 1.02;
+  letter-spacing: 0.01em;
 }
 
 .heroSubhead {
   margin: 0;
-  font-size: clamp(1.02rem, 1.35vw, 1.18rem);
-  color: var(--color-text-muted);
+  font-size: clamp(0.92rem, 1.2vw, 1.03rem);
+  color: color-mix(in srgb, var(--color-accent) 68%, white 32%);
 }
 
 .heroLead {
   margin: 0;
   max-width: 50rem;
-  line-height: 1.55;
-  color: var(--color-text-muted);
+  line-height: 1.5;
+  color: color-mix(in srgb, var(--color-text-muted) 80%, white 20%);
 }
 
 .definitionRow {
@@ -185,9 +222,14 @@
 }
 
 .summaryTimestamp {
-  font-size: 0.82rem;
+  font-size: 0.78rem;
   text-align: right;
   font-family: var(--font-mono);
+  padding: 0.26rem 0.55rem;
+  border-radius: var(--radius-pill);
+  border: 1px solid color-mix(in srgb, var(--color-accent) 40%, rgba(255, 255, 255, 0.06));
+  background: color-mix(in srgb, var(--color-accent) 14%, rgba(56, 116, 193, 0.16));
+  color: color-mix(in srgb, var(--color-accent) 80%, var(--color-text) 20%);
 }
 
 .sectionEyebrow,
@@ -465,6 +507,10 @@
 .liveBoardSection {
   display: grid;
   gap: 0.65rem;
+  border-color: color-mix(in srgb, var(--color-accent) 22%, var(--color-border));
+  background:
+    radial-gradient(160% 140% at 100% 0%, rgba(124, 227, 191, 0.08), transparent 58%),
+    linear-gradient(165deg, rgba(12, 22, 34, 0.95), rgba(8, 15, 25, 0.95));
 }
 
 .toolbar {
@@ -472,8 +518,10 @@
   align-items: flex-end;
   flex-wrap: wrap;
   gap: 0.95rem;
-  border-color: rgba(255, 255, 255, 0.06);
-  background: rgba(255, 255, 255, 0.02);
+  border-color: color-mix(in srgb, var(--color-accent) 16%, rgba(255, 255, 255, 0.07));
+  background:
+    linear-gradient(145deg, rgba(124, 227, 191, 0.07), transparent 34%),
+    rgba(255, 255, 255, 0.02);
   box-shadow: none;
 }
 
@@ -512,8 +560,8 @@
   line-height: 1.45;
   padding: 0.45rem 0.65rem;
   border-radius: var(--radius-md);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid color-mix(in srgb, var(--color-accent) 20%, rgba(255, 255, 255, 0.05));
+  background: color-mix(in srgb, var(--color-accent) 7%, rgba(255, 255, 255, 0.02));
 }
 
 .sortReminder {
@@ -521,22 +569,24 @@
   font-size: 0.76rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: color-mix(in srgb, var(--color-positive) 82%, white 18%);
+  color: color-mix(in srgb, var(--color-positive) 86%, white 14%);
   padding: 0.35rem 0.65rem;
   border-radius: var(--radius-md);
-  border: 1px solid color-mix(in srgb, var(--color-positive) 30%, transparent);
-  background: color-mix(in srgb, var(--color-positive) 9%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-positive) 42%, transparent);
+  background: color-mix(in srgb, var(--color-positive) 14%, rgba(34, 70, 118, 0.2));
 }
 
 .tableWrap {
   overflow: hidden;
-  border-color: rgba(255, 255, 255, 0.05);
-  background: rgba(255, 255, 255, 0.015);
+  border-color: color-mix(in srgb, var(--color-accent) 14%, rgba(255, 255, 255, 0.06));
+  background:
+    radial-gradient(130% 120% at 0% 0%, rgba(76, 146, 232, 0.08), transparent 62%),
+    rgba(255, 255, 255, 0.015);
 }
 
 .tableHeader {
   padding: 1rem 1rem 0.82rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  border-bottom: 1px solid color-mix(in srgb, var(--color-accent) 20%, rgba(255, 255, 255, 0.07));
 }
 
 .tableHeadMeta {
@@ -560,7 +610,7 @@
   position: sticky;
   top: 0;
   z-index: 2;
-  background: rgba(10, 14, 21, 0.93);
+  background: rgba(8, 16, 26, 0.94);
   color: var(--color-text-dim);
   font-size: 0.68rem;
   letter-spacing: 0.12em;
@@ -580,12 +630,12 @@
 }
 
 .tableRow:hover td {
-  background: rgba(124, 227, 191, 0.06);
-  box-shadow: inset 0 -1px 0 rgba(124, 227, 191, 0.25);
+  background: linear-gradient(90deg, rgba(124, 227, 191, 0.11), rgba(74, 132, 212, 0.08));
+  box-shadow: inset 0 -1px 0 rgba(124, 227, 191, 0.28);
 }
 
 .tableRowPositive td:first-child {
-  border-left: 2px solid color-mix(in srgb, var(--color-positive) 76%, transparent);
+  border-left: 2px solid color-mix(in srgb, var(--color-positive) 88%, transparent);
 }
 
 .tableRowNegative td:first-child {
@@ -1181,6 +1231,39 @@
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+@keyframes auraShift {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+    opacity: 0.85;
+  }
+
+  50% {
+    transform: translate3d(0.65rem, -0.55rem, 0) scale(1.05);
+    opacity: 1;
+  }
+}
+
+@keyframes markFloat {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-3px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .page,
+  .page::before,
+  .page::after,
+  .heroBrandMark {
+    animation: none;
   }
 }
 

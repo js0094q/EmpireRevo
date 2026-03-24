@@ -4,6 +4,7 @@ import { startTransition, useDeferredValue, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import type { FairBoardResponse } from "@/lib/server/odds/types";
 import { AppContainer } from "@/components/layout/AppContainer";
+import { BrandMark } from "@/components/layout/BrandMark";
 import styles from "./BoardShell.module.css";
 import { BoardToolbar } from "@/components/board/BoardToolbar";
 import { BoardTable } from "@/components/board/BoardTable";
@@ -13,8 +14,7 @@ import {
   formatUpdatedLabel,
   type BoardNavigationContext,
   type BoardMode,
-  type BoardSideKey,
-  type BoardSortKey
+  type BoardSideKey
 } from "@/components/board/board-helpers";
 import { filterEvents, sortEvents } from "@/components/board/selectors";
 
@@ -22,11 +22,6 @@ function joinTitles(values: string[]): string {
   if (values.length <= 1) return values[0] ?? "";
   if (values.length === 2) return `${values[0]} and ${values[1]}`;
   return `${values.slice(0, -1).join(", ")}, and ${values[values.length - 1]}`;
-}
-
-function parseSortParam(value: string | null): BoardSortKey {
-  if (value === "edge" || value === "confidence" || value === "best" || value === "soonest" || value === "timing") return value;
-  return "score";
 }
 
 function parseSideParam(value: string | null): BoardSideKey {
@@ -45,14 +40,12 @@ function parsePositiveEdgeParam(value: string | null): boolean {
 type BoardShellProps = {
   board: FairBoardResponse;
   league: string;
-  windowKey: "today" | "next24";
   mode?: BoardMode;
 };
 
-export function BoardShell({ board, league, windowKey, mode = "board" }: BoardShellProps) {
+export function BoardShell({ board, league, mode = "board" }: BoardShellProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [sortBy, setSortBy] = useState<BoardSortKey>(() => parseSortParam(searchParams?.get("sort") ?? null));
   const [search, setSearch] = useState(() => parseSearchParam(searchParams?.get("search") ?? null));
   const [side, setSide] = useState<BoardSideKey>(() => parseSideParam(searchParams?.get("side") ?? null));
   const [positiveEdgeOnly, setPositiveEdgeOnly] = useState(() => parsePositiveEdgeParam(searchParams?.get("edge") ?? null));
@@ -61,13 +54,12 @@ export function BoardShell({ board, league, windowKey, mode = "board" }: BoardSh
   const navigationContext = useMemo<BoardNavigationContext>(
     () => ({
       mode,
-      windowKey,
-      sortBy,
+      windowKey: "all",
       side,
       search,
       positiveEdgeOnly
     }),
-    [mode, positiveEdgeOnly, search, side, sortBy, windowKey]
+    [mode, positiveEdgeOnly, search, side]
   );
 
   function replaceParam(key: string, value: string) {
@@ -80,7 +72,6 @@ export function BoardShell({ board, league, windowKey, mode = "board" }: BoardSh
   }
 
   const allBookKeys = useMemo(() => new Set(board.books.map((book) => book.key)), [board.books]);
-  const windowFilter = windowKey === "today" ? "12h" : "24h";
 
   const filteredEvents = useMemo(
     () =>
@@ -91,7 +82,7 @@ export function BoardShell({ board, league, windowKey, mode = "board" }: BoardSh
         minContributingBooks: 1,
         minConfidenceScore: 0,
         minSharpParticipation: 0,
-        startWindow: windowFilter,
+        startWindow: "all",
         positiveEdgeOnly,
         sideFilter: side,
         bestEdgesOnly: false,
@@ -102,28 +93,10 @@ export function BoardShell({ board, league, windowKey, mode = "board" }: BoardSh
         pinnedBooks: new Set<string>(),
         pinnedActionableEdgeThreshold: board.diagnostics.calibration.pinned.actionableEdgePct
       }),
-    [allBookKeys, board.diagnostics.calibration.pinned.actionableEdgePct, board.events, deferredSearch, positiveEdgeOnly, side, windowFilter]
+    [allBookKeys, board.diagnostics.calibration.pinned.actionableEdgePct, board.events, deferredSearch, positiveEdgeOnly, side]
   );
 
-  const filteredEventIds = useMemo(() => new Set(filteredEvents.map((event) => event.id)), [filteredEvents]);
-  const topOpportunityRank = useMemo(() => {
-    const rank = new Map<string, number>();
-    for (const [index, opportunity] of board.topOpportunities.entries()) {
-      if (!filteredEventIds.has(opportunity.eventId) || rank.has(opportunity.eventId)) continue;
-      rank.set(opportunity.eventId, index);
-    }
-    return rank;
-  }, [board.topOpportunities, filteredEventIds]);
-
-  const orderedEvents = useMemo(() => {
-    if (sortBy !== "score") return sortEvents(filteredEvents, sortBy);
-    return [...filteredEvents].sort((a, b) => {
-      const aRank = topOpportunityRank.get(a.id) ?? Number.POSITIVE_INFINITY;
-      const bRank = topOpportunityRank.get(b.id) ?? Number.POSITIVE_INFINITY;
-      if (aRank !== bRank) return aRank - bRank;
-      return b.opportunityScore - a.opportunityScore;
-    });
-  }, [filteredEvents, sortBy, topOpportunityRank]);
+  const orderedEvents = useMemo(() => sortEvents(filteredEvents, "soonest"), [filteredEvents]);
 
   const currentMarketAvailability = board.marketAvailability.find((entry) => entry.market === board.market) ?? null;
   const limitedMarkets = board.marketAvailability.filter((entry) => entry.status === "limited");
@@ -140,13 +113,17 @@ export function BoardShell({ board, league, windowKey, mode = "board" }: BoardSh
         <div className={styles.stack}>
           <section className={styles.heroPanel}>
             <div className={styles.heroTopRow}>
-              <div>
-                <p className={styles.sectionEyebrow}>EmpirePicks</p>
-                <h1 className={styles.sectionTitle}>Board Workspace</h1>
-                <p className={styles.sectionMuted}>Recommended side first, then market price, model fair value, and edge.</p>
+              <div className={styles.heroBrand}>
+                <BrandMark className={styles.heroBrandMark} />
+                <div className={styles.heroBrandCopy}>
+                  <p className={styles.sectionEyebrow}>EmpirePicks</p>
+                  <h1 className={styles.heroTitle}>Board Workspace</h1>
+                  <p className={styles.heroSubhead}>Live pricing terminal for fast betting decisions.</p>
+                </div>
               </div>
               <span className={styles.summaryTimestamp}>Updated {formatUpdatedLabel(board.updatedAt)}</span>
             </div>
+            <p className={styles.heroLead}>Recommended side first, then market price, model fair value, and edge.</p>
           </section>
 
           <section className={styles.liveBoardSection}>
@@ -161,15 +138,11 @@ export function BoardShell({ board, league, windowKey, mode = "board" }: BoardSh
               league={league}
               market={board.market}
               marketAvailability={board.marketAvailability}
-              windowKey={windowKey}
-              sortBy={sortBy}
               search={search}
               side={side}
               positiveEdgeOnly={positiveEdgeOnly}
               onLeagueChange={(value) => replaceParam("league", value)}
               onMarketChange={(value) => replaceParam("market", value)}
-              onWindowChange={(value) => replaceParam("window", value)}
-              onSortChange={setSortBy}
               onSearchChange={setSearch}
               onSideChange={setSide}
               onTogglePositive={() => setPositiveEdgeOnly((value) => !value)}
@@ -186,7 +159,7 @@ export function BoardShell({ board, league, windowKey, mode = "board" }: BoardSh
               </p>
             ) : null}
             <p className={styles.marketNote}>{sharpReferenceNote}</p>
-            {sortBy === "edge" ? <p className={styles.sortReminder}>Sorted by Value</p> : null}
+            <p className={styles.sortReminder}>Sorted by Start Time</p>
 
             {orderedEvents.length ? (
               <BoardTable

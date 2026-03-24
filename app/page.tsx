@@ -12,7 +12,7 @@ function ConfigRequired() {
 export default async function Page({
   searchParams
 }: {
-  searchParams?: Promise<{ league?: string; market?: string; model?: string; window?: string }>;
+  searchParams?: Promise<{ league?: string; market?: string; model?: string }>;
 }) {
   if (!hasOddsKey()) {
     return <ConfigRequired />;
@@ -22,7 +22,7 @@ export default async function Page({
   const league = params.league || "nba";
   const market = params.market === "spreads" || params.market === "totals" ? params.market : "h2h";
   const model = params.model === "sharp" || params.model === "equal" || params.model === "weighted" ? (params.model as "sharp" | "equal" | "weighted") : "weighted";
-  const windowHours = params.window === "today" ? 12 : 24;
+  const windowHours = 168;
 
   const result = await fetchFairBoardPageData({
     league,
@@ -49,9 +49,9 @@ export default async function Page({
       message = "The upstream provider rate limited this request.";
       hint = "Wait a moment, then refresh. Cached snapshots may still be available.";
     } else if (e.code === "UPSTREAM_EMPTY_PAYLOAD") {
-      title = "No games in selected time window";
-      message = "The feed returned an empty schedule for this filter set.";
-      hint = "Try another league or widen your time window.";
+      title = "No games available";
+      message = "The feed returned an empty schedule for this league and market.";
+      hint = "Try another league or market.";
     }
 
     return <ErrorState title={title} message={message} hint={hint} />;
@@ -72,7 +72,6 @@ export default async function Page({
     const nextParams = new URLSearchParams();
     nextParams.set("league", league);
     nextParams.set("market", pageData.resolvedMarket);
-    if (params.window === "today") nextParams.set("window", "today");
     if (model !== "weighted") nextParams.set("model", model);
     redirect(`/?${nextParams.toString()}`);
   }
@@ -88,5 +87,5 @@ export default async function Page({
     );
   }
 
-  return <OddsGridClient board={board} league={league} windowKey={params.window === "today" ? "today" : "next24"} mode="board" />;
+  return <OddsGridClient board={board} league={league} mode="board" />;
 }

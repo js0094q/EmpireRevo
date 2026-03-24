@@ -192,7 +192,7 @@ export async function getFairBoard(params: FairBoardQuery): Promise<FairBoardRes
   const market = params.market;
   const model = params.model;
   const minBooks = positiveInt(params.minBooks ?? DEFAULT_MIN_BOOKS, DEFAULT_MIN_BOOKS);
-  const windowHours = clampRange(positiveInt(params.windowHours ?? DEFAULT_WINDOW_HOURS, DEFAULT_WINDOW_HOURS), 1, 72);
+  const windowHours = clampRange(positiveInt(params.windowHours ?? DEFAULT_WINDOW_HOURS, DEFAULT_WINDOW_HOURS), 1, 168);
   const historyWindowHours = clampRange(
     positiveInt(params.historyWindowHours ?? DEFAULT_HISTORY_WINDOW_HOURS, DEFAULT_HISTORY_WINDOW_HOURS),
     1,

@@ -21,7 +21,6 @@ type SearchParams = {
   sportKey?: string;
   market?: string;
   model?: string;
-  window?: string;
 };
 
 export default async function GamesPage({ searchParams }: { searchParams?: Promise<SearchParams> }) {
@@ -37,7 +36,7 @@ export default async function GamesPage({ searchParams }: { searchParams?: Promi
     params.model === "sharp" || params.model === "equal" || params.model === "weighted"
       ? (params.model as "sharp" | "equal" | "weighted")
       : "weighted";
-  const windowHours = params.window === "today" ? 12 : 24;
+  const windowHours = 168;
 
   const result = await fetchFairBoardPageData({
     league,
@@ -64,9 +63,9 @@ export default async function GamesPage({ searchParams }: { searchParams?: Promi
       message = "The upstream provider temporarily blocked this request.";
       hint = "Wait a moment, then refresh. Cached snapshots may still be available.";
     } else if (e.code === "UPSTREAM_EMPTY_PAYLOAD") {
-      title = "No games in this window";
-      message = "The selected filters returned an empty schedule.";
-      hint = "Switch leagues or widen the time window.";
+      title = "No games available";
+      message = "The selected league and market returned an empty schedule.";
+      hint = "Switch leagues or market.";
     }
 
     return <ErrorState title={title} message={message} hint={hint} />;
@@ -87,7 +86,6 @@ export default async function GamesPage({ searchParams }: { searchParams?: Promi
     const nextParams = new URLSearchParams();
     nextParams.set("league", league);
     nextParams.set("market", pageData.resolvedMarket);
-    if (params.window === "today") nextParams.set("window", "today");
     if (model !== "weighted") nextParams.set("model", model);
     redirect(`/games?${nextParams.toString()}`);
   }
@@ -103,5 +101,5 @@ export default async function GamesPage({ searchParams }: { searchParams?: Promi
     );
   }
 
-  return <OddsGridClient board={board} league={league} windowKey={params.window === "today" ? "today" : "next24"} mode="games" />;
+  return <OddsGridClient board={board} league={league} mode="games" />;
 }

@@ -161,10 +161,6 @@ function parseBoardMode(value?: string): BoardMode {
   return value === "games" ? "games" : "board";
 }
 
-function parseBoardWindow(value?: string): "today" | "next24" {
-  return value === "today" ? "today" : "next24";
-}
-
 function parseBoardSort(value?: string): BoardSortKey {
   if (value === "edge" || value === "confidence" || value === "best" || value === "soonest" || value === "timing") return value;
   return "score";
@@ -191,7 +187,6 @@ function boardReturnHref(params: {
     market: params.market,
     model: params.model
   });
-  if (params.context.windowKey === "today") query.set("window", "today");
   if (params.context.sortBy && params.context.sortBy !== "score") query.set("sort", params.context.sortBy);
   if (params.context.side && params.context.side !== "all") query.set("side", params.context.side);
   const search = params.context.search?.trim();
@@ -210,7 +205,6 @@ export default async function GamePage({
     market?: string;
     model?: string;
     mode?: string;
-    window?: string;
     sort?: string;
     side?: string;
     search?: string;
@@ -236,7 +230,7 @@ export default async function GamePage({
   const model = query.model === "sharp" || query.model === "equal" || query.model === "weighted" ? query.model : "weighted";
   const boardContext: BoardNavigationContext = {
     mode: parseBoardMode(query.mode),
-    windowKey: parseBoardWindow(query.window),
+    windowKey: "all",
     sortBy: parseBoardSort(query.sort),
     side: parseBoardSide(query.side),
     search: boardContextSearch(query.search),
@@ -268,7 +262,6 @@ export default async function GamePage({
       model
     });
     if (boardContext.mode === "games") nextParams.set("mode", "games");
-    if (boardContext.windowKey === "today") nextParams.set("window", "today");
     if (boardContext.sortBy && boardContext.sortBy !== "score") nextParams.set("sort", boardContext.sortBy);
     if (boardContext.side && boardContext.side !== "all") nextParams.set("side", boardContext.side);
     if (boardContext.search?.trim()) nextParams.set("search", boardContext.search.trim());

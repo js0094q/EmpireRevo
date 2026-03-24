@@ -3,11 +3,11 @@ import { toEventRouteId } from "@/lib/server/odds/eventRoute";
 
 export type BoardMode = "board" | "games";
 export type BoardSortKey = "score" | "edge" | "confidence" | "best" | "soonest" | "timing";
-export type BoardWindowKey = "all" | "today" | "next24";
+export type BoardWindowKey = "all";
 export type BoardSideKey = "all" | "favored" | "underdogs";
 export type BoardNavigationContext = {
   mode?: BoardMode;
-  windowKey?: Exclude<BoardWindowKey, "all">;
+  windowKey?: BoardWindowKey;
   sortBy?: BoardSortKey;
   side?: BoardSideKey;
   search?: string;
@@ -226,7 +226,6 @@ export function eventDetailHref(params: {
     model: params.model
   });
   if (params.context?.mode === "games") query.set("mode", "games");
-  if (params.context?.windowKey === "today") query.set("window", "today");
   if (params.context?.sortBy && params.context.sortBy !== "score") query.set("sort", params.context.sortBy);
   if (params.context?.side && params.context.side !== "all") query.set("side", params.context.side);
   const search = params.context?.search?.trim();

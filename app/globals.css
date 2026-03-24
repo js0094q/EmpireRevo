@@ -1,27 +1,27 @@
 :root {
-  --color-bg: #0a1118;
-  --color-surface: #111a24;
-  --color-surface-muted: #17212e;
-  --color-text: #f3f7fb;
-  --color-text-muted: #aab3c1;
-  --color-text-dim: #798495;
+  --color-bg: #07101a;
+  --color-surface: #102032;
+  --color-surface-muted: #182a3f;
+  --color-text: #f3f8ff;
+  --color-text-muted: #a9bacd;
+  --color-text-dim: #73879f;
   --color-accent: #7ce3bf;
   --color-positive: #7ce3bf;
-  --color-warning: #9fa7b4;
+  --color-warning: #f4bf68;
   --color-danger: #ff8d8d;
-  --color-accent-soft: rgba(124, 227, 191, 0.16);
-  --color-positive-soft: rgba(124, 227, 191, 0.18);
-  --color-warning-soft: rgba(159, 167, 180, 0.16);
+  --color-accent-soft: rgba(124, 227, 191, 0.2);
+  --color-positive-soft: rgba(124, 227, 191, 0.2);
+  --color-warning-soft: rgba(244, 191, 104, 0.16);
   --color-danger-soft: rgba(255, 141, 141, 0.16);
-  --color-border: rgba(255, 255, 255, 0.08);
-  --color-highlight: rgba(124, 227, 191, 0.45);
+  --color-border: rgba(167, 190, 216, 0.16);
+  --color-highlight: rgba(124, 227, 191, 0.54);
   --radius-sm: 0.55rem;
   --radius-md: 0.8rem;
   --radius-lg: 1rem;
   --radius-xl: 1.35rem;
   --radius-pill: 999px;
-  --shadow-md: 0 18px 40px rgba(0, 0, 0, 0.24);
-  --shadow-xl: 0 30px 80px rgba(0, 0, 0, 0.34);
+  --shadow-md: 0 18px 40px rgba(2, 6, 14, 0.34);
+  --shadow-xl: 0 30px 80px rgba(2, 6, 14, 0.46);
   --font-body: "Sohne", "Avenir Next", "SF Pro Display", sans-serif;
   --font-mono: "JetBrains Mono", "SFMono-Regular", Menlo, monospace;
 }
@@ -40,7 +40,11 @@ body {
 body {
   color: var(--color-text);
   font-family: var(--font-body);
-  background: var(--color-bg);
+  background:
+    radial-gradient(72rem 38rem at 12% -18%, rgba(67, 123, 201, 0.2), transparent 64%),
+    radial-gradient(62rem 28rem at 96% 2%, rgba(124, 227, 191, 0.15), transparent 68%),
+    linear-gradient(180deg, #050c15 0%, #07111b 46%, #08131f 100%);
+  background-color: var(--color-bg);
 }
 
 button,

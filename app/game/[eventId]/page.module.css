@@ -1,6 +1,34 @@
 .page {
   padding: 1rem 0 3rem;
   animation: pageFade 140ms ease-out;
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+}
+
+.page::before,
+.page::after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  pointer-events: none;
+  filter: blur(34px);
+}
+
+.page::before {
+  width: 24rem;
+  height: 24rem;
+  inset: -8rem auto auto -5rem;
+  background: radial-gradient(circle, color-mix(in srgb, var(--color-accent) 30%, rgba(73, 132, 209, 0.2)), transparent 68%);
+  animation: auraShift 8s ease-in-out infinite;
+}
+
+.page::after {
+  width: 26rem;
+  height: 26rem;
+  inset: auto -8rem -10rem auto;
+  background: radial-gradient(circle, color-mix(in srgb, var(--color-positive) 24%, rgba(62, 118, 198, 0.2)), transparent 72%);
+  animation: auraShift 10s ease-in-out infinite reverse;
 }
 
 .workspace {
@@ -12,9 +40,11 @@
 .summarySection,
 .tableSection,
 .modelSection {
-  border: 1px solid var(--color-border);
+  border: 1px solid color-mix(in srgb, var(--color-accent) 18%, var(--color-border));
   border-radius: var(--radius-xl);
-  background: rgba(13, 19, 28, 0.94);
+  background:
+    radial-gradient(130% 160% at 0% 0%, rgba(124, 227, 191, 0.09), transparent 60%),
+    linear-gradient(165deg, rgba(12, 22, 34, 0.95), rgba(8, 15, 25, 0.95));
   padding: 1rem;
 }
 
@@ -35,7 +65,7 @@
 
 .matchupTitle {
   margin: 0;
-  font-size: clamp(1.25rem, 2.1vw, 1.65rem);
+  font-size: clamp(1.3rem, 2.2vw, 1.72rem);
   line-height: 1.1;
 }
 
@@ -69,16 +99,21 @@
   min-height: 1.95rem;
   padding: 0.35rem 0.7rem;
   border-radius: var(--radius-pill);
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.018);
   color: var(--color-text);
   font-size: 0.8rem;
+  transition:
+    border-color 140ms ease,
+    background-color 140ms ease,
+    color 140ms ease;
 }
 
 .marketTabActive {
-  border-color: color-mix(in srgb, var(--color-positive) 48%, white 10%);
-  color: color-mix(in srgb, var(--color-positive) 88%, white 12%);
-  background: color-mix(in srgb, var(--color-positive) 14%, transparent);
+  border-color: color-mix(in srgb, var(--color-positive) 58%, white 8%);
+  color: color-mix(in srgb, var(--color-positive) 90%, white 10%);
+  background: color-mix(in srgb, var(--color-positive) 18%, rgba(46, 84, 142, 0.2));
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-positive) 26%, transparent) inset;
 }
 
 .marketTabMuted {
@@ -93,12 +128,14 @@
 
 .pickSummary {
   margin-top: 0.7rem;
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  border: 1px solid color-mix(in srgb, var(--color-accent) 26%, rgba(255, 255, 255, 0.1));
   border-radius: var(--radius-lg);
   padding: 0.85rem;
   display: grid;
   gap: 0.5rem;
-  background: rgba(255, 255, 255, 0.018);
+  background:
+    radial-gradient(150% 190% at 0% 0%, rgba(124, 227, 191, 0.1), transparent 65%),
+    rgba(255, 255, 255, 0.016);
 }
 
 .pickLabel,
@@ -148,12 +185,12 @@
 }
 
 .pickMetric {
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.07);
   border-radius: var(--radius-md);
   padding: 0.55rem 0.62rem;
   display: grid;
   gap: 0.2rem;
-  background: rgba(255, 255, 255, 0.012);
+  background: rgba(255, 255, 255, 0.02);
 }
 
 .pickMetric strong {
@@ -194,7 +231,7 @@
 .bookTable th {
   text-align: left;
   padding: 0.62rem 0.72rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.09);
+  border-bottom: 1px solid color-mix(in srgb, var(--color-accent) 20%, rgba(255, 255, 255, 0.08));
   color: var(--color-text-dim);
   font-size: 0.67rem;
   letter-spacing: 0.12em;
@@ -209,15 +246,15 @@
 }
 
 .bookTable tr:hover td {
-  background: rgba(124, 227, 191, 0.06);
+  background: linear-gradient(90deg, rgba(124, 227, 191, 0.11), rgba(74, 132, 212, 0.08));
 }
 
 .bestBookRow td:first-child {
-  box-shadow: inset 2px 0 0 color-mix(in srgb, var(--color-positive) 75%, transparent);
+  box-shadow: inset 2px 0 0 color-mix(in srgb, var(--color-positive) 86%, transparent);
 }
 
 .sharpBookRow td {
-  background: rgba(124, 227, 191, 0.035);
+  background: color-mix(in srgb, var(--color-positive) 9%, rgba(53, 95, 154, 0.14));
 }
 
 .bookCell {
@@ -250,12 +287,12 @@
 }
 
 .contextMetric {
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.075);
   border-radius: var(--radius-md);
   padding: 0.6rem 0.65rem;
   display: grid;
   gap: 0.22rem;
-  background: rgba(255, 255, 255, 0.012);
+  background: rgba(255, 255, 255, 0.018);
 }
 
 .contextMetric span {
@@ -289,6 +326,27 @@
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+@keyframes auraShift {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+    opacity: 0.85;
+  }
+
+  50% {
+    transform: translate3d(0.6rem, -0.45rem, 0) scale(1.04);
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .page,
+  .page::before,
+  .page::after {
+    animation: none;
   }
 }
 

@@ -7,7 +7,6 @@ import type { BoardMode } from "@/components/board/board-helpers";
 type OddsGridClientProps = {
   board: FairBoardResponse;
   league: string;
-  windowKey: "today" | "next24";
   mode?: BoardMode;
 };
 
