@@ -112,6 +112,111 @@ test("buildFairBoard produces a weighted fair moneyline", async () => {
   assert.notEqual(sampleBook.edgePct.toFixed(4), sampleBook.evPct.toFixed(4));
 });
 
+test("buildFairBoard aligns outcomes by name when books publish reversed order", async () => {
+  const event = buildEvent();
+  const draftKings = event.books.find((book) => book.book.key === "draftkings");
+  assert.ok(draftKings);
+  const draftKingsH2h = draftKings.markets.find((market) => market.market === "h2h");
+  assert.ok(draftKingsH2h);
+  draftKingsH2h.outcomes = [draftKingsH2h.outcomes[1]!, draftKingsH2h.outcomes[0]!];
+
+  const board = await buildFairBoard({
+    normalized: [event],
+    league: "nba",
+    sportKey: "basketball_nba",
+    market: "h2h",
+    model: "weighted",
+    minBooks: 2,
+    timeWindowHours: 24
+  });
+
+  const firstEvent = board.events[0];
+  assert.ok(firstEvent);
+  const celticsOutcome = firstEvent.outcomes.find((outcome) => outcome.name === "Boston Celtics");
+  assert.ok(celticsOutcome);
+  const draftKingsBook = celticsOutcome.books.find((book) => book.bookKey === "draftkings");
+  assert.equal(draftKingsBook?.priceAmerican, -115);
+});
+
+test("buildFairBoard aligns outcomes across team-label aliases", async () => {
+  const event = buildEvent();
+  const draftKings = event.books.find((book) => book.book.key === "draftkings");
+  assert.ok(draftKings);
+  const draftKingsH2h = draftKings.markets.find((market) => market.market === "h2h");
+  assert.ok(draftKingsH2h);
+  draftKingsH2h.outcomes = [
+    { name: "Celtics", price: -115 },
+    { name: "NY Knicks", price: 105 }
+  ];
+
+  const board = await buildFairBoard({
+    normalized: [event],
+    league: "nba",
+    sportKey: "basketball_nba",
+    market: "h2h",
+    model: "weighted",
+    minBooks: 2,
+    timeWindowHours: 24
+  });
+
+  const firstEvent = board.events[0];
+  assert.ok(firstEvent);
+  const knicksOutcome = firstEvent.outcomes.find((outcome) => outcome.name === "New York Knicks");
+  assert.ok(knicksOutcome);
+  const draftKingsBook = knicksOutcome.books.find((book) => book.bookKey === "draftkings");
+  assert.equal(draftKingsBook?.priceAmerican, 105);
+});
+
+test("buildFairBoard aligns totals outcomes when labels include point text", async () => {
+  const event = buildEvent();
+  event.books = [
+    {
+      book: { key: "pinnacle", title: "Pinnacle", tier: "sharp", weight: 1, isSharpWeighted: true },
+      markets: [
+        {
+          market: "totals",
+          lastUpdate: "2026-03-08T12:00:00.000Z",
+          outcomes: [
+            { name: "Over 228.5", price: -110, point: 228.5 },
+            { name: "Under 228.5", price: -110, point: 228.5 }
+          ]
+        }
+      ]
+    },
+    {
+      book: { key: "draftkings", title: "DraftKings", tier: "mainstream", weight: 0.4, isSharpWeighted: false },
+      markets: [
+        {
+          market: "totals",
+          lastUpdate: "2026-03-08T12:05:00.000Z",
+          outcomes: [
+            { name: "Over", price: -112, point: 228.5 },
+            { name: "Under", price: -108, point: 228.5 }
+          ]
+        }
+      ]
+    }
+  ];
+
+  const board = await buildFairBoard({
+    normalized: [event],
+    league: "nba",
+    sportKey: "basketball_nba",
+    market: "totals",
+    model: "weighted",
+    minBooks: 2,
+    timeWindowHours: 24
+  });
+
+  const firstEvent = board.events[0];
+  assert.ok(firstEvent);
+  assert.equal(firstEvent.outcomes.length, 2);
+  const overOutcome = firstEvent.outcomes.find((outcome) => outcome.name.toLowerCase().startsWith("over"));
+  assert.ok(overOutcome);
+  const draftKingsBook = overOutcome.books.find((book) => book.bookKey === "draftkings");
+  assert.equal(draftKingsBook?.priceAmerican, -112);
+});
+
 test("buildFairBoard keeps spread markets point-aware", async () => {
   const event = buildEvent();
   const board = await buildFairBoard({

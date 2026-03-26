@@ -38,4 +38,4 @@ export function buildEditorNote(params: {
 }
 
 export const BOARD_DISCLAIMER =
-  "Market intelligence only. This is not financial advice or a guaranteed outcome.";
+  "Market-based pricing, not predictions. All values are derived from real sportsbook data, adjusted for margin, and compared to fair market probability. Edge reflects pricing inefficiency, not guaranteed outcomes.";

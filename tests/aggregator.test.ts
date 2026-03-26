@@ -64,11 +64,26 @@ test("getAggregatedOdds returns point-aware spreads", async () => {
     const response = await getAggregatedOdds({ sportKey: "basketball_nba", market: "spreads" });
     assert.equal(response.games.length, 1);
     const game = response.games[0];
-    assert.equal(game.sides[0].linePoint, -2.5);
-    const firstBook = game.sides[0].sportsbooks[0];
+    const side = game.sides[0];
+    assert.equal(side.linePoint, -2.5);
+    const firstBook = side.sportsbooks[0];
     assert.equal(firstBook.point, -2.5);
     assert.ok(firstBook.lineMovement !== undefined);
     assert.ok(firstBook.movementDirection);
     assert.ok(firstBook.movementArrow);
+    const expectedEdge = (side.fairProbability - firstBook.noVigProbability) * 100;
+    assert.ok(Math.abs(firstBook.edge - expectedEdge) < 1e-6);
+
+    const positiveEdgeBooks = side.sportsbooks
+      .filter((line) => line.edge > 0)
+      .map((line) => line.book)
+      .sort();
+    assert.deepEqual(
+      side.edges
+        .map((entry) => entry.book)
+        .sort(),
+      positiveEdgeBooks
+    );
+    assert.ok(side.edges.every((entry) => entry.edge > 0));
   });
 });

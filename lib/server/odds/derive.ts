@@ -6,6 +6,8 @@ import type {
   MarketKey,
   NormalizedEventOdds
 } from "@/lib/odds/schemas";
+import { compareOffersByMarket } from "@/lib/server/odds/marketCompare";
+import { calculateEvPercent } from "@/lib/server/odds/ev";
 
 type MovementState = {
   openByKey: Record<string, number>;
@@ -16,6 +18,7 @@ type OutcomeProb = {
   label: string;
   pNoVig: number;
   price: number;
+  point?: number;
 };
 
 type MarketBookView = {
@@ -61,22 +64,43 @@ function movementKey(gameId: string, market: MarketKey, label: string): string {
   return `${gameId}|${market}|${label}`;
 }
 
-function chooseBestPrice(current: { price: number } | null, candidate: number): boolean {
-  if (!current) return true;
-  return candidate > current.price;
+function chooseBestPrice(params: {
+  market: MarketKey;
+  outcomeName: string;
+  current: { price: number; point?: number } | null;
+  candidate: { price: number; point?: number };
+}): boolean {
+  if (!params.current) return true;
+  // Keep derive-path line selection consistent with fair engine:
+  // market-aware point/price comparison, not raw American price sorting.
+  return (
+    compareOffersByMarket(
+      params.market,
+      params.outcomeName,
+      {
+        point: params.candidate.point,
+        priceAmerican: params.candidate.price
+      },
+      {
+        point: params.current.point,
+        priceAmerican: params.current.price
+      }
+    ) < 0
+  );
 }
 
 function normalizeBookMarket(entry: {
   market: MarketKey;
   lastUpdate: string;
-  outcomes: { name: string; price: number }[];
+  outcomes: { name: string; price: number; point?: number }[];
 }): { market: MarketKey; lastUpdate: string; outcomes: OutcomeProb[] } {
   const outcomes = entry.outcomes
     .filter((outcome) => Number.isFinite(outcome.price) && outcome.name)
     .map((outcome) => ({
       label: outcome.name,
       implied: impliedProbAmerican(outcome.price),
-      price: outcome.price
+      price: outcome.price,
+      point: outcome.point
     }));
 
   const total = outcomes.reduce((sum, outcome) => sum + outcome.implied, 0);
@@ -88,7 +112,8 @@ function normalizeBookMarket(entry: {
     outcomes: outcomes.map((outcome) => ({
       label: outcome.label,
       pNoVig: clamp01(outcome.implied / safeTotal),
-      price: outcome.price
+      price: outcome.price,
+      point: outcome.point
     }))
   };
 }
@@ -120,7 +145,7 @@ export function deriveGames(params: {
         const normalizedMarket = normalizeBookMarket({
           market: market.market,
           lastUpdate: market.lastUpdate,
-          outcomes: market.outcomes.map((outcome) => ({ name: outcome.name, price: outcome.price }))
+          outcomes: market.outcomes.map((outcome) => ({ name: outcome.name, price: outcome.price, point: outcome.point }))
         });
 
         const list = byMarket.get(market.market) || [];
@@ -153,7 +178,7 @@ export function deriveGames(params: {
         const probsEqual: number[] = [];
         const probsWeighted: Array<{ p: number; w: number; key: string; title: string }> = [];
         const probsSharp: Array<{ p: number; w: number; key: string; title: string }> = [];
-        let best: { bookKey: string; bookTitle: string; price: number } | null = null;
+        let best: { bookKey: string; bookTitle: string; price: number; point?: number } | null = null;
         let latestUpdateMs = 0;
 
         for (const entry of entries) {
@@ -176,11 +201,19 @@ export function deriveGames(params: {
             });
           }
 
-          if (chooseBestPrice(best ? { price: best.price } : null, outcome.price)) {
+          if (
+            chooseBestPrice({
+              market: marketKey,
+              outcomeName: label,
+              current: best ? { price: best.price, point: best.point } : null,
+              candidate: { price: outcome.price, point: outcome.point }
+            })
+          ) {
             best = {
               bookKey: entry.book.key,
               bookTitle: entry.book.title,
-              price: outcome.price
+              price: outcome.price,
+              point: outcome.point
             };
           }
 
@@ -201,8 +234,9 @@ export function deriveGames(params: {
         );
 
         const leanPct = (sharpWeightedProb - equalWeightedProb) * 100;
-        const bestImpliedProb = impliedProbAmerican(best.price);
-        const evPct = (weightedProb - bestImpliedProb) * 100;
+        // Use canonical EV math shared across the codebase:
+        // EV% = (fairProb * decimalOdds) - 1.
+        const evPct = calculateEvPercent(weightedProb, best.price);
 
         const varianceP = variance(probsEqual);
         const recencySec = latestUpdateMs ? Math.max(0, Math.floor((now.getTime() - latestUpdateMs) / 1000)) : 9999;

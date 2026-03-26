@@ -30,6 +30,7 @@ import { summarizeBookBehavior } from "@/lib/server/odds/evaluation";
 import { getValidationSinkMode, trackValidationEvent } from "@/lib/server/odds/validationEvents";
 import { buildOutcomeMarketKey, persistBoardSnapshots, snapshotLookupKey } from "@/lib/server/odds/snapshotPersistence";
 import type { SnapshotRef } from "@/lib/server/odds/historyStore";
+import { canonicalizeTeamName, normalizeTeamName } from "@/lib/server/odds/logos";
 
 type BuildFairBoardParams = {
   normalized: NormalizedEventOdds[];
@@ -44,6 +45,7 @@ type BuildFairBoardParams = {
 
 type BookOutcome = {
   name: string;
+  key: string;
   priceAmerican: number;
   impliedProb: number;
   noVigProb: number;
@@ -70,7 +72,8 @@ type GroupedMarket = {
 const DEFAULT_MODEL: WeightModel = "weighted";
 const DEFAULT_MIN_BOOKS = 3;
 export const LIMITED_MARKET_MIN_BOOKS = 2;
-const FAIR_BOARD_DISCLAIMER = "Market intelligence only. This is not financial advice or a guaranteed outcome.";
+const FAIR_BOARD_DISCLAIMER =
+  "Market-based pricing, not predictions. All values are derived from real sportsbook data, adjusted for margin, and compared to fair market probability. Edge reflects pricing inefficiency, not guaranteed outcomes.";
 const MARKET_ORDER: MarketKey[] = ["h2h", "spreads", "totals"];
 
 function normalizeModel(model?: string | null): WeightModel {
@@ -110,6 +113,59 @@ function pointSignature(market: MarketKey, outcomes: BookOutcome[]): string {
   return normalized.join("|");
 }
 
+function normalizeOutcomeName(name: string): string {
+  return normalizeTeamName(name);
+}
+
+function directionalTotalsKey(name: string): "over" | "under" | null {
+  const normalized = normalizeOutcomeName(name);
+  if (!normalized) return null;
+  if (normalized === "o" || normalized.startsWith("over")) return "over";
+  if (normalized === "u" || normalized.startsWith("under")) return "under";
+  return null;
+}
+
+function trailingToken(value: string): string {
+  const parts = value.split(" ").filter(Boolean);
+  return parts[parts.length - 1] ?? "";
+}
+
+function createOutcomeKeyResolver(params: {
+  market: MarketKey;
+  event: NormalizedEventOdds["event"];
+}): (name: string) => string {
+  if (params.market === "totals") {
+    return (name) => directionalTotalsKey(name) ?? normalizeOutcomeName(name);
+  }
+
+  const league = params.event.league;
+  const homeCanonical = normalizeOutcomeName(canonicalizeTeamName(params.event.home.name, league));
+  const awayCanonical = normalizeOutcomeName(canonicalizeTeamName(params.event.away.name, league));
+  const homeRaw = normalizeOutcomeName(params.event.home.name);
+  const awayRaw = normalizeOutcomeName(params.event.away.name);
+  const homeNickname = trailingToken(homeCanonical || homeRaw);
+  const awayNickname = trailingToken(awayCanonical || awayRaw);
+  const uniqueNicknames = Boolean(homeNickname && awayNickname && homeNickname !== awayNickname);
+
+  return (name: string) => {
+    const normalized = normalizeOutcomeName(name);
+    const canonical = normalizeOutcomeName(canonicalizeTeamName(name, league));
+    const nickname = trailingToken(canonical || normalized);
+    const candidate = canonical || normalized;
+
+    if (candidate === homeCanonical || candidate === homeRaw) return "home";
+    if (candidate === awayCanonical || candidate === awayRaw) return "away";
+    if (uniqueNicknames && nickname === homeNickname) return "home";
+    if (uniqueNicknames && nickname === awayNickname) return "away";
+
+    return candidate;
+  };
+}
+
+function outcomeByKey(book: BookMarketRow, outcomeKey: string): BookOutcome | undefined {
+  return book.outcomes.find((outcome) => outcome.key === outcomeKey);
+}
+
 function rawMarketPresence(event: NormalizedEventOdds, market: MarketKey, includeBooks: Set<string> | null): boolean {
   return event.books.some((book) => {
     const keyLc = book.book.key.toLowerCase();
@@ -129,6 +185,10 @@ function toBookRows(params: {
   excluded: Array<{ bookKey: string; title: string; reason: "point_mismatch" | "missing_market_or_outcomes" }>;
   totalBookCount: number;
 } {
+  const outcomeKey = createOutcomeKeyResolver({
+    market: params.market,
+    event: params.event.event
+  });
   const rows: BookMarketRow[] = [];
   const excluded: Array<{ bookKey: string; title: string; reason: "point_mismatch" | "missing_market_or_outcomes" }> = [];
   for (const book of params.event.books) {
@@ -147,6 +207,7 @@ function toBookRows(params: {
 
     const outcomes = targetMarket.outcomes.slice(0, 2).map<BookOutcome>((outcome) => ({
       name: outcome.name,
+      key: outcomeKey(outcome.name),
       priceAmerican: outcome.price,
       impliedProb: americanToProbability(outcome.price),
       noVigProb: 0,
@@ -284,51 +345,57 @@ function resolveEvReliability(params: {
 function buildOutcomeBooks(params: {
   market: MarketKey;
   outcomeName: string;
+  outcomeKey: string;
   books: BookMarketRow[];
-  outcomeIdx: number;
   fairProb: number;
 }): { rows: FairOutcomeBook[]; maxAbsEdge: number } {
-  const bestLine = [...params.books]
-    .filter((book) => Number.isFinite(book.outcomes[params.outcomeIdx]?.priceAmerican))
+  const booksWithOutcome = params.books
+    .map((book) => ({
+      book,
+      outcome: outcomeByKey(book, params.outcomeKey)
+    }))
+    .filter((entry): entry is { book: BookMarketRow; outcome: BookOutcome } => Boolean(entry.outcome));
+
+  const bestLine = [...booksWithOutcome]
+    .filter((entry) => Number.isFinite(entry.outcome.priceAmerican))
     .sort((a, b) =>
       compareOffersByMarket(
         params.market,
         params.outcomeName,
         {
-          point: a.outcomes[params.outcomeIdx]?.point,
-          priceAmerican: a.outcomes[params.outcomeIdx]?.priceAmerican ?? 0
+          point: a.outcome.point,
+          priceAmerican: a.outcome.priceAmerican
         },
         {
-          point: b.outcomes[params.outcomeIdx]?.point,
-          priceAmerican: b.outcomes[params.outcomeIdx]?.priceAmerican ?? 0
+          point: b.outcome.point,
+          priceAmerican: b.outcome.priceAmerican
         }
       )
-    )[0];
+    )[0]?.book;
 
   let maxAbsEdge = 0;
-  const rows = params.books.map<FairOutcomeBook>((book) => {
-    const outcome = book.outcomes[params.outcomeIdx];
-    const implied = outcome?.noVigProb ?? 0.5;
+  const rows = booksWithOutcome.map<FairOutcomeBook>(({ book, outcome }) => {
+    const implied = outcome.noVigProb;
     const probabilityEdge = probabilityEdgePct(params.fairProb, implied);
     if (Math.abs(probabilityEdge) > maxAbsEdge) {
       maxAbsEdge = Math.abs(probabilityEdge);
     }
-    const evPct = calculateEvPercent(params.fairProb, outcome?.priceAmerican ?? 0);
+    const evPct = calculateEvPercent(params.fairProb, outcome.priceAmerican);
     return {
       bookKey: book.bookKey,
       title: book.title,
       tier: book.tier,
       isSharpBook: book.isSharpBook,
       weight: book.weight,
-      priceAmerican: outcome?.priceAmerican ?? 0,
-      impliedProb: outcome?.impliedProb ?? 0.5,
+      priceAmerican: outcome.priceAmerican,
+      impliedProb: outcome.impliedProb,
       impliedProbNoVig: implied,
       edgePct: probabilityEdge,
       evPct,
       evQualified: params.market === "h2h",
       evReliability: params.market === "h2h" ? "full" : "qualified",
       isBestPrice: Boolean(bestLine && bestLine.bookKey === book.bookKey),
-      point: outcome?.point,
+      point: outcome.point,
       lastUpdate: book.lastUpdate
     };
   });
@@ -382,32 +449,53 @@ function buildFairEvent(params: {
   calibration: OddsCalibration;
 }): FairEvent | null {
   if (!params.group.books.length) return null;
-  const outcomeCount = params.group.books[0]!.outcomes.length;
+  const outcomeDefinitions: Array<{ name: string; key: string }> = [];
+  const seenOutcomeKeys = new Set<string>();
+  for (const book of params.group.books) {
+    for (const outcome of book.outcomes) {
+      const key = outcome.key;
+      if (!key || seenOutcomeKeys.has(key)) continue;
+      seenOutcomeKeys.add(key);
+      outcomeDefinitions.push({ name: outcome.name, key });
+    }
+  }
+
+  if (!outcomeDefinitions.length) return null;
+
   const outcomes: FairEvent["outcomes"] = [];
   let maxAbsEdge = 0;
   const uniqueBooks = new Set<string>();
 
-  for (let idx = 0; idx < outcomeCount; idx += 1) {
-    const outcomeName = params.group.books[0]!.outcomes[idx]?.name ?? `Outcome ${idx + 1}`;
-    const weighted = weightedFairProbability(
-      params.group.books.map((book) => ({
-        probability: book.outcomes[idx]?.noVigProb ?? 0.5,
+  for (let idx = 0; idx < outcomeDefinitions.length; idx += 1) {
+    const definition = outcomeDefinitions[idx]!;
+    const outcomeName = definition.name || `Outcome ${idx + 1}`;
+    const weightedEntries = params.group.books
+      .map((book) => ({
+        probability: outcomeByKey(book, definition.key)?.noVigProb,
         weight: book.weight
-      })),
+      }))
+      .filter((entry): entry is { probability: number; weight: number } => Number.isFinite(entry.probability));
+
+    if (!weightedEntries.length) continue;
+
+    const weighted = weightedFairProbability(
+      weightedEntries,
       { allowUnweightedFallback: false }
     );
     const fairAmerican = probabilityToAmerican(weighted);
     const { rows, maxAbsEdge: localMax } = buildOutcomeBooks({
       market: params.market,
       outcomeName,
+      outcomeKey: definition.key,
       books: params.group.books,
-      outcomeIdx: idx,
       fairProb: weighted
     });
 
+    if (!rows.length) continue;
+
     const confidence = assessConfidence({
       books: rows,
-      contributingBooks: params.group.books.length,
+      contributingBooks: rows.length,
       totalBooks: params.totalBookCount,
       excludedBooks: params.excludedBooks,
       calibration: params.calibration
@@ -417,7 +505,7 @@ function buildFairEvent(params: {
       market: params.market,
       confidenceScore: confidence.score,
       coverageRatio: confidence.coverageRatio,
-      contributingBooks: params.group.books.length,
+      contributingBooks: rows.length,
       calibration: params.calibration
     });
 
@@ -449,7 +537,7 @@ function buildFairEvent(params: {
       market: params.market,
       confidence,
       books: staleBooks,
-      contributingBooks: params.group.books.length,
+      contributingBooks: rows.length,
       totalBooks: params.totalBookCount,
       calibration: params.calibration
     });

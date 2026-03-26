@@ -47,7 +47,7 @@ Backend
 
 Infrastructure
 - Vercel deployment
-- Optional Redis cache
+- Optional Upstash Redis cache/persistence
 
 Agents must maintain compatibility with:
 
@@ -90,6 +90,10 @@ To run the project locally:
 npm install
 npm run dev
 
+Observed helper workflow:
+
+bash scripts/setup.sh
+
 Development server:
 
 http://localhost:3000
@@ -98,6 +102,7 @@ Before submitting changes agents must verify:
 
 npm run lint
 npm run typecheck
+npm test
 npm run build
 
 ---
@@ -288,7 +293,12 @@ Agents should create tests for:
 
 Testing framework:
 
-Vitest or Jest
+Node's built-in test runner via `tsx --test` (`npm test`)
+
+Visual regression workflow:
+
+- `npm run test:visual`
+- `npm run test:visual -- --update` to refresh baselines
 
 ---
 

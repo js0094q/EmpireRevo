@@ -97,7 +97,7 @@ export type PickStatus = "Favorite" | "Underdog";
 export type PickSummary = {
   outcome: FairOutcome;
   book: FairOutcomeBook | null;
-  label: "Recommended Pick" | "Current Best Number";
+  label: "Best Value Line" | "Best Listed Line";
   status: PickStatus;
   hasRecommendation: boolean;
   whyThisPick: string;
@@ -118,18 +118,15 @@ export function pickStatus(outcome: FairOutcome): PickStatus {
 }
 
 export function whyThisPickText(params: {
-  status: PickStatus;
   edgePct: number;
   hasRecommendation: boolean;
 }): string {
   if (params.hasRecommendation) {
-    return "Market price is better than model fair value at the best available book.";
+    return "This line is priced more favorably than its fair market probability.";
   }
 
-  if (params.edgePct < 0) return "Market price is below model fair value right now.";
-  return params.status === "Underdog"
-    ? "Underdog pricing is close to model fair value and currently has limited edge."
-    : "Favorite pricing is close to model fair value and currently has limited edge.";
+  if (params.edgePct < 0) return "This line is priced less favorably than its fair market probability.";
+  return "This line is currently close to fair market probability.";
 }
 
 export function marketVsModelCopy(params: {
@@ -141,13 +138,14 @@ export function marketVsModelCopy(params: {
   if (!params.book) return `Market pricing is unavailable. Model fair value is ${fairValue}.`;
 
   const marketValue = formatOffer(params.market, params.book);
+  const edgeLabel = `${params.book.edgePct > 0 ? "+" : ""}${params.book.edgePct.toFixed(2)}%`;
   if (params.book.edgePct > 0) {
-    return `Market is pricing this outcome at ${marketValue}, model estimates fair at ${fairValue} -> positive EV.`;
+    return `Available at ${marketValue} versus fair value ${fairValue}. Edge ${edgeLabel} indicates favorable pricing relative to probability.`;
   }
   if (params.book.edgePct < 0) {
-    return `Market is pricing this outcome at ${marketValue}, model estimates fair at ${fairValue} -> below model value.`;
+    return `Available at ${marketValue} versus fair value ${fairValue}. Edge ${edgeLabel} indicates less favorable pricing relative to probability.`;
   }
-  return `Market is pricing this outcome at ${marketValue}, model estimates fair at ${fairValue} -> neutral value.`;
+  return `Available at ${marketValue} versus fair value ${fairValue}. Edge is neutral, so pricing is near fair probability.`;
 }
 
 export function buildOutcomeSummary(outcome: FairOutcome): PickSummary {
@@ -159,11 +157,10 @@ export function buildOutcomeSummary(outcome: FairOutcome): PickSummary {
   return {
     outcome,
     book,
-    label: hasRecommendation ? "Recommended Pick" : "Current Best Number",
+    label: hasRecommendation ? "Best Value Line" : "Best Listed Line",
     status,
     hasRecommendation,
     whyThisPick: whyThisPickText({
-      status,
       edgePct,
       hasRecommendation
     })

@@ -120,25 +120,26 @@
 
 .heroBrandCopy {
   display: grid;
-  gap: 0.16rem;
+  gap: 0.22rem;
 }
 
 .heroTitle {
   margin: 0;
-  font-size: clamp(1.5rem, 2.2vw, 2rem);
-  line-height: 1.02;
-  letter-spacing: 0.01em;
+  font-size: clamp(2.35rem, 6.2vw, 4.1rem);
+  line-height: 0.98;
+  letter-spacing: 0.012em;
 }
 
 .heroSubhead {
   margin: 0;
-  font-size: clamp(0.92rem, 1.2vw, 1.03rem);
-  color: color-mix(in srgb, var(--color-accent) 68%, white 32%);
+  font-size: clamp(1.02rem, 1.6vw, 1.22rem);
+  color: color-mix(in srgb, var(--color-accent) 74%, white 26%);
+  max-width: 44rem;
 }
 
 .heroLead {
   margin: 0;
-  max-width: 50rem;
+  max-width: 56rem;
   line-height: 1.5;
   color: color-mix(in srgb, var(--color-text-muted) 80%, white 20%);
 }
@@ -163,6 +164,37 @@
   font-size: 0.72rem;
   letter-spacing: 0.12em;
   text-transform: uppercase;
+}
+
+.definitionCopy {
+  margin: 0;
+  font-size: 0.79rem;
+  line-height: 1.42;
+}
+
+.edgePrimer {
+  border: 1px solid color-mix(in srgb, var(--color-positive) 34%, rgba(255, 255, 255, 0.08));
+  border-radius: var(--radius-lg);
+  background: color-mix(in srgb, var(--color-positive) 9%, rgba(255, 255, 255, 0.02));
+  padding: 0.78rem 0.88rem;
+  display: grid;
+  gap: 0.33rem;
+}
+
+.edgePrimerTitle {
+  margin: 0;
+  font-size: 0.83rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--color-positive) 88%, white 12%);
+}
+
+.edgePrimerCopy,
+.edgePrimerExample {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 0.8rem;
+  line-height: 1.42;
 }
 
 .summaryHeader,

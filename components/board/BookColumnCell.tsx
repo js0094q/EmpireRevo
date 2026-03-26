@@ -15,7 +15,10 @@ export function BookColumnCell({
   compact?: boolean;
 }) {
   const isSharpBook = book.isSharpBook || book.tier === "sharp";
-  const edgeContext = book.edgePct >= 0 ? "Better than market average" : "Overpriced at this book";
+  const edgeContext =
+    book.edgePct >= 0
+      ? "Priced more favorably than fair market probability"
+      : "Priced less favorably than fair market probability";
   const edgeTierLabel = book.edgePct >= 0 ? getEdgeTierLabel(book.edgePct) : null;
 
   return (

@@ -48,7 +48,7 @@ function BoardRowComponent({ event, detailHref }: BoardRowProps) {
       <td>
         <div className={styles.signalCell} aria-label="Decision summary">
           <div className={styles.recommendationRow}>
-            <span className={styles.pickDirectiveLabel}>Recommended Pick</span>
+            <span className={styles.pickDirectiveLabel}>{pick.label}</span>
             <span className={styles.pickStatus}>{pick.status}</span>
           </div>
           <strong className={styles.pickOutcomeName}>{pick.outcome.name}</strong>
@@ -62,7 +62,7 @@ function BoardRowComponent({ event, detailHref }: BoardRowProps) {
               <strong>Market Price:</strong> {marketPriceLabel}
             </span>
             <span>
-              <strong>Model Fair Value:</strong> {fairValueLabel}
+              <strong>Fair Value:</strong> {fairValueLabel}
             </span>
           </div>
           <p className={styles.whyPickCopy}>{valueStatement}</p>

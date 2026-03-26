@@ -453,7 +453,7 @@ export default async function GamePage({
 
             <div className={styles.pickSummary}>
               <div className={styles.pickHeader}>
-                <span className={styles.pickLabel}>Recommended Pick</span>
+                <span className={styles.pickLabel}>{pickSummary.label}</span>
                 <span className={styles.pickStatus}>{pickSummary.status}</span>
               </div>
               <strong className={styles.pickName}>{featuredOutcome.name}</strong>
@@ -465,7 +465,7 @@ export default async function GamePage({
                   <strong>{featuredBook ? `${formatOffer(event.market, featuredBook)} at ${featuredBook.title}` : "--"}</strong>
                 </div>
                 <div className={styles.pickMetric}>
-                  <span>Model Fair Line</span>
+                  <span>Fair Value (No-Vig)</span>
                   <strong>{`${formatOffer(event.market, featuredOutcome)} (model)`}</strong>
                 </div>
                 <div className={styles.pickMetric}>
@@ -538,8 +538,8 @@ export default async function GamePage({
                 <strong>{`${(featuredOutcome.fairProb * 100).toFixed(2)}%`}</strong>
               </div>
               <div className={styles.contextMetric}>
-                <span>Market Implied</span>
-                <strong>{featuredBook ? formatImpliedPercent(featuredBook.impliedProb) : "--"}</strong>
+                <span>Market Implied (No-Vig)</span>
+                <strong>{featuredBook ? formatImpliedPercent(featuredBook.impliedProbNoVig) : "--"}</strong>
               </div>
               <div className={styles.contextMetric}>
                 <span>EV at Best Price</span>
@@ -547,8 +547,9 @@ export default async function GamePage({
               </div>
             </div>
 
-            <p className={styles.contextNote}>Vig is removed from each market before the model computes consensus fair probability.</p>
+            <p className={styles.contextNote}>Vig is removed from each market before computing consensus fair probability and fair value.</p>
             <p className={styles.contextNote}>{methodologyCopy}</p>
+            <p className={styles.contextNote}>Edge reflects pricing inefficiency, not guaranteed outcomes.</p>
 
             <div className={styles.backRow}>
               <Link href={backToBoardHref} className="app-link">

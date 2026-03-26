@@ -105,7 +105,6 @@ export function BoardShell({ board, league, mode = "board" }: BoardShellProps) {
     sharpReferenceTitles.length > 0
       ? `Sharp books are weighted in model fair value when available (${joinTitles(sharpReferenceTitles)}).`
       : "Sharp books are weighted in model fair value when available.";
-  const disclosureCopy = board.disclaimer.replace("Market intelligence only.", "Compare prices only.");
 
   return (
     <AppContainer>
@@ -116,14 +115,36 @@ export function BoardShell({ board, league, mode = "board" }: BoardShellProps) {
               <div className={styles.heroBrand}>
                 <BrandMark className={styles.heroBrandMark} />
                 <div className={styles.heroBrandCopy}>
-                  <p className={styles.sectionEyebrow}>EmpirePicks</p>
-                  <h1 className={styles.heroTitle}>Board Workspace</h1>
-                  <p className={styles.heroSubhead}>Live pricing terminal for fast betting decisions.</p>
+                  <h1 className={styles.heroTitle}>EmpirePicks</h1>
+                  <p className={styles.heroSubhead}>We don&apos;t predict winners. We identify mispriced bets.</p>
                 </div>
               </div>
               <span className={styles.summaryTimestamp}>Updated {formatUpdatedLabel(board.updatedAt)}</span>
             </div>
-            <p className={styles.heroLead}>Recommended side first, then market price, model fair value, and edge.</p>
+            <p className={styles.heroLead}>
+              Sportsbooks build margin into every line. We remove that margin, estimate true market probability, and show where prices are off.
+            </p>
+            <div className={styles.definitionRow}>
+              <div className={styles.definitionItem}>
+                <span className={styles.definitionTerm}>Value</span>
+                <p className={styles.definitionCopy}>A price and probability mismatch where the number you can bet is better than what fair probability implies.</p>
+              </div>
+              <div className={styles.definitionItem}>
+                <span className={styles.definitionTerm}>Fair Value</span>
+                <p className={styles.definitionCopy}>The no-vig, weighted market estimate converted back into a fair line.</p>
+              </div>
+              <div className={styles.definitionItem}>
+                <span className={styles.definitionTerm}>Edge</span>
+                <p className={styles.definitionCopy}>The gap between an available sportsbook price and fair market probability.</p>
+              </div>
+            </div>
+            <div className={styles.edgePrimer}>
+              <h2 className={styles.edgePrimerTitle}>Why Edge matters</h2>
+              <p className={styles.edgePrimerCopy}>Winning a single bet is short-term variance. Consistently taking positive value is what drives long-term profit.</p>
+              <p className={styles.edgePrimerExample}>
+                Example: Bet A can lose today with positive edge, and Bet B can win today with negative edge. Over time, repeatedly taking Bet A is the stronger strategy because the price is more favorable relative to probability.
+              </p>
+            </div>
           </section>
 
           <section className={styles.liveBoardSection}>
@@ -182,7 +203,7 @@ export function BoardShell({ board, league, mode = "board" }: BoardShellProps) {
             )}
           </section>
 
-          <p className={styles.disclosure}>{disclosureCopy}</p>
+          <p className={styles.disclosure}>{board.disclaimer}</p>
         </div>
       </div>
     </AppContainer>

@@ -12,6 +12,7 @@ export type AggregatedSportsbookLine = {
   impliedProbability: number;
   noVigProbability: number;
   weight: number;
+  edge: number;
   ev: number;
   point?: number;
   isBestPrice: boolean;
@@ -28,7 +29,7 @@ export type AggregatedOutcome = {
   sportsbooks: AggregatedSportsbookLine[];
   bestLine: { book: string; bookKey: string; odds: number; point?: number } | null;
   bestEv: AggregatedSportsbookLine | null;
-  edges: Array<{ book: string; ev: number }>;
+  edges: Array<{ book: string; edge: number; ev: number }>;
 };
 
 export type AggregatedGame = {
@@ -114,6 +115,7 @@ function mapBookToLine(book: FairOutcomeBook): AggregatedSportsbookLine {
     impliedProbability,
     noVigProbability: book.impliedProbNoVig,
     weight: book.weight,
+    edge: book.edgePct,
     ev: book.evPct,
     point: book.point,
     isBestPrice: book.isBestPrice,
@@ -130,7 +132,9 @@ function buildOutcome(event: FairEvent, outcome: FairOutcome): AggregatedOutcome
     if (!best || candidate.ev > best.ev) return candidate;
     return best;
   }, null);
-  const edges = sportsbooks.filter((line) => line.ev > 0).map((line) => ({ book: line.book, ev: line.ev }));
+  const edges = sportsbooks
+    .filter((line) => line.edge > 0)
+    .map((line) => ({ book: line.book, edge: line.edge, ev: line.ev }));
 
   return {
     name: outcome.name,
