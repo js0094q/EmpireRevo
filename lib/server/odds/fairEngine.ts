@@ -19,7 +19,7 @@ import {
 } from "@/lib/server/odds/fairMath";
 import { calculateEvPercent } from "@/lib/server/odds/ev";
 import { compareOffersByMarket } from "@/lib/server/odds/marketCompare";
-import { getBookWeightAudit, getWeight, type WeightModel } from "@/lib/server/odds/weights";
+import { getBookWeightAudit, getWeight, isBookEnabledForModel, type WeightModel } from "@/lib/server/odds/weights";
 import { assessConfidence } from "@/lib/server/odds/confidence";
 import { detectStaleForBook } from "@/lib/server/odds/staleDetection";
 import { rankOpportunity } from "@/lib/server/odds/ranking";
@@ -55,7 +55,7 @@ type BookOutcome = {
 type BookMarketRow = {
   bookKey: string;
   title: string;
-  tier: "sharp" | "signal" | "mainstream" | "promo" | "unknown";
+  tier: "sharp" | "signal" | "exchange" | "mainstream" | "promo" | "unknown";
   isSharpBook: boolean;
   weight: number;
   lastUpdate?: string;
@@ -70,7 +70,7 @@ type GroupedMarket = {
 };
 
 const DEFAULT_MODEL: WeightModel = "weighted";
-const DEFAULT_MIN_BOOKS = 3;
+const DEFAULT_MIN_BOOKS = 4;
 export const LIMITED_MARKET_MIN_BOOKS = 2;
 const FAIR_BOARD_DISCLAIMER =
   "Market-based pricing, not predictions. All values are derived from real sportsbook data, adjusted for margin, and compared to fair market probability. Edge reflects pricing inefficiency, not guaranteed outcomes.";
@@ -191,9 +191,12 @@ function toBookRows(params: {
   });
   const rows: BookMarketRow[] = [];
   const excluded: Array<{ bookKey: string; title: string; reason: "point_mismatch" | "missing_market_or_outcomes" }> = [];
+  let eligibleBookCount = 0;
   for (const book of params.event.books) {
     const keyLc = book.book.key.toLowerCase();
     if (params.includeBooks && !params.includeBooks.has(keyLc)) continue;
+    if (!isBookEnabledForModel(book.book.key, params.model)) continue;
+    eligibleBookCount += 1;
 
     const targetMarket = book.markets.find((m) => m.market === params.market);
     if (!targetMarket || targetMarket.outcomes.length < 2) {
@@ -243,7 +246,7 @@ function toBookRows(params: {
   return {
     rows,
     excluded,
-    totalBookCount: params.event.books.length
+    totalBookCount: eligibleBookCount
   };
 }
 
@@ -301,6 +304,7 @@ function qualityCoverageScore(group: GroupedMarket): number {
   return group.books.reduce((sum, book) => {
     if (book.tier === "sharp") return sum + 8;
     if (book.tier === "signal") return sum + 4;
+    if (book.tier === "exchange") return sum + 3;
     if (book.tier === "mainstream") return sum + 2;
     if (book.tier === "promo") return sum + 1;
     return sum + 0.5;
@@ -311,6 +315,7 @@ function marketMakingCoverageScore(group: GroupedMarket): number {
   return group.books.reduce((sum, book) => {
     if (book.tier === "sharp") return sum + 2;
     if (book.tier === "signal") return sum + 1;
+    if (book.tier === "exchange") return sum + 1;
     return sum;
   }, 0);
 }

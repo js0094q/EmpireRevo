@@ -56,7 +56,7 @@ export type StaleDiagnostics = {
 export type FairOutcomeBook = {
   bookKey: string;
   title: string;
-  tier: "sharp" | "signal" | "mainstream" | "promo" | "unknown";
+  tier: "sharp" | "signal" | "exchange" | "mainstream" | "promo" | "unknown";
   isSharpBook: boolean;
   weight: number;
   priceAmerican: number;

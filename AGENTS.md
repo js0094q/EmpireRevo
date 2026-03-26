@@ -111,59 +111,196 @@ npm run build
 
 EmpirePicks revolves around **odds mathematics**.
 
-Agents must preserve the following workflow:
-
-### Step 1 — Convert American Odds to Probability
-
-Example:
-
-+150 → 40%  
--150 → 60%
-
-### Step 2 — Remove Vig
-
-If sportsbook shows:
-
-Team A  -110  
-Team B  -110
-
-Implied probabilities exceed 100%.
-
-Normalize probabilities so:
-
-P(A) + P(B) = 1
-
-### Step 3 — Apply Book Weights
-
-Sharp books should be weighted higher.
-
-Example weighting:
-
-Pinnacle: 1.5
-Circa: 1.5
-DraftKings: 1.0
-FanDuel: 1.0
-Caesars: 0.9
-
-### Step 4 — Calculate Fair Probability
-
-Weighted average of probabilities.
-
-### Step 5 — Convert Back to Odds
-
-Fair probability → American odds.
+Agents must preserve the exact backend computation pipeline defined below.
 
 ---
 
-# 6. Expected Value Calculation
+## Step 1 — Convert American Odds to Implied Probability
 
-EV should be calculated as:
+\[
+P =
+\begin{cases}
+\frac{100}{\text{Odds} + 100}, & \text{Odds} > 0 \\
+\\
+\frac{|\text{Odds}|}{|\text{Odds}| + 100}, & \text{Odds} < 0
+\end{cases}
+\]
 
-EV = (Fair Probability * Decimal Odds) - 1
+If odds are non-finite or \( = 0 \):
+\[
+P = 0
+\]
 
-Positive EV indicates value.
+---
 
-Agents must comment any EV math changes.
+## Step 2 — Remove Vig (Per Book, Per Market Pair)
+
+\[
+P_i^{\text{no vig}} = \frac{P_i^{\text{raw}}}{\sum_j P_j^{\text{raw}}}
+\]
+
+If total is invalid:
+\[
+\sum_j P_j^{\text{raw}} \le 0 \;\Rightarrow\; P_i^{\text{no vig}} = \frac{1}{N}
+\]
+
+---
+
+## Step 3 — Apply Book Weights (Expanded Universe)
+
+Each sportsbook \( i \) is assigned a weight \( w_i \) based on signal quality.
+
+### Tier 1 — Sharp / Market-Making Books
+
+\[
+w_{\text{Pinnacle}} = 1.0,\quad
+w_{\text{Circa}} = 0.9,\quad
+w_{\text{Bookmaker}} = 0.85,\quad
+w_{\text{BetCris}} = 0.85
+\]
+
+---
+
+### Tier 2 — Strong Signal / Hybrid Books
+
+\[
+w_{\text{BetOnline}} = 0.75,\quad
+w_{\text{Heritage}} = 0.7,\quad
+w_{\text{LowVig}} = 0.7
+\]
+
+---
+
+### Tier 3 — Major U.S. Market Books
+
+\[
+w_{\text{DraftKings}} = 0.4,\quad
+w_{\text{FanDuel}} = 0.38,\quad
+w_{\text{Caesars}} = 0.34,\quad
+w_{\text{BetMGM}} = 0.34,\quad
+w_{\text{PointsBet}} = 0.32,\quad
+w_{\text{Barstool}} = 0.3,\quad
+w_{\text{ESPNBet}} = 0.3
+\]
+
+---
+
+### Tier 4 — Recreational / Promotional Books
+
+\[
+w_{\text{BetRivers}} = 0.28,\quad
+w_{\text{Unibet}} = 0.28,\quad
+w_{\text{WynnBet}} = 0.26,\quad
+w_{\text{FOXBet}} = 0.25,\quad
+w_{\text{SuperBook}} = 0.25
+\]
+
+---
+
+### Tier 5 — Exchange / Niche / Regional
+
+\[
+w_{\text{Matchbook}} = 0.6,\quad
+w_{\text{BetfairExchange}} = 0.6,\quad
+w_{\text{Smarkets}} = 0.6
+\]
+
+---
+
+### Fallback (Unknown Books)
+
+\[
+w_{\text{unknown}} = 0.12
+\]
+
+---
+
+### Model Overrides
+
+- **weighted (default)** → use weights above  
+- **sharp** → restrict to Tier 1  
+- **equal**:
+\[
+w_i = 1 \quad \forall i
+\]
+
+---
+
+## Step 4 — Calculate Fair Probability
+
+\[
+P_{\text{fair}} =
+\frac{\sum_i w_i \cdot P_i^{\text{no vig}}}{\sum_i w_i}
+\]
+
+If total weight is invalid:
+\[
+P_{\text{fair}} = 0.5
+\]
+
+---
+
+## Step 5 — Convert Fair Probability to American Odds
+
+\[
+\text{Odds} =
+\begin{cases}
+-\frac{P_{\text{fair}}}{1 - P_{\text{fair}}} \times 100, & P_{\text{fair}} \ge 0.5 \\
+\\
+\frac{1 - P_{\text{fair}}}{P_{\text{fair}}} \times 100, & P_{\text{fair}} < 0.5
+\end{cases}
+\]
+
+Clamp:
+\[
+P_{\text{fair}} \in [0.001, 0.999]
+\]
+
+---
+
+## Step 6 — Expected Value (EV)
+
+\[
+\text{Decimal} =
+\begin{cases}
+1 + \frac{\text{Odds}}{100}, & \text{Odds} > 0 \\
+\\
+1 + \frac{100}{|\text{Odds}|}, & \text{Odds} < 0
+\end{cases}
+\]
+
+\[
+EV = (P_{\text{fair}} \cdot \text{Decimal}) - 1
+\]
+
+\[
+EV\% = EV \times 100
+\]
+
+---
+
+## Runtime Constraints
+
+- Markets grouped by identical line values (spreads/totals)
+- Fair price computed within each group
+- EV may be suppressed when:
+\[
+\text{coverage} \;\text{or}\; \text{confidence thresholds fail}
+\]
+
+---
+
+## API Defaults
+
+\[
+\text{/api/fair: model} = \text{weighted}, \quad \text{minBooks} = 4
+\]
+
+Indicates a mathematically favorable bet.
+
+---
+
+# 6. Agents must comment any EV math changes.
 
 ---
 

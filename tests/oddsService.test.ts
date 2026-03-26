@@ -87,3 +87,14 @@ test("getFairBoard reuses provided normalized result", async () => {
     assert.equal(board.events.length, 1);
   });
 });
+
+test("getFairBoard defaults to minBooks = 4 when no threshold is provided", async () => {
+  const board = await withMockedFetch(() =>
+    getFairBoard({
+      sportKey: "basketball_nba",
+      market: "h2h"
+    })
+  );
+
+  assert.equal(board.events.length, 0);
+});

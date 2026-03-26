@@ -16,40 +16,64 @@ export type BookWeightAudit = BookWeightProfile & {
 const DEFAULT_PROFILE: BookWeightProfile = {
   tier: "unknown",
   weighted: 0.12,
-  sharp: 0.06
+  sharp: 0
 };
 
+function profile(tier: BookTier, weighted: number): BookWeightProfile {
+  return {
+    tier,
+    weighted,
+    sharp: tier === "sharp" ? weighted : 0
+  };
+}
+
 const BOOK_PROFILES: Record<string, BookWeightProfile> = {
-  // Market-making anchors
-  pinnacle: { tier: "sharp", weighted: 1.0, sharp: 1.25 },
-  circa: { tier: "sharp", weighted: 0.9, sharp: 1.15 },
-  bookmaker: { tier: "sharp", weighted: 0.8, sharp: 1.05 },
+  // Tier 1: sharp / market-making books
+  pinnacle: profile("sharp", 1.0),
+  circa: profile("sharp", 0.9),
+  circasports: profile("sharp", 0.9),
+  bookmaker: profile("sharp", 0.85),
+  betcris: profile("sharp", 0.85),
 
-  // High-signal / semi-sharp
-  lowvig: { tier: "signal", weighted: 0.7, sharp: 0.9 },
-  betonline: { tier: "signal", weighted: 0.65, sharp: 0.85 },
-  cloudbet: { tier: "signal", weighted: 0.6, sharp: 0.8 },
-  sportsbetting: { tier: "signal", weighted: 0.6, sharp: 0.8 },
-  betanything: { tier: "signal", weighted: 0.6, sharp: 0.75 },
+  // Tier 2: strong signal / hybrid books
+  betonline: profile("signal", 0.75),
+  betonlineag: profile("signal", 0.75),
+  heritage: profile("signal", 0.7),
+  heritagesports: profile("signal", 0.7),
+  lowvig: profile("signal", 0.7),
+  lowvigag: profile("signal", 0.7),
 
-  // Major retail
-  draftkings: { tier: "mainstream", weighted: 0.4, sharp: 0.25 },
-  fanduel: { tier: "mainstream", weighted: 0.38, sharp: 0.25 },
-  betmgm: { tier: "mainstream", weighted: 0.35, sharp: 0.22 },
-  caesars: { tier: "mainstream", weighted: 0.34, sharp: 0.22 },
-  betrivers: { tier: "mainstream", weighted: 0.32, sharp: 0.2 },
-  pointsbet: { tier: "mainstream", weighted: 0.32, sharp: 0.2 },
-  barstool: { tier: "mainstream", weighted: 0.3, sharp: 0.18 },
+  // Tier 3: major U.S. market books
+  draftkings: profile("mainstream", 0.4),
+  fanduel: profile("mainstream", 0.38),
+  caesars: profile("mainstream", 0.34),
+  williamhillus: profile("mainstream", 0.34),
+  betmgm: profile("mainstream", 0.34),
+  pointsbet: profile("mainstream", 0.32),
+  pointsbetus: profile("mainstream", 0.32),
+  barstool: profile("mainstream", 0.3),
+  espnbet: profile("mainstream", 0.3),
 
-  // Promotional / recreational
-  bovada: { tier: "promo", weighted: 0.18, sharp: 0.1 },
-  espnbet: { tier: "promo", weighted: 0.2, sharp: 0.12 },
-  betr: { tier: "promo", weighted: 0.16, sharp: 0.1 }
+  // Tier 4: recreational / promotional books
+  betrivers: profile("promo", 0.28),
+  unibet: profile("promo", 0.28),
+  wynnbet: profile("promo", 0.26),
+  foxbet: profile("promo", 0.25),
+  superbook: profile("promo", 0.25),
+  superbookus: profile("promo", 0.25),
+
+  // Tier 5: exchange / niche / regional
+  matchbook: profile("exchange", 0.6),
+  betfairexchange: profile("exchange", 0.6),
+  betfairexuk: profile("exchange", 0.6),
+  betfairexau: profile("exchange", 0.6),
+  smarkets: profile("exchange", 0.6)
 };
 
 function resolveProfile(bookKey: string): BookWeightProfile {
   const key = bookKey.toLowerCase().trim();
-  return BOOK_PROFILES[key] ?? DEFAULT_PROFILE;
+  const compact = key.replace(/[^a-z0-9]/g, "");
+  return BOOK_PROFILES[key] ?? BOOK_PROFILES[compact] ?? DEFAULT_PROFILE;
 }
 
 export function getBookWeightAudit(bookKey: string): BookWeightAudit {
@@ -88,4 +112,9 @@ export function getWeight(bookKey: string, mode: WeightModel = "weighted"): numb
   if (mode === "equal") return 1;
   const profile = resolveProfile(bookKey);
   return mode === "sharp" ? profile.sharp : profile.weighted;
+}
+
+export function isBookEnabledForModel(bookKey: string, mode: WeightModel = "weighted"): boolean {
+  if (mode !== "sharp") return true;
+  return resolveProfile(bookKey).tier === "sharp";
 }

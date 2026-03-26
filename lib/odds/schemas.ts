@@ -2,7 +2,7 @@ export type LeagueKey = "nfl" | "nba" | "nhl" | "ncaab" | "mlb";
 
 export type MarketKey = "h2h" | "spreads" | "totals";
 
-export type BookTier = "sharp" | "signal" | "mainstream" | "promo" | "unknown";
+export type BookTier = "sharp" | "signal" | "exchange" | "mainstream" | "promo" | "unknown";
 
 export type TeamRef = {
   id: string;
