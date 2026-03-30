@@ -1,6 +1,7 @@
 import type { MarketKey } from "@/lib/odds/schemas";
 import { getOddsCalibration, type OddsCalibration } from "@/lib/server/odds/calibration";
 import type { ConfidenceAssessment } from "@/lib/server/odds/confidence";
+import { getOddsHistoryConfig } from "@/lib/server/odds/historyConfig";
 import type {
   ScoreBreakdown,
   FairOutcomeBook,
@@ -54,6 +55,7 @@ function sharpDeviation(books: FairOutcomeBook[]): number {
 
 export function rankOpportunity(params: RankParams): OpportunityRanking {
   const calibration = params.calibration ?? getOddsCalibration();
+  const historyMode = getOddsHistoryConfig().liveRankingMode;
   const best = [...params.books].sort((a, b) => b.edgePct - a.edgePct || b.evPct - a.evPct)[0];
   const bestWithQualifiedEv = [...params.books].filter((book) => book.evQualified).sort((a, b) => b.evPct - a.evPct)[0];
   const bestEdgePct = Math.max(0, best?.edgePct ?? 0);
@@ -108,40 +110,47 @@ export function rankOpportunity(params: RankParams): OpportunityRanking {
   if (params.confidence.label === "Thin Market" || params.confidence.label === "Stale Market") {
     penalties.push({ reason: "Weak confidence label", delta: -calibration.ranking.penalties.weakLabelPenalty });
   }
-  if (params.marketPressure?.label === "fragmented") {
-    penalties.push({ reason: "Fragmented historical movement", delta: -calibration.ranking.historyAdjustments.fragmentedPenalty });
+
+  const appliedHistoryReasons: string[] = [];
+  if (historyMode !== "off" && params.marketPressure && params.marketPressure.confidence !== "low") {
+    if (params.marketPressure.label === "fragmented") {
+      penalties.push({
+        reason: "Fragmented historical movement",
+        delta: -calibration.ranking.historyAdjustments.fragmentedPenalty
+      });
+      appliedHistoryReasons.push("Historical movement is fragmented");
+    } else if (params.marketPressure.label === "stale") {
+      penalties.push({
+        reason: "Stale historical market",
+        delta: -calibration.ranking.historyAdjustments.staleHistoryPenalty
+      });
+      appliedHistoryReasons.push("Historical signal is stale");
+    } else if (params.marketPressure.label === "sharp-up" || params.marketPressure.label === "sharp-down") {
+      score += calibration.ranking.historyAdjustments.sharpConfirmationBoost;
+      appliedHistoryReasons.push("Sharp books moved first");
+    }
   }
-  if (params.marketPressure?.label === "stale") {
-    penalties.push({ reason: "Stale historical market", delta: -calibration.ranking.historyAdjustments.staleHistoryPenalty });
-  }
-  if (params.valueTiming?.edgeTrend === "worsening") {
-    penalties.push({ reason: "Edge trend worsening", delta: -calibration.ranking.historyAdjustments.worseningEdgePenalty });
+
+  if (historyMode === "full" && params.valueTiming) {
+    if (params.valueTiming.valuePersistence === "stable") {
+      score += calibration.ranking.historyAdjustments.persistentEdgeBoost;
+      appliedHistoryReasons.push("Positive value has persisted");
+    } else if (params.valueTiming.valuePersistence === "developing") {
+      score += Math.max(1, calibration.ranking.historyAdjustments.persistentEdgeBoost - 1);
+      appliedHistoryReasons.push("Positive value is developing");
+    }
+
+    if (params.valueTiming.edgeTrend === "worsening") {
+      penalties.push({
+        reason: "Edge trend worsening",
+        delta: -calibration.ranking.historyAdjustments.worseningEdgePenalty
+      });
+      appliedHistoryReasons.push("Historical edge is worsening");
+    }
   }
 
   for (const penalty of penalties) {
     score += penalty.delta;
-  }
-
-  if (params.valueTiming?.valuePersistence === "stable") {
-    score += calibration.ranking.historyAdjustments.persistentEdgeBoost;
-    penalties.push({
-      reason: "Persistent positive value",
-      delta: calibration.ranking.historyAdjustments.persistentEdgeBoost
-    });
-  } else if (params.valueTiming?.valuePersistence === "developing") {
-    score += calibration.ranking.historyAdjustments.persistentEdgeBoost / 2;
-    penalties.push({
-      reason: "Developing positive value",
-      delta: calibration.ranking.historyAdjustments.persistentEdgeBoost / 2
-    });
-  }
-
-  if (params.marketPressure?.label === "sharp-up" || params.marketPressure?.label === "sharp-down") {
-    score += calibration.ranking.historyAdjustments.sharpConfirmationBoost;
-    penalties.push({
-      reason: "Sharp-led confirmation",
-      delta: calibration.ranking.historyAdjustments.sharpConfirmationBoost
-    });
   }
 
   score = Math.max(0, Math.round(score * 10) / 10);
@@ -161,6 +170,11 @@ export function rankOpportunity(params: RankParams): OpportunityRanking {
   }
   if (params.confidence.freshnessScore < calibration.ranking.reasonThresholds.freshnessPenalty) {
     reasons.push("Freshness penalty applied");
+  }
+  for (const reason of appliedHistoryReasons) {
+    if (!reasons.includes(reason)) {
+      reasons.push(reason);
+    }
   }
   if (params.market !== "h2h") {
     reasons.push("EV de-emphasized outside moneyline");

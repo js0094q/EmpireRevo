@@ -54,3 +54,90 @@ test("assessConfidence penalizes thin stale markets", () => {
   assert.ok(low.score < 0.55);
   assert.ok(low.label === "Thin Market" || low.label === "Stale Market");
 });
+
+test("assessConfidence measures history quality without letting it change live confidence", () => {
+  const now = Date.now();
+  const sparse = assessConfidence({
+    books: [
+      makeBook({
+        bookKey: "a",
+        isSharpBook: true,
+        tier: "sharp",
+        impliedProbNoVig: 0.51,
+        movement: {
+          openPrice: -110,
+          prevPrice: -110,
+          currentPrice: -109,
+          delta: 1,
+          move: 1,
+          updatedAt: new Date(now).toISOString(),
+          history: [{ ts: new Date(now).toISOString(), priceAmerican: -109 }]
+        }
+      }),
+      makeBook({
+        bookKey: "b",
+        impliedProbNoVig: 0.508,
+        movement: {
+          openPrice: -110,
+          prevPrice: -110,
+          currentPrice: -109,
+          delta: 1,
+          move: 1,
+          updatedAt: new Date(now).toISOString(),
+          history: [{ ts: new Date(now).toISOString(), priceAmerican: -109 }]
+        }
+      })
+    ],
+    contributingBooks: 2,
+    totalBooks: 3,
+    excludedBooks: [],
+    nowMs: now
+  });
+
+  const deep = assessConfidence({
+    books: [
+      makeBook({
+        bookKey: "a",
+        isSharpBook: true,
+        tier: "sharp",
+        impliedProbNoVig: 0.51,
+        movement: {
+          openPrice: -110,
+          prevPrice: -105,
+          currentPrice: -103,
+          delta: 2,
+          move: 7,
+          updatedAt: new Date(now).toISOString(),
+          history: Array.from({ length: 12 }, (_, idx) => ({
+            ts: new Date(now - (12 - idx) * 60_000).toISOString(),
+            priceAmerican: -115 + idx
+          }))
+        }
+      }),
+      makeBook({
+        bookKey: "b",
+        impliedProbNoVig: 0.508,
+        movement: {
+          openPrice: -110,
+          prevPrice: -106,
+          currentPrice: -104,
+          delta: 2,
+          move: 6,
+          updatedAt: new Date(now).toISOString(),
+          history: Array.from({ length: 12 }, (_, idx) => ({
+            ts: new Date(now - (12 - idx) * 60_000).toISOString(),
+            priceAmerican: -114 + idx
+          }))
+        }
+      })
+    ],
+    contributingBooks: 2,
+    totalBooks: 3,
+    excludedBooks: [],
+    nowMs: now
+  });
+
+  assert.ok(sparse.historyQuality < deep.historyQuality);
+  assert.equal(sparse.score, deep.score);
+  assert.equal(sparse.label, deep.label);
+});

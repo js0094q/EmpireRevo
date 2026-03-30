@@ -26,12 +26,13 @@ The current system extends the existing fair-engine path without adding a parall
 - realized ROI evaluation (flat 1-unit stake model)
 - fair-probability calibration analysis (Brier + calibration buckets)
 - historical factor-performance tracking (avg CLV/ROI/win rate)
-- daily/weekly/rolling-30 evaluation reports with confidence intervals where possible
+- daily/weekly/rolling-30/rolling-90 evaluation reports with confidence intervals where possible
 - internal diagnostics APIs (`/api/internal/*`) and operator page (`/internal/engine`)
 - real event-detail history charts from persisted data (no fabricated sparkline history)
-- descriptive market-pressure/lag labels from observed history
+- deterministic market-pressure labels from observed history (`sharp-up`, `sharp-down`, `broad-consensus`, `fragmented`, `stale`, `none`)
 - internal snapshot collection route for cron/operator triggers (`/api/internal/snapshots/collect`)
 - persistence health telemetry (write success/failure/fallback + payload/latency signals)
+- conservative history pressure signals can inform live ranking, while broader historical signals remain available for UI, diagnostics, CLV, and research/backtests
 
 ## Calibration in EmpirePicks
 
@@ -63,9 +64,13 @@ American-odds delta fields remain as display-only compatibility helpers for inte
 
 ROI is computed only when matching outcomes are persisted; missing outcomes remain null-safe and are never inferred.
 
+## Board Behavior
+
+The board keeps upcoming games within the selected start window, and once a game has started it remains visible as long as the live odds feed is still publishing it. That supports late-game betting without relying on a fixed two-hour post-kickoff cutoff.
+
 ## Pinned-Book Actionability
 
-Phase 5 distinguishes:
+Pinned-book handling distinguishes:
 - global best line
 - best actionable pinned-book line
 
@@ -84,7 +89,7 @@ The board now supports pinned-first ranking and filtering:
 ## Run Locally
 
 ```bash
-npm install
+npm ci
 npm run dev
 ```
 
@@ -98,6 +103,8 @@ Create `.env.local`:
 ODDS_API_KEY=your_key_here
 # optional
 ODDS_API_BASE=https://api.the-odds-api.com
+ODDS_API_ALLOWED_HOSTS=api.the-odds-api.com
+ODDS_ALLOWED_SPORT_KEYS=
 ODDS_CALIBRATION_OVERRIDES_JSON={"ranking":{"penalties":{"sparseCoveragePenalty":14}}}
 UPSTASH_REDIS_REST_URL=...
 UPSTASH_REDIS_REST_TOKEN=...
@@ -109,6 +116,12 @@ ODDS_SNAPSHOT_BATCH_SIZE=500
 ODDS_HISTORY_SHORT_WINDOW_MINUTES=5
 ODDS_HISTORY_LONG_WINDOW_MINUTES=30
 ODDS_VALUE_PERSISTENCE_THRESHOLD_PCT=1.0
+ODDS_HISTORY_LIVE_RANKING_MODE=conservative
+ODDS_SNAPSHOT_TTL_SECONDS=
+ODDS_TIMELINE_TTL_SECONDS=
+ODDS_VALIDATION_TTL_SECONDS=
+ODDS_EVALUATION_TTL_SECONDS=
+ODDS_DIAGNOSTICS_TTL_SECONDS=
 ```
 
 Never expose keys in client code.
@@ -120,6 +133,12 @@ npm run typecheck
 npm run lint
 npm test
 npm run build
+```
+
+Optional visual regression run:
+
+```bash
+npm run test:visual
 ```
 
 ## Documentation

@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { resetOddsHistoryConfigForTests } from "../lib/server/odds/historyConfig";
 import { rankOpportunity } from "../lib/server/odds/ranking";
 import type { ConfidenceAssessment } from "../lib/server/odds/confidence";
 import type { FairOutcomeBook } from "../lib/server/odds/types";
@@ -76,6 +77,16 @@ const thinConfidence: ConfidenceAssessment = {
   }
 };
 
+test.beforeEach(() => {
+  delete process.env.ODDS_HISTORY_LIVE_RANKING_MODE;
+  resetOddsHistoryConfigForTests();
+});
+
+test.after(() => {
+  delete process.env.ODDS_HISTORY_LIVE_RANKING_MODE;
+  resetOddsHistoryConfigForTests();
+});
+
 test("ranking prefers quality-supported edge over sparse larger edge", () => {
   const quality = rankOpportunity({
     market: "h2h",
@@ -108,4 +119,122 @@ test("ranking de-emphasizes EV outside moneyline", () => {
     totalBooks: 6
   });
   assert.ok(spreadRank.bestEvPct <= 0);
+});
+
+test("ranking uses conservative pressure history in live scoring by default", () => {
+  const baseline = rankOpportunity({
+    market: "h2h",
+    confidence: highConfidence,
+    books: [
+      makeBook({ bookKey: "pinnacle", title: "Pinnacle", isSharpBook: true, tier: "sharp", edgePct: 1.4, evPct: 3.5, evQualified: true, staleStrength: 0.45 }),
+      makeBook({ bookKey: "fanduel", title: "FanDuel", edgePct: 1.1, evPct: 2.2, evQualified: true })
+    ],
+    contributingBooks: 6,
+    totalBooks: 8
+  });
+
+  const withHistorySignals = rankOpportunity({
+    market: "h2h",
+    confidence: highConfidence,
+    books: [
+      makeBook({ bookKey: "pinnacle", title: "Pinnacle", isSharpBook: true, tier: "sharp", edgePct: 1.4, evPct: 3.5, evQualified: true, staleStrength: 0.45 }),
+      makeBook({ bookKey: "fanduel", title: "FanDuel", edgePct: 1.1, evPct: 2.2, evQualified: true })
+    ],
+    contributingBooks: 6,
+    totalBooks: 8,
+    marketPressure: {
+      label: "sharp-up",
+      confidence: "high",
+      explanation: "Sharp books moved first.",
+      evidence: {
+        sharpBooksMovedFirst: true,
+        observations: 8
+      }
+    },
+    valueTiming: {
+      firstPositiveEvAt: "2026-03-01T00:00:00.000Z",
+      lastPositiveEvAt: "2026-03-01T00:20:00.000Z",
+      positiveEvDurationSeconds: 1200,
+      valuePersistence: "stable",
+      edgeTrend: "improving"
+    }
+  });
+
+  assert.equal(withHistorySignals.score, baseline.score + 2);
+  assert.ok(withHistorySignals.reasons.includes("Sharp books moved first"));
+  assert.deepEqual(withHistorySignals.breakdown.penaltiesApplied, baseline.breakdown.penaltiesApplied);
+});
+
+test("ranking keeps value timing out of live scoring in conservative mode", () => {
+  const baseline = rankOpportunity({
+    market: "h2h",
+    confidence: highConfidence,
+    books: [
+      makeBook({ bookKey: "pinnacle", title: "Pinnacle", isSharpBook: true, tier: "sharp", edgePct: 1.4, evPct: 3.5, evQualified: true, staleStrength: 0.45 }),
+      makeBook({ bookKey: "fanduel", title: "FanDuel", edgePct: 1.1, evPct: 2.2, evQualified: true })
+    ],
+    contributingBooks: 6,
+    totalBooks: 8
+  });
+
+  const withValueTiming = rankOpportunity({
+    market: "h2h",
+    confidence: highConfidence,
+    books: [
+      makeBook({ bookKey: "pinnacle", title: "Pinnacle", isSharpBook: true, tier: "sharp", edgePct: 1.4, evPct: 3.5, evQualified: true, staleStrength: 0.45 }),
+      makeBook({ bookKey: "fanduel", title: "FanDuel", edgePct: 1.1, evPct: 2.2, evQualified: true })
+    ],
+    contributingBooks: 6,
+    totalBooks: 8,
+    valueTiming: {
+      firstPositiveEvAt: "2026-03-01T00:00:00.000Z",
+      lastPositiveEvAt: "2026-03-01T00:20:00.000Z",
+      positiveEvDurationSeconds: 1200,
+      valuePersistence: "stable",
+      edgeTrend: "improving"
+    }
+  });
+
+  assert.equal(withValueTiming.score, baseline.score);
+  assert.ok(!withValueTiming.reasons.includes("Positive value has persisted"));
+});
+
+test("ranking mode can turn history off or enable full value timing adjustments", () => {
+  const params = {
+    market: "h2h" as const,
+    confidence: highConfidence,
+    books: [
+      makeBook({ bookKey: "pinnacle", title: "Pinnacle", isSharpBook: true, tier: "sharp", edgePct: 1.4, evPct: 3.5, evQualified: true, staleStrength: 0.45 }),
+      makeBook({ bookKey: "fanduel", title: "FanDuel", edgePct: 1.1, evPct: 2.2, evQualified: true })
+    ],
+    contributingBooks: 6,
+    totalBooks: 8,
+    marketPressure: {
+      label: "sharp-up" as const,
+      confidence: "high" as const,
+      explanation: "Sharp books moved first.",
+      evidence: {
+        sharpBooksMovedFirst: true,
+        observations: 8
+      }
+    },
+    valueTiming: {
+      firstPositiveEvAt: "2026-03-01T00:00:00.000Z",
+      lastPositiveEvAt: "2026-03-01T00:20:00.000Z",
+      positiveEvDurationSeconds: 1200,
+      valuePersistence: "stable" as const,
+      edgeTrend: "improving" as const
+    }
+  };
+
+  process.env.ODDS_HISTORY_LIVE_RANKING_MODE = "off";
+  resetOddsHistoryConfigForTests();
+  const off = rankOpportunity(params);
+
+  process.env.ODDS_HISTORY_LIVE_RANKING_MODE = "full";
+  resetOddsHistoryConfigForTests();
+  const full = rankOpportunity(params);
+
+  assert.ok(full.score > off.score);
+  assert.ok(full.reasons.includes("Positive value has persisted"));
 });

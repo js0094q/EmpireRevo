@@ -59,3 +59,7 @@ export function cacheStatus(): { provider: "redis" | "memory"; memoryEntries: nu
     memoryEntries: memoryStore.size
   };
 }
+
+export function resetCacheForTests(): void {
+  memoryStore.clear();
+}

@@ -66,12 +66,15 @@ Auth:
 Parameters:
 
 - `sportKey`, default `basketball_nba`
+- `sportKeys`, optional CSV override for multi-sport collection in one internal run
 - `regions`, default `us`
 - `markets`, default `h2h,spreads,totals`
 - `force=1` or `force=true` to bypass `ODDS_SNAPSHOT_COLLECTION_ENABLED=false`
 
 Success response fields:
 
+- `sportKeys`
+- `sportSummaries`
 - `eventsProcessed`
 - `snapshotsWritten`
 - `failures`
@@ -84,6 +87,7 @@ Behavior rules:
 
 - duplicate runs are survivable because writes are bucketed and exact duplicate observations are tolerated
 - partial write failure returns a success payload with non-zero `failures`
+- multi-sport runs aggregate per-sport summaries so operators can monitor wider collection coverage from one call
 - when collection is disabled and `force` is absent, the route returns `409 SNAPSHOT_COLLECTION_DISABLED`
 
 ## Scheduling
@@ -100,6 +104,7 @@ Signal windows:
 - `ODDS_HISTORY_SHORT_WINDOW_MINUTES`
 - `ODDS_HISTORY_LONG_WINDOW_MINUTES`
 - `ODDS_VALUE_PERSISTENCE_THRESHOLD_PCT`
+- `ODDS_HISTORY_LIVE_RANKING_MODE`
 
 The route is safe for Vercel Cron, an external scheduler, or an operator-triggered internal call.
 

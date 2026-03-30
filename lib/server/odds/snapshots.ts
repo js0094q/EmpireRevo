@@ -20,6 +20,19 @@ export type SnapshotCollectionSummary = {
   durable: boolean;
 };
 
+export type SnapshotCollectionAggregateSummary = {
+  ok: boolean;
+  sportKeys: string[];
+  sportSummaries: SnapshotCollectionSummary[];
+  markets: MarketKey[];
+  eventsProcessed: number;
+  snapshotsWritten: number;
+  failures: number;
+  durationMs: number;
+  fallbackMode: "redis" | "memory";
+  durable: boolean;
+};
+
 export async function collectHistoricalSnapshots(params: {
   sportKey: string;
   regions?: string;
@@ -75,6 +88,44 @@ export async function collectHistoricalSnapshots(params: {
     eventsProcessed,
     snapshotsWritten,
     failures,
+    durationMs: Date.now() - startedAt,
+    fallbackMode: persistence.mode,
+    durable: persistence.durable
+  };
+}
+
+export async function collectHistoricalSnapshotsForSportKeys(params: {
+  sportKeys: string[];
+  regions?: string;
+  markets?: MarketKey[];
+  model?: WeightModel;
+  minBooks?: number;
+}): Promise<SnapshotCollectionAggregateSummary> {
+  const startedAt = Date.now();
+  const sportKeys = params.sportKeys.length ? params.sportKeys : ["basketball_nba"];
+  const sportSummaries: SnapshotCollectionSummary[] = [];
+
+  for (const sportKey of sportKeys) {
+    sportSummaries.push(
+      await collectHistoricalSnapshots({
+        sportKey,
+        regions: params.regions,
+        markets: params.markets,
+        model: params.model,
+        minBooks: params.minBooks
+      })
+    );
+  }
+
+  const persistence = getPersistenceStatus();
+  return {
+    ok: sportSummaries.every((summary) => summary.ok),
+    sportKeys,
+    sportSummaries,
+    markets: params.markets?.length ? params.markets : DEFAULT_MARKETS,
+    eventsProcessed: sportSummaries.reduce((sum, summary) => sum + summary.eventsProcessed, 0),
+    snapshotsWritten: sportSummaries.reduce((sum, summary) => sum + summary.snapshotsWritten, 0),
+    failures: sportSummaries.reduce((sum, summary) => sum + summary.failures, 0),
     durationMs: Date.now() - startedAt,
     fallbackMode: persistence.mode,
     durable: persistence.durable

@@ -2,8 +2,8 @@ import { NextResponse } from "next/server";
 import { internalUnexpectedErrorResponse, isValidationError, validationErrorResponse } from "@/lib/server/odds/apiErrors";
 import { getOddsHistoryConfig } from "@/lib/server/odds/historyConfig";
 import { authorizeInternalRequest, toInternalAuthError } from "@/lib/server/odds/internalAuth";
-import { collectHistoricalSnapshots } from "@/lib/server/odds/snapshots";
-import { parseMarketsCsv, parseRegionsCsv, parseSportKey } from "@/lib/server/odds/requestValidation";
+import { collectHistoricalSnapshotsForSportKeys } from "@/lib/server/odds/snapshots";
+import { parseMarketsCsv, parseRegionsCsv, parseSportKey, parseSportKeysCsv } from "@/lib/server/odds/requestValidation";
 
 export const runtime = "nodejs";
 
@@ -45,20 +45,23 @@ async function handle(req: Request) {
     }
 
     const sportKey = parseSportKey(url.searchParams.get("sportKey"), "basketball_nba");
+    const sportKeys = parseSportKeysCsv(url.searchParams.get("sportKeys"), sportKey);
     const regions = parseRegionsCsv(url.searchParams.get("regions"), "us");
     const markets = parseMarketsCsv(url.searchParams.get("markets"), "h2h,spreads,totals")
       .split(",")
       .filter((value): value is "h2h" | "spreads" | "totals" => value === "h2h" || value === "spreads" || value === "totals");
 
-    const summary = await collectHistoricalSnapshots({
-      sportKey,
+    const summary = await collectHistoricalSnapshotsForSportKeys({
+      sportKeys,
       regions,
       markets
     });
 
     return NextResponse.json({
       ok: true,
-      sportKey: summary.sportKey,
+      sportKey: summary.sportKeys.length === 1 ? summary.sportKeys[0] : undefined,
+      sportKeys: summary.sportKeys,
+      sportSummaries: summary.sportSummaries,
       markets: summary.markets,
       eventsProcessed: summary.eventsProcessed,
       snapshotsWritten: summary.snapshotsWritten,

@@ -13,7 +13,6 @@ Primary components:
 - freshness
 - stale-line strength
 - sharp-vs-retail deviation
-- history-backed pressure and value-persistence adjustments
 
 Each outcome now exposes a score decomposition (`rankingBreakdown`) including:
 - normalized component scores
@@ -22,17 +21,14 @@ Each outcome now exposes a score decomposition (`rankingBreakdown`) including:
 
 This makes "why A outranks B" auditable and testable.
 
-## Historical Adjustments
+## Historical Signals
 
-History-based modifiers are deliberately small relative to the fair-price core:
+Historical signals are split into two tiers:
 
-- stable or developing positive EV can add a modest boost
-- sharp-led confirmation can add a modest boost
-- fragmented historical movement applies a penalty
-- stale historical quotes apply a penalty
-- worsening edge trend applies a penalty
+- conservative live ranking inputs: pressure labels with enough confidence to flag `sharp-up`, `sharp-down`, `fragmented`, or `stale`
+- research/backtest inputs: broader value-persistence and edge-trend signals that remain collected and exposed without changing live ranking in the default mode
 
-These adjustments are configured centrally in `calibration.ts` and are intended to refine ordering, not replace fair-price math.
+This keeps some market-history context in production ordering without letting the full historical feature set dominate live scores.
 
 ## Confidence Score
 
@@ -41,12 +37,19 @@ Confidence is still deterministic and market-structure based:
 - sharp participation share
 - freshness of updates
 - probability dispersion
-- movement-history quality
 - exclusion pressure
 
 Each outcome includes `confidenceBreakdown` with component contributions and exclusion impact.
 
-Sparse or missing history lowers confidence more readily than rank. The system prefers to withhold confidence rather than fabricate certainty from thin samples.
+Movement history is still measured and surfaced as context, but it does not directly change the live confidence score.
+
+## Live Ranking Mode
+
+`ODDS_HISTORY_LIVE_RANKING_MODE` controls how much history reaches live opportunity scoring:
+
+- `conservative` (default): only pressure-based history adjusts live ranking
+- `off`: history is collected and surfaced but does not change live ranking
+- `full`: pressure and value-timing history can both adjust live ranking
 
 ## Label Boundaries and Calibration
 

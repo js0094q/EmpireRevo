@@ -72,6 +72,28 @@ export function parseSportKey(value: string | null, fallback = "basketball_nba")
   return normalized;
 }
 
+export function parseSportKeysCsv(value: string | null, fallback = "basketball_nba"): string[] {
+  const normalized = normalize(value);
+  const source = normalized || fallback;
+  const entries = source
+    .split(",")
+    .map((part) => part.trim().toLowerCase())
+    .filter(Boolean);
+  if (!entries.length || entries.length > 8) {
+    invalid("sportKeys must include 1 to 8 values");
+  }
+
+  const deduped: string[] = [];
+  const seen = new Set<string>();
+  for (const entry of entries) {
+    const sportKey = parseSportKey(entry);
+    if (seen.has(sportKey)) continue;
+    seen.add(sportKey);
+    deduped.push(sportKey);
+  }
+  return deduped;
+}
+
 export function parseMarket(value: string | null, fallback: MarketKey = "h2h"): MarketKey {
   const normalized = normalize(value).toLowerCase();
   if (!normalized) return fallback;

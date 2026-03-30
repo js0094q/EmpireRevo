@@ -78,6 +78,45 @@ function historyQuality(books: FairOutcomeBook[], calibration: OddsCalibration):
   return clamp01(avg / strong);
 }
 
+function normalizeActiveWeights(weights: {
+  coverage: number;
+  sharpParticipation: number;
+  freshness: number;
+  dispersion: number;
+  exclusions: number;
+}): {
+  coverage: number;
+  sharpParticipation: number;
+  freshness: number;
+  dispersion: number;
+  exclusions: number;
+} {
+  const total =
+    weights.coverage +
+    weights.sharpParticipation +
+    weights.freshness +
+    weights.dispersion +
+    weights.exclusions;
+
+  if (total <= 0) {
+    return {
+      coverage: 0.25,
+      sharpParticipation: 0.2,
+      freshness: 0.2,
+      dispersion: 0.2,
+      exclusions: 0.15
+    };
+  }
+
+  return {
+    coverage: weights.coverage / total,
+    sharpParticipation: weights.sharpParticipation / total,
+    freshness: weights.freshness / total,
+    dispersion: weights.dispersion / total,
+    exclusions: weights.exclusions / total
+  };
+}
+
 export function assessConfidence(params: ConfidenceParams): ConfidenceAssessment {
   const calibration = params.calibration ?? getOddsCalibration();
   const nowMs = params.nowMs ?? Date.now();
@@ -89,14 +128,21 @@ export function assessConfidence(params: ConfidenceParams): ConfidenceAssessment
   const disperse = dispersionScore(params.books, calibration);
   const history = historyQuality(params.books, calibration);
   const exclusionPenalty = clamp01(params.excludedBooks.length / total);
+  const liveWeights = normalizeActiveWeights({
+    coverage: calibration.confidence.componentWeights.coverage,
+    sharpParticipation: calibration.confidence.componentWeights.sharpParticipation,
+    freshness: calibration.confidence.componentWeights.freshness,
+    dispersion: calibration.confidence.componentWeights.dispersion,
+    exclusions: calibration.confidence.componentWeights.exclusions
+  });
 
   const contributions = {
-    coverage: calibration.confidence.componentWeights.coverage * coverageRatio,
-    sharpParticipation: calibration.confidence.componentWeights.sharpParticipation * sharpParticipation,
-    freshness: calibration.confidence.componentWeights.freshness * fresh,
-    dispersion: calibration.confidence.componentWeights.dispersion * disperse,
-    history: calibration.confidence.componentWeights.history * history,
-    exclusions: calibration.confidence.componentWeights.exclusions * (1 - exclusionPenalty)
+    coverage: liveWeights.coverage * coverageRatio,
+    sharpParticipation: liveWeights.sharpParticipation * sharpParticipation,
+    freshness: liveWeights.freshness * fresh,
+    dispersion: liveWeights.dispersion * disperse,
+    history: 0,
+    exclusions: liveWeights.exclusions * (1 - exclusionPenalty)
   };
 
   const score = clamp01(

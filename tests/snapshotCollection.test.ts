@@ -1,6 +1,7 @@
 import test, { mock } from "node:test";
 import assert from "node:assert/strict";
 import { GET } from "../app/api/internal/snapshots/collect/route";
+import { resetCacheForTests } from "../lib/server/odds/cache";
 import { resetOddsHistoryConfigForTests } from "../lib/server/odds/historyConfig";
 import {
   listRecentEventHistory,
@@ -52,9 +53,53 @@ const upstreamPayload = [
   }
 ];
 
-async function withMockedFetch<T>(payload: unknown, fn: () => Promise<T>): Promise<T> {
-  const fetchMock = mock.method(globalThis, "fetch", async () => {
-    return new Response(JSON.stringify(payload), {
+const upstreamPayloadNfl = [
+  {
+    sport_key: "americanfootball_nfl",
+    home_team: "Buffalo Bills",
+    away_team: "Kansas City Chiefs",
+    commence_time: "2026-03-10T00:00:00.000Z",
+    bookmakers: [
+      {
+        key: "pinnacle",
+        title: "Pinnacle",
+        markets: [
+          {
+            key: "h2h",
+            last_update: "2026-03-09T12:00:00.000Z",
+            outcomes: [
+              { name: "Kansas City Chiefs", price: -125 },
+              { name: "Buffalo Bills", price: 114 }
+            ]
+          }
+        ]
+      },
+      {
+        key: "draftkings",
+        title: "DraftKings",
+        markets: [
+          {
+            key: "h2h",
+            last_update: "2026-03-09T12:10:00.000Z",
+            outcomes: [
+              { name: "Kansas City Chiefs", price: -118 },
+              { name: "Buffalo Bills", price: 108 }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+];
+
+type MockedFetchPayload =
+  | unknown
+  | ((input: string | URL | Request, init?: RequestInit) => unknown);
+
+async function withMockedFetch<T>(payload: MockedFetchPayload, fn: () => Promise<T>): Promise<T> {
+  const fetchMock = mock.method(globalThis, "fetch", async (input: string | URL | Request, init?: RequestInit) => {
+    const resolvedPayload = typeof payload === "function" ? payload(input, init) : payload;
+    return new Response(JSON.stringify(resolvedPayload), {
       status: 200,
       headers: { "Content-Type": "application/json" }
     });
@@ -71,6 +116,7 @@ async function withMockedFetch<T>(payload: unknown, fn: () => Promise<T>): Promi
 }
 
 test.beforeEach(() => {
+  resetCacheForTests();
   resetPersistenceForTests();
   resetOddsHistoryConfigForTests();
   process.env.EMPIRE_INTERNAL_API_KEY = INTERNAL_TEST_KEY;
@@ -196,5 +242,36 @@ test("internal snapshot collection route enforces auth, respects disabled mode, 
     assert.equal(payload.failures, 0);
     assert.equal(payload.configuredIntervalSeconds, 60);
     assert.equal(payload.fallbackMode, "memory");
+  });
+});
+
+test("internal snapshot collection route can aggregate multiple sports for monitoring", async () => {
+  process.env.ODDS_SNAPSHOT_COLLECTION_ENABLED = "true";
+  resetOddsHistoryConfigForTests();
+
+  await withMockedFetch((input: string | URL | Request) => {
+    const url = typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
+    return url.includes("americanfootball_nfl") ? upstreamPayloadNfl : upstreamPayload;
+  }, async () => {
+    const response = await GET(
+      new Request("http://localhost/api/internal/snapshots/collect?sportKeys=basketball_nba,americanfootball_nfl&markets=h2h", {
+        headers: {
+          "x-empire-internal-key": INTERNAL_TEST_KEY
+        }
+      })
+    );
+    const payload = await response.json();
+
+    assert.equal(response.status, 200);
+    assert.equal(payload.ok, true);
+    assert.deepEqual(payload.sportKeys, ["basketball_nba", "americanfootball_nfl"]);
+    assert.equal(payload.markets.length, 1);
+    assert.equal(payload.markets[0], "h2h");
+    assert.equal(payload.eventsProcessed, 2);
+    assert.equal(payload.snapshotsWritten, 8);
+    assert.equal(payload.failures, 0);
+    assert.equal(payload.sportSummaries.length, 2);
+    assert.equal(payload.sportSummaries[0].sportKey, "basketball_nba");
+    assert.equal(payload.sportSummaries[1].sportKey, "americanfootball_nfl");
   });
 });

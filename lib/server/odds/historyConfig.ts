@@ -6,6 +6,7 @@ export type OddsHistoryConfig = {
   shortWindowMinutes: number;
   longWindowMinutes: number;
   valuePersistenceThresholdPct: number;
+  liveRankingMode: "off" | "conservative" | "full";
 };
 
 const DEFAULT_HISTORY_CONFIG: OddsHistoryConfig = {
@@ -15,7 +16,8 @@ const DEFAULT_HISTORY_CONFIG: OddsHistoryConfig = {
   batchSize: 500,
   shortWindowMinutes: 5,
   longWindowMinutes: 30,
-  valuePersistenceThresholdPct: 1
+  valuePersistenceThresholdPct: 1,
+  liveRankingMode: "conservative"
 };
 
 let cached: OddsHistoryConfig | null = null;
@@ -39,6 +41,17 @@ function parseNonNegativeNumber(value: string | undefined, fallback: number): nu
   const parsed = Number(value);
   if (!Number.isFinite(parsed)) return fallback;
   return parsed >= 0 ? parsed : fallback;
+}
+
+function parseLiveRankingMode(
+  value: string | undefined,
+  fallback: OddsHistoryConfig["liveRankingMode"]
+): OddsHistoryConfig["liveRankingMode"] {
+  const normalized = (value || "").trim().toLowerCase();
+  if (normalized === "off" || normalized === "conservative" || normalized === "full") {
+    return normalized;
+  }
+  return fallback;
 }
 
 export function getOddsHistoryConfig(): OddsHistoryConfig {
@@ -69,6 +82,10 @@ export function getOddsHistoryConfig(): OddsHistoryConfig {
     valuePersistenceThresholdPct: parseNonNegativeNumber(
       process.env.ODDS_VALUE_PERSISTENCE_THRESHOLD_PCT,
       DEFAULT_HISTORY_CONFIG.valuePersistenceThresholdPct
+    ),
+    liveRankingMode: parseLiveRankingMode(
+      process.env.ODDS_HISTORY_LIVE_RANKING_MODE,
+      DEFAULT_HISTORY_CONFIG.liveRankingMode
     )
   };
 
