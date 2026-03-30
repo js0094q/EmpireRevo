@@ -32,8 +32,12 @@ function toTimelinePoints(points: StoredTimelinePoint[]): TimelinePoint[] {
   return points.map((point) => ({
     ts: point.ts,
     fairAmerican: point.fairAmerican ?? null,
+    fairProb: point.fairProb ?? null,
     globalBestAmerican: point.globalBestAmerican ?? null,
-    pinnedBestAmerican: point.pinnedBestAmerican ?? null
+    pinnedBestAmerican: point.pinnedBestAmerican ?? null,
+    globalBestPoint: point.globalBestPoint ?? null,
+    pinnedBestPoint: point.pinnedBestPoint ?? null,
+    observationCount: point.observationCount
   }));
 }
 
@@ -45,7 +49,8 @@ function toBookPoints(points: StoredTimelinePoint[], bookFilter?: Set<string>): 
       rows.push({
         ts: point.ts,
         bookKey: book.bookKey,
-        american: book.american ?? null
+        american: book.american ?? null,
+        point: book.point ?? null
       });
     }
   }

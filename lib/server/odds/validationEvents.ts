@@ -39,6 +39,10 @@ export type ValidationOpportunitySnapshot = {
     key: string;
     bucketTs: number;
   } | null;
+  historyRef?: {
+    eventId: string;
+    marketKey: string;
+  } | null;
   diagnosticsReasons?: string[];
   factorBreakdown?: Record<string, number>;
 };
@@ -87,6 +91,7 @@ function toPersistedEvent(event: ValidationEvent): PersistedValidationEvent {
     point: event.point ?? null,
     bookKey: event.bestBookKey || null,
     snapshotRef: event.snapshotRef || null,
+    historyRef: event.historyRef || null,
     pinnedContext: {
       pinnedBookKey: event.pinnedBestBookKey,
       pinnedBestPriceAmerican: null,
@@ -110,7 +115,8 @@ function toPersistedEvent(event: ValidationEvent): PersistedValidationEvent {
     },
     execution: {
       displayedPriceAmerican: event.bestBookPriceAmerican,
-      displayedBookKey: event.bestBookKey
+      displayedBookKey: event.bestBookKey,
+      displayedPoint: event.point ?? null
     }
   };
 }

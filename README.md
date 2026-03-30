@@ -12,14 +12,16 @@ Raw sportsbook prices include vig and disagree across books. EmpirePicks:
 - converts fair probability back to fair American odds
 - shows **Edge** and **Expected Value** context alongside book-level pricing
 
-## Phase 7 Highlights
+## Historical Snapshot Highlights
 
-Phase 7 extends the Phase 6.1 system without adding a parallel subsystem:
+The current system extends the existing fair-engine path without adding a parallel odds subsystem:
 
 - centralized calibration surface for ranking/confidence/stale/timing/pinned/EV defensibility
+- self-collected normalized odds snapshots at the event/market/outcome/book/timestamp level
 - durable odds snapshots + event timelines (Redis-backed, memory fallback)
+- history-backed movement, pressure, staleness, and value-persistence signals
 - persisted validation events with snapshot references
-- closing-line + CLV evaluation with implied-probability normalization
+- closing-line + CLV evaluation with implied-probability normalization from self-collected history
 - optional persisted outcome layer (`win/loss/push/void/unknown`)
 - realized ROI evaluation (flat 1-unit stake model)
 - fair-probability calibration analysis (Brier + calibration buckets)
@@ -28,6 +30,7 @@ Phase 7 extends the Phase 6.1 system without adding a parallel subsystem:
 - internal diagnostics APIs (`/api/internal/*`) and operator page (`/internal/engine`)
 - real event-detail history charts from persisted data (no fabricated sparkline history)
 - descriptive market-pressure/lag labels from observed history
+- internal snapshot collection route for cron/operator triggers (`/api/internal/snapshots/collect`)
 - persistence health telemetry (write success/failure/fallback + payload/latency signals)
 
 ## Calibration in EmpirePicks
@@ -46,7 +49,9 @@ Defaults are conservative by design.
 
 `lib/server/odds/validationEvents.ts` now writes versioned validation events into the persistence layer.
 
-`lib/server/odds/snapshotPersistence.ts` and `lib/server/odds/historyStore.ts` persist board-time snapshots and timelines from the existing fair-engine pass.
+`lib/server/odds/snapshotPersistence.ts` and `lib/server/odds/historyStore.ts` persist normalized snapshot buckets and timelines from the existing fair-engine pass.
+
+Historical snapshots are written after normalization and reuse the same internal fetch path that powers board rendering. No separate raw-history ingestion path is introduced.
 
 Persistence failures are non-fatal; board rendering continues.
 
@@ -97,6 +102,13 @@ ODDS_CALIBRATION_OVERRIDES_JSON={"ranking":{"penalties":{"sparseCoveragePenalty"
 UPSTASH_REDIS_REST_URL=...
 UPSTASH_REDIS_REST_TOKEN=...
 EMPIRE_INTERNAL_API_KEY=...
+ODDS_SNAPSHOT_COLLECTION_ENABLED=false
+ODDS_SNAPSHOT_INTERVAL_SECONDS=60
+ODDS_SNAPSHOT_RETENTION_HOURS=72
+ODDS_SNAPSHOT_BATCH_SIZE=500
+ODDS_HISTORY_SHORT_WINDOW_MINUTES=5
+ODDS_HISTORY_LONG_WINDOW_MINUTES=30
+ODDS_VALUE_PERSISTENCE_THRESHOLD_PCT=1.0
 ```
 
 Never expose keys in client code.
@@ -115,6 +127,7 @@ npm run build
 - [Odds Math](./docs/odds-math.md)
 - [Calibration Framework](./docs/calibration-framework.md)
 - [Validation and Instrumentation](./docs/validation-and-instrumentation.md)
+- [Historical Odds Collection](./docs/historical-odds-collection.md)
 - [Persistence and History](./docs/persistence-and-history.md)
 - [CLV and Evaluation](./docs/clv-and-evaluation.md)
 - [Phase 7 Outcome Evaluation](./docs/phase-7-outcome-evaluation.md)

@@ -52,6 +52,9 @@ External sportsbook APIs vary widely in:
 All upstream data must be normalized before mathematical processing.
 client.ts → normalize.ts → fairEngine.ts
 
+Historical persistence follows the same rule:
+client.ts → normalize.ts → fairEngine.ts / snapshotPersistence.ts → historyStore.ts
+
 ---
 
 ## 3. One Upstream Fetch Per Request Context
@@ -68,8 +71,11 @@ normalizeOdds()
 cache
 ↓
 fairEngine
+snapshot persistence
 aggregator
 api routes
+
+The internal collection route also reuses this normalized fetch path. It must not introduce a separate raw-history ingestion request.
 
 ---
 
@@ -153,23 +159,31 @@ Books
 
 ---
 
-## Layer 5: Movement Tracking
+## Layer 5: Historical Persistence
+
+Modules:
+lib/server/odds/snapshotPersistence.ts
+lib/server/odds/historyStore.ts
+
+Purpose:
+
+- persist normalized book/outcome snapshots
+- store event/market timelines
+- retain canonical history indexes
+- support Redis durability with memory fallback
+
+## Layer 6: Historical Signals
 
 Module:
 lib/server/odds/movement.ts
 
 Purpose:
 
-Track:
-open
-previous
-current
-delta
-
-Used for UI signals like:
-▲ improving
-▼ worsening
-⚡ rapid move
+- derive opening/current state from persisted history
+- compute movement velocity and staleness
+- classify sharp-vs-public pressure
+- classify value persistence and edge trend
+- expose history-backed signals to ranking, confidence, CLV, and UI
 
 ---
 
@@ -182,12 +196,13 @@ UPSTASH_REDIS_REST_TOKEN
 Key examples:
 odds:sport:nfl
 fair:board:nba
-movement:eventId
+empire:odds:snapshot:{sport}:{eventId}:{market}:{bucketTs}
+empire:odds:timeline:{sport}:{eventId}:{market}
 
 TTL recommendations:
 raw odds: 15s
 fair board: 30s
-movement history: 24h
+snapshot/timeline history: retention-window driven (`ODDS_SNAPSHOT_RETENTION_HOURS`, default `72`)
 
 ---
 
@@ -199,9 +214,10 @@ Example `/api/fair` request:
 	3.	Fetch upstream if needed
 	4.	Normalize odds
 	5.	Compute fair board
-	6.	Attach movement metadata
-	7.	Cache result
-	8.	Return JSON
+	6.	Persist current normalized snapshots (non-fatal)
+	7.	Attach history-backed movement/value signals
+	8.	Cache result
+	9.	Return JSON
 
 ---
 
@@ -240,6 +256,6 @@ Architecture refactor is complete when:
 
 - one fair math implementation exists
 - upstream odds fetched once per request
-- movement tracking unified
+- movement tracking unified around persisted history
 - Redis used in production
 - UI uses modular components

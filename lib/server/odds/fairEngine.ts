@@ -28,8 +28,17 @@ import { summarizeMovementSignal } from "@/lib/server/odds/movementSignal";
 import { assessTimingSignal } from "@/lib/server/odds/timingSignal";
 import { summarizeBookBehavior } from "@/lib/server/odds/evaluation";
 import { getValidationSinkMode, trackValidationEvent } from "@/lib/server/odds/validationEvents";
-import { buildOutcomeMarketKey, persistBoardSnapshots, snapshotLookupKey } from "@/lib/server/odds/snapshotPersistence";
-import type { SnapshotRef } from "@/lib/server/odds/historyStore";
+import {
+  buildOutcomeMarketKey,
+  canonicalHistoryEventId,
+  snapshotLookupKey
+} from "@/lib/server/odds/snapshotPersistence";
+import { readMarketTimeline, type SnapshotRef } from "@/lib/server/odds/historyStore";
+import {
+  buildBookMovementMap,
+  deriveMarketPressureSignal,
+  deriveValueTimingSignal
+} from "@/lib/server/odds/movement";
 import { canonicalizeTeamName, normalizeTeamName } from "@/lib/server/odds/logos";
 
 type BuildFairBoardParams = {
@@ -89,6 +98,37 @@ function normalizeIncludedBooks(includeBooks?: Set<string> | null): Set<string> 
 function formatWindowLabel(windowHours?: number): string {
   const safe = Number.isFinite(windowHours) && windowHours ? Math.max(1, Math.floor(windowHours)) : 24;
   return `Rolling ${safe}h window`;
+}
+
+function formatDurationLabel(seconds: number | null | undefined): string {
+  if (!Number.isFinite(seconds) || Number(seconds) <= 0) return "0m";
+  const totalSeconds = Math.round(Number(seconds));
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.max(1, Math.round((totalSeconds % 3600) / 60));
+  if (hours > 0) return `${hours}h ${minutes}m`;
+  return `${minutes}m`;
+}
+
+function buildHistorySummary(outcome: FairOutcome): string {
+  if (outcome.marketPressure?.label === "sharp-up" || outcome.marketPressure?.label === "sharp-down") {
+    return "Sharp books moved first";
+  }
+  if (outcome.valueTiming?.valuePersistence === "stable") {
+    return `Value stable for ${formatDurationLabel(outcome.valueTiming.positiveEvDurationSeconds)}`;
+  }
+  if (outcome.valueTiming?.edgeTrend === "worsening") {
+    return "Price drifting against edge";
+  }
+  if (outcome.marketPressure?.label === "stale") {
+    return "Stale market";
+  }
+  if (outcome.marketPressure?.label === "fragmented") {
+    return "Books are fragmented";
+  }
+  if (outcome.valueTiming?.valuePersistence === "developing") {
+    return "Value is developing";
+  }
+  return outcome.movementSummary || "History still forming";
 }
 
 function hasComparablePoints(market: MarketKey, outcomes: BookOutcome[]): boolean {
@@ -810,7 +850,200 @@ export function getActiveMarketsForBoard(options: {
     .map((entry) => entry.market);
 }
 
-async function emitValidationSnapshots(params: {
+function refreshEventDerivedFields(event: FairEvent): void {
+  const topOutcome = [...event.outcomes].sort((a, b) => b.opportunityScore - a.opportunityScore)[0];
+  const avgConfidence =
+    event.outcomes.length > 0
+      ? event.outcomes.reduce((sum, outcome) => sum + outcome.confidenceScore, 0) / event.outcomes.length
+      : 0;
+
+  event.maxAbsEdgePct = event.outcomes.reduce((max, outcome) => {
+    const local = outcome.books.reduce((innerMax, book) => Math.max(innerMax, Math.abs(book.edgePct)), 0);
+    return Math.max(max, local);
+  }, 0);
+  event.opportunityScore = topOutcome?.opportunityScore ?? 0;
+  event.confidenceScore = avgConfidence;
+  event.confidenceLabel = topOutcome?.confidenceLabel ?? "Moderate Confidence";
+  event.staleStrength = topOutcome?.staleStrength ?? 0;
+  event.timingLabel = topOutcome?.timingSignal.label ?? "Weak timing signal";
+  event.marketPressureLabel = topOutcome?.marketPressure?.label ?? "none";
+  event.valuePersistenceLabel = topOutcome?.valueTiming?.valuePersistence ?? "unknown";
+  event.historySummaryLabel = topOutcome?.historySummary;
+  event.lastHistoricalUpdateAt = topOutcome?.lastHistoricalUpdateAt ?? null;
+  event.rankingSummary = topOutcome?.explanation ?? "No ranking summary available.";
+}
+
+function deriveDirectoryFromEvents(events: FairEvent[]): {
+  books: FairBoardResponse["books"];
+  sharpBooksUsed: string[];
+} {
+  const booksDirectory = new Map<string, { title: string; tier: FairBoardResponse["books"][number]["tier"] }>();
+  for (const event of events) {
+    for (const outcome of event.outcomes) {
+      for (const book of outcome.books) {
+        booksDirectory.set(book.bookKey, { title: book.title, tier: book.tier });
+      }
+    }
+  }
+
+  const books = Array.from(booksDirectory.entries())
+    .map(([key, value]) => ({ key, title: value.title, tier: value.tier }))
+    .sort((a, b) => a.title.localeCompare(b.title));
+  const sharpBooksUsed = books.filter((book) => book.tier === "sharp").map((book) => book.title);
+  return { books, sharpBooksUsed };
+}
+
+function deriveTopOpportunities(events: FairEvent[]): FairBoardResponse["topOpportunities"] {
+  return events
+    .flatMap((event) =>
+      event.outcomes.map((outcome) => ({
+        eventId: event.id,
+        matchup: `${event.awayTeam} @ ${event.homeTeam}`,
+        outcome: outcome.name,
+        score: outcome.opportunityScore,
+        confidenceLabel: outcome.confidenceLabel,
+        staleSummary: outcome.staleSummary,
+        edgePct: outcome.pinnedActionability.globalBestEdgePct,
+        bestBook: outcome.bestBook,
+        timingLabel: outcome.timingSignal.label,
+        historySummary: outcome.historySummary,
+        pinnedActionable: outcome.pinnedActionability.actionable,
+        pinnedScore: outcome.pinnedActionability.pinnedScore
+      }))
+    )
+    .sort((a, b) => Math.abs(b.edgePct) - Math.abs(a.edgePct) || b.score - a.score)
+    .slice(0, 12);
+}
+
+export function refreshBoardDerivedData(board: FairBoardResponse, calibration = getOddsCalibration()): void {
+  board.events.sort((a, b) => Date.parse(a.commenceTime) - Date.parse(b.commenceTime));
+  for (const event of board.events) {
+    refreshEventDerivedFields(event);
+  }
+  const directory = deriveDirectoryFromEvents(board.events);
+  board.books = directory.books;
+  board.sharpBooksUsed = directory.sharpBooksUsed;
+  board.topOpportunities = deriveTopOpportunities(board.events);
+  board.bookBehavior = summarizeBookBehavior(board.events, calibration);
+}
+
+export async function attachHistoricalSignalsToBoard(params: {
+  board: FairBoardResponse;
+  capturedAtMs?: number;
+}): Promise<{ marketsWithHistory: number; totalMarkets: number }> {
+  const calibration = getOddsCalibration();
+  const nowMs = params.capturedAtMs ?? Date.now();
+  let marketsWithHistory = 0;
+  let totalMarkets = 0;
+
+  await Promise.all(
+    params.board.events.map(async (event) => {
+      await Promise.all(
+        event.outcomes.map(async (outcome) => {
+          totalMarkets += 1;
+          const historyEventId = canonicalHistoryEventId(event);
+          const marketKey = buildOutcomeMarketKey(event.market, outcome.name);
+          const timeline = await readMarketTimeline(params.board.sportKey, historyEventId, marketKey);
+          if (timeline?.points.length) {
+            marketsWithHistory += 1;
+          }
+
+          const bookMovement = buildBookMovementMap({
+            timeline,
+            books: outcome.books,
+            nowMs
+          });
+          outcome.books = outcome.books.map((book) => ({
+            ...book,
+            movement: bookMovement.get(book.bookKey)
+          }));
+
+          const confidence = assessConfidence({
+            books: outcome.books,
+            contributingBooks: outcome.books.length,
+            totalBooks: event.totalBookCount,
+            excludedBooks: event.excludedBooks,
+            nowMs,
+            calibration
+          });
+          const marketPressure = deriveMarketPressureSignal({
+            timeline,
+            nowMs
+          });
+          const valueTiming = deriveValueTimingSignal({
+            timeline,
+            nowMs
+          });
+          const ranking = rankOpportunity({
+            market: event.market,
+            confidence,
+            books: outcome.books,
+            contributingBooks: outcome.books.length,
+            totalBooks: event.totalBookCount,
+            marketPressure,
+            valueTiming,
+            calibration
+          });
+          const movementSignal = summarizeMovementSignal(outcome.books);
+          const timingSignal = assessTimingSignal({
+            books: outcome.books,
+            confidence,
+            staleStrength: ranking.staleStrength,
+            movementQuality: movementSignal.quality,
+            movedBooks: movementSignal.diagnostics.movedBooks,
+            calibration
+          });
+          const topStaleBook = [...outcome.books].sort((a, b) => (b.staleStrength ?? 0) - (a.staleStrength ?? 0))[0];
+          const staleSummary = topStaleBook?.staleSummary || "No stale-line signal";
+
+          outcome.opportunityScore = ranking.score;
+          outcome.confidenceScore = confidence.score;
+          outcome.confidenceLabel = confidence.label;
+          outcome.confidenceNotes = confidence.notes;
+          outcome.confidenceBreakdown = confidence.breakdown;
+          outcome.staleStrength = ranking.staleStrength;
+          outcome.staleSummary = staleSummary;
+          outcome.movementSummary = movementSignal.summary;
+          outcome.movementQuality = movementSignal.quality;
+          outcome.movementDiagnostics = movementSignal.diagnostics;
+          outcome.marketPressure = marketPressure;
+          outcome.valueTiming = valueTiming;
+          outcome.historySummary = buildHistorySummary({
+            ...outcome,
+            marketPressure,
+            valueTiming
+          });
+          outcome.lastHistoricalUpdateAt = timeline?.points.at(-1)
+            ? new Date(timeline.points[timeline.points.length - 1]!.ts).toISOString()
+            : null;
+          outcome.timingSignal = timingSignal;
+          outcome.sharpDeviation = ranking.sharpDeviation;
+          outcome.rankingBreakdown = ranking.breakdown;
+          outcome.rankingReasons = ranking.reasons;
+          outcome.explanation = buildOpportunityExplanation({
+            outcomeName: outcome.name,
+            confidence,
+            ranking,
+            books: outcome.books,
+            staleSummary,
+            timingSignal
+          });
+          outcome.pinnedActionability = buildPinnedActionability(outcome, calibration);
+        })
+      );
+
+      refreshEventDerivedFields(event);
+    })
+  );
+
+  refreshBoardDerivedData(params.board, calibration);
+  return {
+    marketsWithHistory,
+    totalMarkets
+  };
+}
+
+export async function emitValidationSnapshots(params: {
   events: FairEvent[];
   market: MarketKey;
   sportKey: string;
@@ -831,8 +1064,9 @@ async function emitValidationSnapshots(params: {
   await Promise.all(
     candidates.map(async ({ event, outcome, bestBook }) => {
       const point = bestBook?.point ?? event.linePoint;
-      const marketKey = buildOutcomeMarketKey(event.market, outcome.name, point);
-      const snapshotRef = params.snapshotRefs.get(snapshotLookupKey(event.id, marketKey));
+      const marketKey = buildOutcomeMarketKey(event.market, outcome.name);
+      const historyEventId = canonicalHistoryEventId(event);
+      const snapshotRef = params.snapshotRefs.get(snapshotLookupKey(historyEventId, marketKey));
       await trackValidationEvent({
         id: `${event.id}:${marketKey}:${params.capturedAtMs}`,
         type: "opportunity_snapshot",
@@ -867,7 +1101,11 @@ async function emitValidationSnapshots(params: {
         bestBookPriceAmerican: bestBook?.priceAmerican ?? 0,
         diagnosticsReasons: outcome.rankingReasons || [],
         factorBreakdown: outcome.rankingBreakdown?.componentContributions,
-        snapshotRef: snapshotRef || null
+        snapshotRef: snapshotRef || null,
+        historyRef: {
+          eventId: historyEventId,
+          marketKey
+        }
       });
     })
   );
@@ -888,8 +1126,6 @@ export async function buildFairBoard(options: BuildFairBoardParams): Promise<Fai
     includeBooks
   });
   const activeMarkets = marketAvailability.filter((entry) => entry.status === "active").map((entry) => entry.market);
-
-  const booksDirectory = new Map<string, { title: string; tier: FairBoardResponse["books"][number]["tier"] }>();
   const events: FairEvent[] = [];
 
   for (const normalized of options.normalized) {
@@ -904,54 +1140,13 @@ export async function buildFairBoard(options: BuildFairBoardParams): Promise<Fai
     });
     for (const event of normalizedEvents) {
       events.push(event);
-      event.outcomes.forEach((outcome) => {
-        outcome.books.forEach((book) => booksDirectory.set(book.bookKey, { title: book.title, tier: book.tier }));
-      });
     }
   }
 
-  events.sort((a, b) => Date.parse(a.commenceTime) - Date.parse(b.commenceTime));
-
   const nowIso = new Date().toISOString();
-  const books = Array.from(booksDirectory.entries())
-    .map(([key, value]) => ({ key, title: value.title, tier: value.tier }))
-    .sort((a, b) => a.title.localeCompare(b.title));
-  const sharpBooksUsed = books.filter((book) => book.tier === "sharp").map((book) => book.title);
-
-  const topOpportunities = events
-    .flatMap((event) =>
-      event.outcomes.map((outcome) => ({
-        eventId: event.id,
-        matchup: `${event.awayTeam} @ ${event.homeTeam}`,
-        outcome: outcome.name,
-        score: outcome.opportunityScore,
-        confidenceLabel: outcome.confidenceLabel,
-        staleSummary: outcome.staleSummary,
-        edgePct: outcome.pinnedActionability.globalBestEdgePct,
-        bestBook: outcome.bestBook,
-        timingLabel: outcome.timingSignal.label,
-        pinnedActionable: outcome.pinnedActionability.actionable,
-        pinnedScore: outcome.pinnedActionability.pinnedScore
-      }))
-    )
-    .sort((a, b) => Math.abs(b.edgePct) - Math.abs(a.edgePct) || b.score - a.score)
-    .slice(0, 12);
-
-  const capturedAtMs = Date.now();
-  const snapshotRefs = await persistBoardSnapshots({
-    sportKey: options.sportKey,
-    events,
-    capturedAt: capturedAtMs
-  });
-  const emittedEvents = await emitValidationSnapshots({
-    events,
-    market: options.market,
-    sportKey: options.sportKey,
-    capturedAtMs,
-    snapshotRefs
-  });
+  const directory = deriveDirectoryFromEvents(events);
   const validationSummary: ValidationTrackingSummary = {
-    emittedEvents,
+    emittedEvents: 0,
     sink: getValidationSinkMode()
   };
 
@@ -965,10 +1160,10 @@ export async function buildFairBoard(options: BuildFairBoardParams): Promise<Fai
     lastUpdatedLabel: formatWindowLabel(options.timeWindowHours),
     activeMarkets,
     marketAvailability,
-    sharpBooksUsed,
-    books,
+    sharpBooksUsed: directory.sharpBooksUsed,
+    books: directory.books,
     events,
-    topOpportunities,
+    topOpportunities: deriveTopOpportunities(events),
     bookBehavior: summarizeBookBehavior(events, calibration),
     diagnostics: {
       calibration,

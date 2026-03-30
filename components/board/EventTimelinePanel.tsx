@@ -8,6 +8,10 @@ type ViewMode = "fair" | "global" | "pinned" | "books";
 
 const COLORS = ["#7ce3bf", "#d5dce7", "#a8b2c2", "#ff8d8d", "#8f9daf"];
 
+function formatSignalLabel(label: string): string {
+  return label.replace(/-/g, " ");
+}
+
 function byBook(timeline: MarketTimelineResponse): Map<string, Array<{ ts: number; priceAmerican: number }>> {
   const map = new Map<string, Array<{ ts: number; priceAmerican: number }>>();
   for (const point of timeline.books) {
@@ -104,7 +108,7 @@ export function EventTimelinePanel({
           {pressureSignals.map((signal) => (
             <div key={`${outcome}-${signal.label}`} className="detail-row slim">
               <span>
-                {signal.label} ({signal.severity})
+                {formatSignalLabel(signal.label)} ({signal.confidence})
               </span>
               <small>{signal.explanation}</small>
             </div>

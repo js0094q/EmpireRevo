@@ -66,6 +66,7 @@ function BoardRowComponent({ event, detailHref }: BoardRowProps) {
             </span>
           </div>
           <p className={styles.whyPickCopy}>{valueStatement}</p>
+          {event.historySummaryLabel ? <p className={styles.whyPickCopy}>{event.historySummaryLabel}</p> : null}
         </div>
       </td>
       <td>

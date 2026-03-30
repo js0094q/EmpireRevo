@@ -7,12 +7,15 @@ Internal diagnostics remain server-side and now include outcome-aware evaluation
 - `GET /api/internal/diagnostics`
 - `GET /api/internal/timeline`
 - `GET /api/internal/evaluation`
+- `GET /api/internal/snapshots/collect`
+- `POST /api/internal/snapshots/collect`
 
 Behavior:
 
 - stable JSON with `ok/error`
 - fail closed (`503`) when durable persistence is unavailable
 - explicit evaluation methodology metadata on CLV/ROI outputs
+- internal collection route requires `x-empire-internal-key` when `EMPIRE_INTERNAL_API_KEY` is configured
 
 ## Evaluation Sections
 
@@ -44,6 +47,13 @@ Diagnostics expose persistence telemetry from `persistenceTelemetry.ts`:
 - `namespacesTouched`
 - optional timeline/validation read-latency averages
 
+Diagnostics also expose history coverage details from `internalDiagnostics.ts`:
+
+- history config values in effect
+- recent events with stored history
+- total stored snapshot count in the sampled window
+- movement coverage (`marketsWithHistory` vs `totalMarkets`)
+
 ## Operator Page
 
 `/internal/engine` includes:
@@ -54,6 +64,7 @@ Diagnostics expose persistence telemetry from `persistenceTelemetry.ts`:
 - pressure signal analysis table
 - evaluation report window table
 - persistence panel
+- history coverage and fallback-state context
 
 ## Authentication
 

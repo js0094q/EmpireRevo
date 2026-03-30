@@ -13,6 +13,7 @@ Primary components:
 - freshness
 - stale-line strength
 - sharp-vs-retail deviation
+- history-backed pressure and value-persistence adjustments
 
 Each outcome now exposes a score decomposition (`rankingBreakdown`) including:
 - normalized component scores
@@ -20,6 +21,18 @@ Each outcome now exposes a score decomposition (`rankingBreakdown`) including:
 - explicit penalties applied
 
 This makes "why A outranks B" auditable and testable.
+
+## Historical Adjustments
+
+History-based modifiers are deliberately small relative to the fair-price core:
+
+- stable or developing positive EV can add a modest boost
+- sharp-led confirmation can add a modest boost
+- fragmented historical movement applies a penalty
+- stale historical quotes apply a penalty
+- worsening edge trend applies a penalty
+
+These adjustments are configured centrally in `calibration.ts` and are intended to refine ordering, not replace fair-price math.
 
 ## Confidence Score
 
@@ -32,6 +45,8 @@ Confidence is still deterministic and market-structure based:
 - exclusion pressure
 
 Each outcome includes `confidenceBreakdown` with component contributions and exclusion impact.
+
+Sparse or missing history lowers confidence more readily than rank. The system prefers to withhold confidence rather than fabricate certainty from thin samples.
 
 ## Label Boundaries and Calibration
 

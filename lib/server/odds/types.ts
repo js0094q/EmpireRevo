@@ -76,18 +76,39 @@ export type FairOutcomeBook = {
   staleDiagnostics?: StaleDiagnostics;
   point?: number;
   lastUpdate?: string;
-  movement?: {
-    openPrice: number;
-    prevPrice: number;
-    currentPrice: number;
-    delta: number;
-    move: number;
-    updatedAt: string;
-    history: Array<{
-      ts: string;
-      priceAmerican: number;
-    }>;
-  };
+  movement?: LineMovementSummary;
+};
+
+export type LineMovementHistoryPoint = {
+  ts: string;
+  priceAmerican: number | null;
+  point?: number | null;
+};
+
+export type LineMovementDirection = "up" | "down" | "flat" | "mixed";
+
+export type LineMovementSummary = {
+  openPrice: number;
+  prevPrice: number;
+  currentPrice: number;
+  delta: number;
+  move: number;
+  updatedAt: string;
+  history: LineMovementHistoryPoint[];
+  openingPriceAmerican?: number | null;
+  currentPriceAmerican?: number | null;
+  openingPoint?: number | null;
+  currentPoint?: number | null;
+  priceDelta?: number | null;
+  pointDelta?: number | null;
+  direction?: LineMovementDirection;
+  observations?: number;
+  firstObservedAt?: string | null;
+  lastObservedAt?: string | null;
+  velocityShortWindow?: number | null;
+  velocityLongWindow?: number | null;
+  lineAgeSeconds?: number | null;
+  stale?: boolean;
 };
 
 export type ScoreBreakdown = {
@@ -184,6 +205,10 @@ export type FairOutcome = {
     movedBooks: number;
     totalBooks: number;
   };
+  marketPressure?: MarketPressureSignal;
+  valueTiming?: ValueTimingSignal;
+  historySummary?: string;
+  lastHistoricalUpdateAt?: string | null;
   timingSignal: TimingSignal;
   sharpDeviation: number;
   explanation: string;
@@ -220,6 +245,10 @@ export type FairEvent = {
   confidenceLabel: "High Confidence" | "Moderate Confidence" | "Thin Market" | "Stale Market" | "Limited Sharp Coverage";
   staleStrength: number;
   timingLabel: TimingSignalLabel;
+  marketPressureLabel?: string;
+  valuePersistenceLabel?: string;
+  historySummaryLabel?: string;
+  lastHistoricalUpdateAt?: string | null;
   rankingSummary: string;
   excludedBooks: FairEventBookExclusion[];
   outcomes: FairOutcome[];
@@ -235,6 +264,7 @@ export type FairBoardOpportunity = {
   edgePct: number;
   bestBook: string;
   timingLabel: TimingSignalLabel;
+  historySummary?: string;
   pinnedActionable: boolean;
   pinnedScore: number;
 };
@@ -333,17 +363,77 @@ export type PersistedMarketSnapshot = {
   books: PersistedBookSnapshot[];
 };
 
+export type PersistedOddsSnapshot = {
+  version: 1;
+  sportKey: string;
+  eventId: string;
+  marketKey: string;
+  marketType: MarketKey;
+  outcomeKey: string;
+  outcomeLabel: string;
+  bookmakerKey: string;
+  bookmakerTitle: string;
+  bookmakerTier?: BookTier;
+  isPinned?: boolean;
+  isSharp?: boolean;
+  isBestPrice?: boolean;
+  priceAmerican: number | null;
+  point: number | null;
+  impliedProbability: number | null;
+  noVigProbability: number | null;
+  fairProbability?: number | null;
+  fairAmerican?: number | null;
+  rankingScore?: number | null;
+  confidenceScore?: number | null;
+  staleStrength?: number | null;
+  timingUrgency?: number | null;
+  edgePct?: number | null;
+  evPct?: number | null;
+  observedAt: string;
+  bookLastSeenAt?: string | null;
+};
+
+export type PersistedSnapshotBucket = {
+  version: 1;
+  capturedAt: number;
+  observedAt: string;
+  sportKey: string;
+  eventId: string;
+  marketKey: string;
+  marketType: MarketKey;
+  fair?: {
+    fairProb?: number | null;
+    fairAmerican?: number | null;
+  };
+  diagnostics?: {
+    rankingScore?: number | null;
+    confidenceScore?: number | null;
+    stalePenalty?: number | null;
+    timingPenalty?: number | null;
+    coveragePenalty?: number | null;
+    evDefensibility?: EvReliability | null;
+    penaltyReasons?: string[];
+    factorBreakdown?: Record<string, number>;
+  };
+  snapshots: PersistedOddsSnapshot[];
+};
+
 export type TimelinePoint = {
   ts: number;
   fairAmerican?: number | null;
+  fairProb?: number | null;
   globalBestAmerican?: number | null;
   pinnedBestAmerican?: number | null;
+  globalBestPoint?: number | null;
+  pinnedBestPoint?: number | null;
+  observationCount?: number;
 };
 
 export type BookTimelinePoint = {
   ts: number;
   bookKey: string;
   american?: number | null;
+  point?: number | null;
 };
 
 export type MarketTimelineResponse = {
@@ -370,6 +460,10 @@ export type PersistedValidationEvent = {
     key: string;
     bucketTs: number;
   } | null;
+  historyRef?: {
+    eventId: string;
+    marketKey: string;
+  } | null;
   pinnedContext?: {
     pinnedBookKey?: string | null;
     pinnedBestPriceAmerican?: number | null;
@@ -394,6 +488,7 @@ export type PersistedValidationEvent = {
   execution: {
     displayedPriceAmerican?: number | null;
     displayedBookKey?: string | null;
+    displayedPoint?: number | null;
   };
 };
 
@@ -452,11 +547,27 @@ export type PersistedEvaluationResult = {
   sportKey: string;
   eventId: string;
   marketKey: string;
+  historyRef?: {
+    eventId: string;
+    marketKey: string;
+  } | null;
+  recommendation?: {
+    capturedAt: number;
+    priceAmerican?: number | null;
+    point?: number | null;
+    impliedProbability?: number | null;
+    fairAmerican?: number | null;
+    fairProbability?: number | null;
+  } | null;
   close: {
     globalBestAmerican?: number | null;
+    globalBestPoint?: number | null;
     pinnedBestAmerican?: number | null;
+    pinnedBestPoint?: number | null;
     sharpConsensusAmerican?: number | null;
+    sharpConsensusPoint?: number | null;
     fairAmerican?: number | null;
+    fairPoint?: number | null;
   };
   clv: {
     global: ClvResult;
@@ -473,14 +584,24 @@ export type PersistedEvaluationResult = {
   methodology: EvaluationMethodology;
 };
 
+export type ValueTimingSignal = {
+  firstPositiveEvAt: string | null;
+  lastPositiveEvAt: string | null;
+  positiveEvDurationSeconds: number | null;
+  valuePersistence: "fleeting" | "developing" | "stable" | "stale" | "unknown";
+  edgeTrend: "improving" | "worsening" | "flat" | "unknown";
+};
+
 export type MarketPressureSignal = {
-  label: string;
-  severity: "low" | "medium" | "high";
+  label: "sharp-up" | "sharp-down" | "broad-consensus" | "fragmented" | "stale" | "none" | string;
+  confidence: "low" | "medium" | "high";
+  severity?: "low" | "medium" | "high";
   explanation: string;
   evidence: {
     sharpBooksMovedFirst?: boolean;
     laggingBooks?: string[];
     staleDurationMs?: number | null;
     fairShiftAmerican?: number | null;
+    observations?: number;
   };
 };

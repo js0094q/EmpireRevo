@@ -3,9 +3,14 @@ import type { FairBoardResponse } from "@/lib/server/odds/types";
 import { cacheGet, cacheKey, cacheSet } from "@/lib/server/odds/cache";
 import { fetchOddsFromUpstream, sportKeyToLeague } from "@/lib/server/odds/client";
 import { normalizeOddsApiResponse } from "@/lib/server/odds/normalize";
-import { buildFairBoard } from "@/lib/server/odds/fairEngine";
-import { trackMovement } from "@/lib/server/odds/movement";
+import {
+  attachHistoricalSignalsToBoard,
+  buildFairBoard,
+  emitValidationSnapshots
+} from "@/lib/server/odds/fairEngine";
+import { persistBoardSnapshots } from "@/lib/server/odds/snapshotPersistence";
 import type { WeightModel } from "@/lib/server/odds/weights";
+import { getValidationSinkMode } from "@/lib/server/odds/validationEvents";
 
 const DEFAULT_SPORT_KEY = "basketball_nba";
 const DEFAULT_REGIONS = "us";
@@ -13,7 +18,6 @@ const DEFAULT_MARKETS = "h2h,spreads,totals";
 const DEFAULT_ODDS_FORMAT = "american";
 const RAW_NORMALIZED_TTL_MS = 15_000;
 const FAIR_BOARD_TTL_MS = 30_000;
-const HOUR_MS = 60 * 60 * 1000;
 const DEFAULT_MIN_BOOKS = 4;
 const DEFAULT_WINDOW_HOURS = 24;
 const DEFAULT_HISTORY_WINDOW_HOURS = 24;
@@ -238,40 +242,32 @@ export async function getFairBoard(params: FairBoardQuery): Promise<FairBoardRes
     timeWindowHours: windowHours
   });
 
+  const capturedAtMs = Date.now();
+  const persisted = await persistBoardSnapshots({
+    sportKey: normalized.sportKey,
+    events: board.events,
+    capturedAt: capturedAtMs
+  });
+
   if (movementEnabled) {
-    await attachMovement(board, { historyWindowHours, retentionHours, maxPoints });
+    await attachHistoricalSignalsToBoard({
+      board,
+      capturedAtMs
+    });
   }
+
+  const emittedEvents = await emitValidationSnapshots({
+    events: board.events,
+    market,
+    sportKey: normalized.sportKey,
+    capturedAtMs,
+    snapshotRefs: persisted.refs
+  });
+  board.diagnostics.validation = {
+    emittedEvents,
+    sink: getValidationSinkMode()
+  };
 
   await cacheSet(fairKey, board, FAIR_BOARD_TTL_MS);
   return board;
-}
-
-async function attachMovement(
-  board: FairBoardResponse,
-  options: { historyWindowHours: number; retentionHours: number; maxPoints: number }
-): Promise<void> {
-  const windowMs = options.historyWindowHours * HOUR_MS;
-  const retentionMs = options.retentionHours * HOUR_MS;
-  await Promise.all(
-    board.events.map((event) =>
-      Promise.all(
-        event.outcomes.map((outcome) =>
-          Promise.all(
-            outcome.books.map(async (book) => {
-              const movement = await trackMovement(
-                `${event.id}|${event.market}|${outcome.name}|${book.bookKey}|${book.point ?? "na"}`,
-                book.priceAmerican,
-                {
-                  windowMs,
-                  retentionMs,
-                  maxPoints: options.maxPoints
-                }
-              );
-              book.movement = movement;
-            })
-          )
-        )
-      )
-    )
-  );
 }

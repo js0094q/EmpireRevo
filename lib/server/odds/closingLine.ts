@@ -8,6 +8,7 @@ export type ClosingLineSelection = {
   method: ClosingLineMethod;
   ts: number | null;
   american: number | null;
+  point: number | null;
 };
 
 export function describeCloseReference(method: CloseReferenceMethod): string {
@@ -30,22 +31,34 @@ function median(values: number[]): number | null {
   return (a + b) / 2;
 }
 
-function valueAt(point: StoredTimelinePoint, method: ClosingLineMethod): number | null {
+function valueAt(point: StoredTimelinePoint, method: ClosingLineMethod): { american: number | null; point: number | null } {
   if (method === "closing_global_best") {
-    return Number.isFinite(point.globalBestAmerican) ? Number(point.globalBestAmerican) : null;
+    return {
+      american: Number.isFinite(point.globalBestAmerican) ? Number(point.globalBestAmerican) : null,
+      point: Number.isFinite(point.globalBestPoint) ? Number(point.globalBestPoint) : null
+    };
   }
   if (method === "closing_pinned_best") {
-    return Number.isFinite(point.pinnedBestAmerican) ? Number(point.pinnedBestAmerican) : null;
+    return {
+      american: Number.isFinite(point.pinnedBestAmerican) ? Number(point.pinnedBestAmerican) : null,
+      point: Number.isFinite(point.pinnedBestPoint) ? Number(point.pinnedBestPoint) : null
+    };
   }
   if (method === "closing_fair") {
-    return Number.isFinite(point.fairAmerican) ? Number(point.fairAmerican) : null;
+    return {
+      american: Number.isFinite(point.fairAmerican) ? Number(point.fairAmerican) : null,
+      point: null
+    };
   }
 
   const sharp = point.books
     .filter((book) => book.isSharp)
-    .map((book) => book.american)
-    .filter((value): value is number => Number.isFinite(value));
-  return median(sharp);
+    .map((book) => ({ american: book.american, point: book.point }))
+    .filter((book) => Number.isFinite(book.american));
+  return {
+    american: median(sharp.map((book) => Number(book.american))),
+    point: median(sharp.map((book) => Number(book.point)).filter((value) => Number.isFinite(value)))
+  };
 }
 
 function pickClosingPoint(points: StoredTimelinePoint[], closeTs?: number): StoredTimelinePoint[] {
@@ -65,11 +78,12 @@ export function selectClosingLine(params: {
     const point = candidates[idx];
     if (!point) continue;
     const value = valueAt(point, params.method);
-    if (Number.isFinite(value)) {
+    if (Number.isFinite(value.american)) {
       return {
         method: params.method,
         ts: point.ts,
-        american: value
+        american: value.american,
+        point: value.point
       };
     }
   }
@@ -77,7 +91,8 @@ export function selectClosingLine(params: {
   return {
     method: params.method,
     ts: null,
-    american: null
+    american: null,
+    point: null
   };
 }
 

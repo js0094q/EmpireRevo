@@ -45,23 +45,58 @@ A stale signal still requires multiple aligned conditions:
 
 ## Movement Timing Interpretation
 
-Movement summaries remain selective and now feed timing labels:
-- sharp-led movement
-- retail-only drift
-- out-of-sync behavior
-- weak signal due to sparse history
+Movement summaries are now derived from persisted time-series snapshots and expose:
 
-## Phase 6 Historical Pressure Labels
+- opening price and current price
+- opening point and current point when applicable
+- absolute price and point deltas
+- number of observed changes
+- short-window and long-window velocity
+- first seen, last seen, and staleness context
 
-Historical timelines now support descriptive pressure signals derived from persisted snapshots:
+## Historical Pressure Labels
 
-- `sharp-led move`
-- `mainstream lagging`
-- `pinned lagging`
-- `broad market shift`
-- `isolated stale quote`
+Historical timelines support one deterministic pressure label per market:
 
-These labels describe observed sequencing and divergence. They are not predictive prompts.
+- `sharp-up`
+- `sharp-down`
+- `broad-consensus`
+- `fragmented`
+- `stale`
+- `none`
+
+These labels describe observed sequencing and divergence from actual timestamps. They are not predictive prompts.
+
+## Sharp vs Public Heuristic
+
+The first-pass heuristic is intentionally rules-based:
+
+- identify sharp books from the existing weight map
+- detect which books moved first on the persisted timeline
+- check whether broader books later converge or remain split
+- downgrade confidence when the sample is sparse or fragmented
+
+Every pressure label includes a deterministic explanation string and a `low` / `medium` / `high` confidence tier.
+
+## Value Persistence Semantics
+
+Historical odds also describe whether an edge was fleeting or stable.
+
+`ValueTimingSignal` tracks:
+
+- `firstPositiveEvAt`
+- `lastPositiveEvAt`
+- `positiveEvDurationSeconds`
+- `valuePersistence`
+- `edgeTrend`
+
+Persistence labels:
+
+- `fleeting`: brief positive-EV window with weak continuity
+- `developing`: positive-EV window is building but still short
+- `stable`: positive EV has persisted long enough to trust more than a flicker
+- `stale`: value may still screen positive, but the last observed quote is too old
+- `unknown`: not enough history to classify safely
 
 ## Signal Compression Principles (Wide Boards)
 

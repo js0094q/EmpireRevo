@@ -60,20 +60,17 @@ Node >= 20
 Agents should understand the repository layout before making changes.
 
 app/
-api/ # Next.js API routes
-games/ # game listings
-components/ # UI components
+api/ # Next.js API routes under app/api/
+games/ # game listings and related routes under app/games/ and app/game/
 
 lib/
 server/
 odds/ # odds math and aggregation
-utils/
+ui/
 
 scripts/
 setup.sh
-
-public/
-assets/
+visual-regression.ts
 
 Important logic lives in:
 
@@ -87,12 +84,20 @@ Agents must review this folder carefully before modifying odds calculations.
 
 To run the project locally:
 
-npm install
+npm ci
 npm run dev
 
 Observed helper workflow:
 
 bash scripts/setup.sh
+
+Observed `scripts/setup.sh` behavior:
+
+- checks for `node`, `npm`, and `git`
+- requires Node 20+
+- creates `.env.local` with `ODDS_API_KEY` and optional `NEXT_PUBLIC_DEFAULT_LEAGUE` if missing
+- runs `npm run -s typecheck` and `npm run -s lint`
+- starts the dev server
 
 Development server:
 

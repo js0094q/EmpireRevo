@@ -1,3 +1,5 @@
+import { getOddsHistoryConfig } from "@/lib/server/odds/historyConfig";
+
 export type PersistenceTtlConfig = {
   rawSnapshotSeconds: number;
   timelineSeconds: number;
@@ -26,9 +28,12 @@ let cached: PersistenceTtlConfig | null = null;
 export function getPersistenceTtls(): PersistenceTtlConfig {
   if (cached) return cached;
 
+  const historyConfig = getOddsHistoryConfig();
+  const retentionSeconds = Math.max(1, Math.floor(historyConfig.retentionHours * 60 * 60));
+
   cached = {
-    rawSnapshotSeconds: parsePositiveInt(process.env.ODDS_SNAPSHOT_TTL_SECONDS, DEFAULT_TTLS.rawSnapshotSeconds),
-    timelineSeconds: parsePositiveInt(process.env.ODDS_TIMELINE_TTL_SECONDS, DEFAULT_TTLS.timelineSeconds),
+    rawSnapshotSeconds: parsePositiveInt(process.env.ODDS_SNAPSHOT_TTL_SECONDS, retentionSeconds || DEFAULT_TTLS.rawSnapshotSeconds),
+    timelineSeconds: parsePositiveInt(process.env.ODDS_TIMELINE_TTL_SECONDS, retentionSeconds || DEFAULT_TTLS.timelineSeconds),
     validationEventSeconds: parsePositiveInt(process.env.ODDS_VALIDATION_TTL_SECONDS, DEFAULT_TTLS.validationEventSeconds),
     evaluationSeconds: parsePositiveInt(process.env.ODDS_EVALUATION_TTL_SECONDS, DEFAULT_TTLS.evaluationSeconds),
     diagnosticsSeconds: parsePositiveInt(process.env.ODDS_DIAGNOSTICS_TTL_SECONDS, DEFAULT_TTLS.diagnosticsSeconds)

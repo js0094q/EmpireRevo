@@ -1,7 +1,12 @@
 import type { MarketKey } from "@/lib/odds/schemas";
 import { getOddsCalibration, type OddsCalibration } from "@/lib/server/odds/calibration";
 import type { ConfidenceAssessment } from "@/lib/server/odds/confidence";
-import type { ScoreBreakdown, FairOutcomeBook } from "@/lib/server/odds/types";
+import type {
+  ScoreBreakdown,
+  FairOutcomeBook,
+  MarketPressureSignal,
+  ValueTimingSignal
+} from "@/lib/server/odds/types";
 
 export type OpportunityRanking = {
   score: number;
@@ -21,6 +26,8 @@ type RankParams = {
   books: FairOutcomeBook[];
   contributingBooks: number;
   totalBooks: number;
+  marketPressure?: MarketPressureSignal;
+  valueTiming?: ValueTimingSignal;
   calibration?: OddsCalibration;
 };
 
@@ -101,9 +108,40 @@ export function rankOpportunity(params: RankParams): OpportunityRanking {
   if (params.confidence.label === "Thin Market" || params.confidence.label === "Stale Market") {
     penalties.push({ reason: "Weak confidence label", delta: -calibration.ranking.penalties.weakLabelPenalty });
   }
+  if (params.marketPressure?.label === "fragmented") {
+    penalties.push({ reason: "Fragmented historical movement", delta: -calibration.ranking.historyAdjustments.fragmentedPenalty });
+  }
+  if (params.marketPressure?.label === "stale") {
+    penalties.push({ reason: "Stale historical market", delta: -calibration.ranking.historyAdjustments.staleHistoryPenalty });
+  }
+  if (params.valueTiming?.edgeTrend === "worsening") {
+    penalties.push({ reason: "Edge trend worsening", delta: -calibration.ranking.historyAdjustments.worseningEdgePenalty });
+  }
 
   for (const penalty of penalties) {
     score += penalty.delta;
+  }
+
+  if (params.valueTiming?.valuePersistence === "stable") {
+    score += calibration.ranking.historyAdjustments.persistentEdgeBoost;
+    penalties.push({
+      reason: "Persistent positive value",
+      delta: calibration.ranking.historyAdjustments.persistentEdgeBoost
+    });
+  } else if (params.valueTiming?.valuePersistence === "developing") {
+    score += calibration.ranking.historyAdjustments.persistentEdgeBoost / 2;
+    penalties.push({
+      reason: "Developing positive value",
+      delta: calibration.ranking.historyAdjustments.persistentEdgeBoost / 2
+    });
+  }
+
+  if (params.marketPressure?.label === "sharp-up" || params.marketPressure?.label === "sharp-down") {
+    score += calibration.ranking.historyAdjustments.sharpConfirmationBoost;
+    penalties.push({
+      reason: "Sharp-led confirmation",
+      delta: calibration.ranking.historyAdjustments.sharpConfirmationBoost
+    });
   }
 
   score = Math.max(0, Math.round(score * 10) / 10);

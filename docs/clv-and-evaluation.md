@@ -1,6 +1,6 @@
-# CLV and Evaluation (Phase 7)
+# CLV and Evaluation
 
-Phase 7 extends the existing Phase 6.1 evaluation path from CLV-only into outcome-aware evaluation while keeping the same pipeline.
+EmpirePicks computes evaluation from surfaced recommendations plus self-collected market history. CLV remains authoritative in implied-probability space.
 
 ## CLV vs ROI
 
@@ -20,6 +20,20 @@ These are separate metrics. Positive CLV does not guarantee positive ROI in shor
 
 Evaluation outputs always state the active close reference.
 
+Closing-line reads now come from persisted snapshot history keyed by the canonical event and market history reference captured with the validation event.
+
+## Recommendation-Time Reference
+
+Validation events persist enough context to reconnect a surfaced pick to historical odds:
+
+- recommendation timestamp
+- displayed American odds
+- displayed point when applicable
+- `historyRef` for canonical event/market history lookup
+- fair probability at recommendation time
+
+This allows the evaluator to compare the surfaced recommendation against the later closing snapshot without re-fetching upstream data.
+
 ## Authoritative CLV Method
 
 `lib/server/odds/clv.ts` computes:
@@ -30,6 +44,19 @@ Evaluation outputs always state the active close reference.
 - `beatClose = clvProbDelta > 0`
 
 This remains the authoritative CLV signal.
+
+American-odds deltas remain compatibility display helpers only.
+
+## Historical Snapshot Semantics
+
+When enough self-collected history exists, evaluation can derive:
+
+- recommendation price and implied probability
+- closing price and implied probability
+- closing point for spreads/totals when applicable
+- `clvProbDelta`
+
+When history is sparse or a matching closing snapshot is unavailable, CLV fields stay null-safe instead of fabricating a close.
 
 ## ROI Method
 
@@ -62,9 +89,11 @@ Evaluation payloads include:
 - `displaySpace: american_odds`
 - `roiStakeModel: flat_unit_stake`
 - `probabilitySource: validation_event_fair_probability`
+- `historySource: self_collected_normalized_snapshots`
 
 ## Limitations
 
 - CLV, ROI, and calibration outputs are descriptive diagnostics, not guarantees.
 - Small samples can produce unstable ROI and calibration estimates.
 - Missing outcome data intentionally yields null-safe ROI/calibration fields.
+- Missing or incomplete history intentionally yields null-safe CLV/close fields.

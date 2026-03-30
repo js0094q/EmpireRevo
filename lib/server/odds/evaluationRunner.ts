@@ -102,15 +102,27 @@ function mergeEvaluationRecord(
   cached: PersistedEvaluationResult,
   recomputed: PersistedEvaluationResult
 ): PersistedEvaluationResult {
+  const recomputedRecommendation = recomputed.recommendation || {
+    capturedAt: recomputed.createdAt,
+    priceAmerican: null,
+    point: null,
+    impliedProbability: null,
+    fairAmerican: null,
+    fairProbability: null
+  };
   return {
     ...recomputed,
     ...cached,
     createdAt: Math.max(recomputed.createdAt, cached.createdAt),
     close: {
       globalBestAmerican: preferNumber(cached.close.globalBestAmerican, recomputed.close.globalBestAmerican),
+      globalBestPoint: preferNumber(cached.close.globalBestPoint, recomputed.close.globalBestPoint),
       pinnedBestAmerican: preferNumber(cached.close.pinnedBestAmerican, recomputed.close.pinnedBestAmerican),
+      pinnedBestPoint: preferNumber(cached.close.pinnedBestPoint, recomputed.close.pinnedBestPoint),
       sharpConsensusAmerican: preferNumber(cached.close.sharpConsensusAmerican, recomputed.close.sharpConsensusAmerican),
-      fairAmerican: preferNumber(cached.close.fairAmerican, recomputed.close.fairAmerican)
+      sharpConsensusPoint: preferNumber(cached.close.sharpConsensusPoint, recomputed.close.sharpConsensusPoint),
+      fairAmerican: preferNumber(cached.close.fairAmerican, recomputed.close.fairAmerican),
+      fairPoint: preferNumber(cached.close.fairPoint, recomputed.close.fairPoint)
     },
     clv: {
       global: mergeClvResult(cached.clv.global, recomputed.clv.global),
@@ -122,7 +134,19 @@ function mergeEvaluationRecord(
     beatClosePinned: preferBoolean(cached.beatClosePinned, recomputed.beatClosePinned),
     modelEdgeHeld: preferBoolean(cached.modelEdgeHeld, recomputed.modelEdgeHeld),
     evDefensibility: cached.evDefensibility ?? recomputed.evDefensibility,
-    methodology: cached.methodology || recomputed.methodology
+    methodology: cached.methodology || recomputed.methodology,
+    historyRef: cached.historyRef || recomputed.historyRef,
+    recommendation: {
+      capturedAt: Math.max(cached.recommendation?.capturedAt || 0, recomputedRecommendation.capturedAt),
+      priceAmerican: preferNumber(cached.recommendation?.priceAmerican, recomputedRecommendation.priceAmerican),
+      point: preferNumber(cached.recommendation?.point, recomputedRecommendation.point),
+      impliedProbability: preferNumber(
+        cached.recommendation?.impliedProbability,
+        recomputedRecommendation.impliedProbability
+      ),
+      fairAmerican: preferNumber(cached.recommendation?.fairAmerican, recomputedRecommendation.fairAmerican),
+      fairProbability: preferNumber(cached.recommendation?.fairProbability, recomputedRecommendation.fairProbability)
+    }
   };
 }
 
@@ -202,10 +226,12 @@ export async function evaluateValidationEvent(
   }
 
   const closeTs = Number.isFinite(commenceMs) ? commenceMs : undefined;
+  const historyEventId = event.historyRef?.eventId || event.eventId;
+  const historyMarketKey = event.historyRef?.marketKey || event.marketKey;
   const close = await resolveClosingLines({
     sportKey: event.sportKey,
-    eventId: event.eventId,
-    marketKey: event.marketKey,
+    eventId: historyEventId,
+    marketKey: historyMarketKey,
     closeTs
   });
 
@@ -247,11 +273,24 @@ export async function evaluateValidationEvent(
     sportKey: event.sportKey,
     eventId: event.eventId,
     marketKey: event.marketKey,
+    historyRef: event.historyRef || null,
+    recommendation: {
+      capturedAt: event.createdAt,
+      priceAmerican: displayedPrice,
+      point: event.execution.displayedPoint ?? event.point ?? null,
+      impliedProbability: global.betImpliedProb ?? null,
+      fairAmerican: event.model.fairAmerican ?? null,
+      fairProbability: event.model.fairProb ?? null
+    },
     close: {
       globalBestAmerican: close.closing_global_best.american,
+      globalBestPoint: close.closing_global_best.point,
       pinnedBestAmerican: close.closing_pinned_best.american,
+      pinnedBestPoint: close.closing_pinned_best.point,
       sharpConsensusAmerican: close.closing_sharp_consensus.american,
-      fairAmerican: close.closing_fair.american
+      sharpConsensusPoint: close.closing_sharp_consensus.point,
+      fairAmerican: close.closing_fair.american,
+      fairPoint: close.closing_fair.point
     },
     clv: {
       global,

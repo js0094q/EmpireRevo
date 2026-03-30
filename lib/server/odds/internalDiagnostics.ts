@@ -5,6 +5,8 @@ import { buildFactorPerformance } from "@/lib/server/odds/factorPerformance";
 import { buildProbabilityCalibration } from "@/lib/server/odds/calibrationAnalysis";
 import { buildEvaluationReports } from "@/lib/server/odds/evaluationReport";
 import { getEvaluationSummary } from "@/lib/server/odds/evaluationRunner";
+import { getOddsHistoryConfig } from "@/lib/server/odds/historyConfig";
+import { listRecentEventHistory } from "@/lib/server/odds/historyStore";
 import { getPersistenceStatus } from "@/lib/server/odds/persistence";
 import { readPersistenceTelemetry } from "@/lib/server/odds/persistenceTelemetry";
 import { listValidationEvents } from "@/lib/server/odds/validationStore";
@@ -40,6 +42,15 @@ export type InternalDiagnosticsPayload = {
   probabilityCalibration?: Awaited<ReturnType<typeof buildProbabilityCalibration>>;
   factorPerformance?: Awaited<ReturnType<typeof buildFactorPerformance>>;
   evaluationReports?: Awaited<ReturnType<typeof buildEvaluationReports>>;
+  history?: {
+    config: ReturnType<typeof getOddsHistoryConfig>;
+    recentEvents: Awaited<ReturnType<typeof listRecentEventHistory>>;
+    totalSnapshots: number;
+    movementCoverage: {
+      marketsWithHistory: number;
+      totalMarkets: number;
+    };
+  };
 };
 
 export async function getInternalDiagnostics(limit = 400): Promise<InternalDiagnosticsPayload> {
@@ -57,13 +68,20 @@ export async function getInternalDiagnostics(limit = 400): Promise<InternalDiagn
   const validationEvents = await listValidationEvents(limit);
   const distributions = summarizeValidationDistributions(validationEvents);
 
-  const [factorAnalytics, evaluation, probabilityCalibration, factorPerformance, evaluationReports] = await Promise.all([
+  const [factorAnalytics, evaluation, probabilityCalibration, factorPerformance, evaluationReports, recentHistory] = await Promise.all([
     buildFactorAnalytics(limit),
     getEvaluationSummary(limit),
     buildProbabilityCalibration(limit),
     buildFactorPerformance(limit),
-    buildEvaluationReports(limit)
+    buildEvaluationReports(limit),
+    listRecentEventHistory(25)
   ]);
+  const totalSnapshots = recentHistory.reduce((sum, event) => sum + event.snapshotCount, 0);
+  const totalMarkets = recentHistory.reduce((sum, event) => sum + event.markets.length, 0);
+  const marketsWithHistory = recentHistory.reduce(
+    (sum, event) => sum + event.markets.filter((market) => market.snapshotCount >= 2).length,
+    0
+  );
 
   return {
     ok: true,
@@ -84,6 +102,15 @@ export async function getInternalDiagnostics(limit = 400): Promise<InternalDiagn
     roiSummary: evaluation.roiSummary,
     probabilityCalibration,
     factorPerformance,
-    evaluationReports
+    evaluationReports,
+    history: {
+      config: getOddsHistoryConfig(),
+      recentEvents: recentHistory,
+      totalSnapshots,
+      movementCoverage: {
+        marketsWithHistory,
+        totalMarkets
+      }
+    }
   };
 }

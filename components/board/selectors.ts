@@ -32,8 +32,6 @@ type PinnedMetrics = {
   hasActionable: boolean;
 };
 
-const LIVE_EVENT_GRACE_MS = 2 * 60 * 60 * 1000;
-
 function eventHasVisibleBook(event: FairEvent, visibleBookKeys: Set<string>): boolean {
   return event.outcomes.some((outcome) => outcome.books.some((book) => visibleBookKeys.has(book.bookKey)));
 }
@@ -163,8 +161,8 @@ export function filterEvents(events: FairEvent[], options: EventFilterOptions): 
     const kickoffTs = Date.parse(event.commenceTime);
     if (!Number.isFinite(kickoffTs)) return false;
 
-    // Keep live games available until 2 hours after scheduled start.
-    if (kickoffTs + LIVE_EVENT_GRACE_MS < now) return false;
+    // Once a game has started, keep it visible until the upstream feed drops it.
+    if (kickoffTs <= now) return true;
     if (options.startWindow === "all") return true;
 
     return kickoffTs - now <= cutoffMs;

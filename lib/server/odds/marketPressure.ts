@@ -2,193 +2,20 @@ import { readMarketTimeline, type StoredTimelinePoint } from "@/lib/server/odds/
 import { listEvaluationResults, listValidationEvents } from "@/lib/server/odds/validationStore";
 import { buildOutcomeMapForValidationEvents, computeOutcomeProfit } from "@/lib/server/odds/roiEvaluation";
 import { buildOutcomeLookupKey } from "@/lib/server/odds/outcomes";
+import { deriveMarketPressureSignal } from "@/lib/server/odds/movement";
 import type { CloseReferenceMethod, MarketPressureSignal, PersistedEvaluationResult, PersistedValidationEvent } from "@/lib/server/odds/types";
 
-type FirstMove = {
-  firstSeen: number;
-  openPrice: number;
-  firstMoveTs: number | null;
-  isSharp: boolean;
-  isPinned: boolean;
-};
-
-function finite(value: number | null | undefined): number | null {
-  return Number.isFinite(value) ? Number(value) : null;
-}
-
-function severityByGap(gap: number): "low" | "medium" | "high" {
-  if (gap >= 45 * 60 * 1000) return "high";
-  if (gap >= 20 * 60 * 1000) return "medium";
-  return "low";
-}
-
-function buildFirstMoveMap(points: StoredTimelinePoint[]): Map<string, FirstMove> {
-  const byBook = new Map<string, FirstMove>();
-  for (const point of points) {
-    for (const book of point.books) {
-      const price = finite(book.american);
-      if (price === null) continue;
-      const existing = byBook.get(book.bookKey);
-      if (!existing) {
-        byBook.set(book.bookKey, {
-          firstSeen: point.ts,
-          openPrice: price,
-          firstMoveTs: null,
-          isSharp: Boolean(book.isSharp),
-          isPinned: Boolean(book.isPinned)
-        });
-        continue;
-      }
-
-      if (existing.firstMoveTs === null && price !== existing.openPrice) {
-        existing.firstMoveTs = point.ts;
-      }
-      existing.isSharp = existing.isSharp || Boolean(book.isSharp);
-      existing.isPinned = existing.isPinned || Boolean(book.isPinned);
-    }
-  }
-  return byBook;
-}
-
-function firstMoveTs(entries: FirstMove[], predicate: (entry: FirstMove) => boolean): number | null {
-  const moved = entries.filter((entry) => predicate(entry) && Number.isFinite(entry.firstMoveTs)) as Array<FirstMove & { firstMoveTs: number }>;
-  if (!moved.length) return null;
-  return moved.reduce((min, entry) => Math.min(min, entry.firstMoveTs), moved[0].firstMoveTs);
-}
-
-function staleRunSignal(points: StoredTimelinePoint[]): { laggingBooks: string[]; staleDurationMs: number | null } {
-  let maxDuration = 0;
-  const lagging = new Set<string>();
-
-  const byBook = new Map<string, Array<{ ts: number; offBy: number }>>();
-  for (const point of points) {
-    const best = finite(point.globalBestAmerican);
-    if (best === null) continue;
-    for (const book of point.books) {
-      const price = finite(book.american);
-      if (price === null) continue;
-      const offBy = Math.abs(best - price);
-      const series = byBook.get(book.bookKey) || [];
-      series.push({ ts: point.ts, offBy });
-      byBook.set(book.bookKey, series);
-    }
-  }
-
-  for (const [bookKey, series] of byBook.entries()) {
-    let runStart: number | null = null;
-    let localMax = 0;
-    for (const row of series) {
-      if (row.offBy >= 10) {
-        if (runStart === null) runStart = row.ts;
-        localMax = Math.max(localMax, row.ts - runStart);
-      } else {
-        runStart = null;
-      }
-    }
-
-    if (localMax >= 20 * 60 * 1000) {
-      lagging.add(bookKey);
-      maxDuration = Math.max(maxDuration, localMax);
-    }
-  }
-
-  return {
-    laggingBooks: Array.from(lagging),
-    staleDurationMs: maxDuration > 0 ? maxDuration : null
-  };
-}
-
 export function detectMarketPressure(points: StoredTimelinePoint[]): MarketPressureSignal[] {
-  if (points.length < 2) return [];
-
-  const sorted = [...points].sort((a, b) => a.ts - b.ts);
-  const map = buildFirstMoveMap(sorted);
-  const entries = Array.from(map.values());
-  const signals: MarketPressureSignal[] = [];
-
-  const sharpFirst = firstMoveTs(entries, (entry) => entry.isSharp);
-  const mainstreamFirst = firstMoveTs(entries, (entry) => !entry.isSharp);
-
-  if (sharpFirst !== null && mainstreamFirst !== null && sharpFirst + 10 * 60 * 1000 <= mainstreamFirst) {
-    const gap = mainstreamFirst - sharpFirst;
-    signals.push({
-      label: "sharp-led move",
-      severity: severityByGap(gap),
-      explanation: "Sharp books moved materially earlier than mainstream books in this observed timeline.",
-      evidence: {
-        sharpBooksMovedFirst: true,
-        staleDurationMs: gap
-      }
-    });
-  }
-
-  if (sharpFirst !== null) {
-    const laggingBooks = Array.from(map.entries())
-      .filter(([, entry]) => !entry.isSharp && Number.isFinite(entry.firstMoveTs) && (entry.firstMoveTs as number) - sharpFirst >= 20 * 60 * 1000)
-      .map(([bookKey]) => bookKey);
-
-    if (laggingBooks.length) {
-      signals.push({
-        label: "mainstream lagging",
-        severity: laggingBooks.length >= 3 ? "high" : "medium",
-        explanation: "Mainstream books trailed the sharp-market move sequence in this market window.",
-        evidence: {
-          sharpBooksMovedFirst: true,
-          laggingBooks
-        }
-      });
+  const signal = deriveMarketPressureSignal({
+    timeline: {
+      version: 2,
+      sportKey: "unknown",
+      eventId: "unknown",
+      marketKey: "unknown",
+      points
     }
-  }
-
-  const pinnedEntries = Array.from(map.entries()).filter(([, entry]) => entry.isPinned);
-  if (sharpFirst !== null && pinnedEntries.length) {
-    const pinnedLagging = pinnedEntries
-      .filter(([, entry]) => Number.isFinite(entry.firstMoveTs) && (entry.firstMoveTs as number) - sharpFirst >= 15 * 60 * 1000)
-      .map(([bookKey]) => bookKey);
-
-    if (pinnedLagging.length) {
-      signals.push({
-        label: "pinned lagging",
-        severity: pinnedLagging.length >= 2 ? "high" : "medium",
-        explanation: "Pinned-book quotes moved later than broader market movement in observed snapshots.",
-        evidence: {
-          laggingBooks: pinnedLagging,
-          sharpBooksMovedFirst: true
-        }
-      });
-    }
-  }
-
-  const firstFair = finite(sorted[0]?.fairAmerican);
-  const lastFair = finite(sorted[sorted.length - 1]?.fairAmerican);
-  if (firstFair !== null && lastFair !== null) {
-    const shift = lastFair - firstFair;
-    if (Math.abs(shift) >= 8) {
-      signals.push({
-        label: "broad market shift",
-        severity: Math.abs(shift) >= 16 ? "high" : "medium",
-        explanation: "Consensus fair line moved meaningfully over the stored timeline.",
-        evidence: {
-          fairShiftAmerican: shift
-        }
-      });
-    }
-  }
-
-  const stale = staleRunSignal(sorted);
-  if (stale.laggingBooks.length) {
-    signals.push({
-      label: "isolated stale quote",
-      severity: stale.laggingBooks.length >= 2 ? "medium" : "low",
-      explanation: "One or more books stayed materially off-market across multiple snapshots.",
-      evidence: {
-        laggingBooks: stale.laggingBooks,
-        staleDurationMs: stale.staleDurationMs
-      }
-    });
-  }
-
-  return signals;
+  });
+  return signal.label === "none" ? [] : [signal];
 }
 
 export async function detectMarketPressureForMarket(params: {

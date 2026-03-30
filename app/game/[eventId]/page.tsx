@@ -3,10 +3,15 @@ import { redirect } from "next/navigation";
 import { AppContainer } from "@/components/layout/AppContainer";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { TeamAvatar } from "@/components/board/TeamAvatar";
+import { EventTimelinePanel } from "@/components/board/EventTimelinePanel";
 import { hasOddsKey, resolveRequestedMarket, toSportKey } from "@/lib/server/odds/pageData";
 import { buildFairEventsForNormalizedEvent, getMarketAvailabilityForBoard, LIMITED_MARKET_MIN_BOOKS } from "@/lib/server/odds/fairEngine";
 import { getNormalizedOdds } from "@/lib/server/odds/oddsService";
 import { matchesEventRouteId, toEventRouteId } from "@/lib/server/odds/eventRoute";
+import { readMarketTimeline } from "@/lib/server/odds/historyStore";
+import { buildOutcomeMarketKey, persistBoardSnapshots } from "@/lib/server/odds/snapshotPersistence";
+import { buildMarketTimeline } from "@/lib/server/odds/timeline";
+import { deriveMarketPressureSignal, deriveValueTimingSignal } from "@/lib/server/odds/movement";
 import {
   buildPickSummary,
   eventDetailHref,
@@ -57,6 +62,15 @@ function formatImpliedPercent(prob: number): string {
 function formatTableLine(market: MarketKey, point?: number): string {
   if (market === "h2h") return "ML";
   return Number.isFinite(point) ? formatPoint(point) : "--";
+}
+
+function formatDurationLabel(seconds: number | null | undefined): string {
+  if (!Number.isFinite(seconds) || Number(seconds) <= 0) return "--";
+  const totalSeconds = Math.round(Number(seconds));
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.max(1, Math.round((totalSeconds % 3600) / 60));
+  if (hours > 0) return `${hours}h ${minutes}m`;
+  return `${minutes}m`;
 }
 
 type NormalizedEvent = Awaited<ReturnType<typeof getNormalizedOdds>>["normalized"][number];
@@ -394,6 +408,34 @@ export default async function GamePage({
   const methodologyCopy = sharpBooksUsed.length
     ? `Sharp-book weighting currently includes ${joinTitles(sharpBooksUsed.slice(0, 3))}.`
     : "Sharp-book weighting is applied when sharp prices are available.";
+  const historyEventId = event.baseEventId || event.id;
+  const historyMarketKey = buildOutcomeMarketKey(event.market, featuredOutcome.name);
+  const historyCapturedAt = Number.isFinite(Date.parse(normalizedResult.fetchedAt))
+    ? Date.parse(normalizedResult.fetchedAt)
+    : 0;
+  await persistBoardSnapshots({
+    sportKey,
+    events: [event],
+    capturedAt: historyCapturedAt
+  });
+  const rawTimeline = await readMarketTimeline(sportKey, historyEventId, historyMarketKey);
+  const timeline = await buildMarketTimeline({
+    sportKey,
+    eventId: historyEventId,
+    marketKey: historyMarketKey
+  });
+  const marketPressure = deriveMarketPressureSignal({
+    timeline: rawTimeline,
+    nowMs: historyCapturedAt
+  });
+  const valueTiming = deriveValueTimingSignal({
+    timeline: rawTimeline,
+    nowMs: historyCapturedAt
+  });
+  const pressureSignals = marketPressure.label === "none" ? [] : [marketPressure];
+  const openPoint = timeline.points[0];
+  const currentPoint = timeline.points[timeline.points.length - 1];
+  const latestHistoryTs = currentPoint ? new Date(currentPoint.ts).toLocaleString() : "--";
 
   const backToBoardHref = boardReturnHref({
     league,
@@ -522,6 +564,49 @@ export default async function GamePage({
                 </tbody>
               </table>
             </div>
+          </section>
+
+          <section className={styles.modelSection}>
+            <div className={styles.sectionHeader}>
+              <div>
+                <p className={styles.sectionEyebrow}>History</p>
+                <h2 className={styles.sectionTitle}>Observed line history</h2>
+              </div>
+            </div>
+
+            <div className={styles.contextGrid}>
+              <div className={styles.contextMetric}>
+                <span>Opening vs Current</span>
+                <strong>
+                  {openPoint
+                    ? `${formatAmerican(openPoint.globalBestAmerican ?? 0)} to ${formatAmerican(currentPoint?.globalBestAmerican ?? 0)}`
+                    : "--"}
+                </strong>
+              </div>
+              <div className={styles.contextMetric}>
+                <span>Sharp/Public Signal</span>
+                <strong>{pressureSignals[0]?.label ?? "none"}</strong>
+              </div>
+              <div className={styles.contextMetric}>
+                <span>Value Persistence</span>
+                <strong>
+                  {valueTiming.valuePersistence === "stable" && valueTiming.positiveEvDurationSeconds
+                    ? `Stable for ${formatDurationLabel(valueTiming.positiveEvDurationSeconds)}`
+                    : valueTiming.valuePersistence}
+                </strong>
+              </div>
+              <div className={styles.contextMetric}>
+                <span>Last Updated</span>
+                <strong>{latestHistoryTs}</strong>
+              </div>
+            </div>
+
+            <p className={styles.contextNote}>{pressureSignals[0]?.explanation ?? "Observed history is still sparse for this market."}</p>
+            <p className={styles.contextNote}>
+              Edge trend {valueTiming.edgeTrend}. Positive EV observed for {formatDurationLabel(valueTiming.positiveEvDurationSeconds)}.
+            </p>
+
+            <EventTimelinePanel outcome={featuredOutcome.name} timeline={timeline} pressureSignals={pressureSignals} />
           </section>
 
           <section className={styles.modelSection}>

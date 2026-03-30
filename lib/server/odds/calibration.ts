@@ -35,6 +35,13 @@ export type RankingCalibration = {
     staleStrength: number;
     freshnessPenalty: number;
   };
+  historyAdjustments: {
+    persistentEdgeBoost: number;
+    sharpConfirmationBoost: number;
+    fragmentedPenalty: number;
+    staleHistoryPenalty: number;
+    worseningEdgePenalty: number;
+  };
 };
 
 export type ConfidenceCalibration = {
@@ -213,6 +220,13 @@ const DEFAULT_CALIBRATION: OddsCalibration = {
       broadCoverage: 0.7,
       staleStrength: 0.6,
       freshnessPenalty: 0.35
+    },
+    historyAdjustments: {
+      persistentEdgeBoost: 3,
+      sharpConfirmationBoost: 2,
+      fragmentedPenalty: 4,
+      staleHistoryPenalty: 5,
+      worseningEdgePenalty: 2
     }
   },
   confidence: {

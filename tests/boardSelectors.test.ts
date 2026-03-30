@@ -271,13 +271,13 @@ test("filterEvents positive-edge filter follows the displayed pick edge instead 
   assert.deepEqual(filtered.map((event) => event.id), ["edge-only"]);
 });
 
-test("filterEvents keeps live events for two hours after start", () => {
-  const expired = mockEvent("expired", { commenceTime: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString() });
+test("filterEvents keeps started games visible until the feed stops publishing them", () => {
+  const longRunning = mockEvent("long-running", { commenceTime: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString() });
   const past = mockEvent("past", { commenceTime: new Date(Date.now() - 5 * 60 * 1000).toISOString() });
   const soon = mockEvent("soon", { commenceTime: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString() });
   const later = mockEvent("later", { commenceTime: new Date(Date.now() + 30 * 60 * 60 * 1000).toISOString() });
 
-  const filtered = filterEvents([expired, past, soon, later], {
+  const filtered = filterEvents([longRunning, past, soon, later], {
     teamQuery: "",
     visibleBookKeys: new Set(["booka"]),
     edgeThresholdPct: 0,
@@ -295,5 +295,5 @@ test("filterEvents keeps live events for two hours after start", () => {
     pinnedBooks: new Set<string>()
   });
 
-  assert.deepEqual(filtered.map((event) => event.id), ["past", "soon"]);
+  assert.deepEqual(filtered.map((event) => event.id), ["long-running", "past", "soon"]);
 });
