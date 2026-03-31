@@ -39,6 +39,7 @@ export type StaleFlag = "none" | "stale_price" | "lagging_book" | "off_market" |
 
 export type StaleDiagnostics = {
   marketScale: number;
+  evidenceStrength: number;
   edgeSignal: number;
   ageSignal: number;
   movementSignal: number;
@@ -222,7 +223,7 @@ export type FairOutcome = {
 export type FairEventBookExclusion = {
   bookKey: string;
   title: string;
-  reason: "point_mismatch" | "missing_market_or_outcomes";
+  reason: "point_mismatch" | "missing_market_or_outcomes" | "unsupported_outcome_count";
 };
 
 export type FairEvent = {
@@ -479,6 +480,7 @@ export type PersistedValidationEvent = {
   };
   diagnostics: {
     stalePenalty?: number | null;
+    marketPressureLabel?: string | null;
     timingPenalty?: number | null;
     coveragePenalty?: number | null;
     widthPenalty?: number | null;

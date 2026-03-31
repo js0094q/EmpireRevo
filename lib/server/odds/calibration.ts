@@ -359,6 +359,23 @@ function clamp01(value: number): number {
   return value;
 }
 
+function clampPositive(value: number, fallback: number): number {
+  if (!Number.isFinite(value) || value <= 0) return fallback;
+  return value;
+}
+
+function clampNonNegative(value: number, fallback = 0): number {
+  if (!Number.isFinite(value) || value < 0) return fallback;
+  return value;
+}
+
+function normalizeWeights<T extends Record<string, number>>(weights: T, fallback: T): T {
+  const entries = Object.entries(weights).map(([key, value]) => [key, clampNonNegative(value)] as const);
+  const total = entries.reduce((sum, [, value]) => sum + value, 0);
+  if (total <= 0) return fallback;
+  return Object.fromEntries(entries.map(([key, value]) => [key, value / total])) as T;
+}
+
 function mergeDeep<T extends Record<string, unknown>>(base: T, patch: DeepPartial<T>): T {
   const out = { ...base } as Record<string, unknown>;
 
@@ -393,19 +410,62 @@ function parseCalibrationOverride(raw: string): { patch: DeepPartial<OddsCalibra
 }
 
 function sanitizeCalibration(calibration: OddsCalibration): OddsCalibration {
+  const rankingWeights = normalizeWeights(calibration.ranking.componentWeights, DEFAULT_CALIBRATION.ranking.componentWeights);
+  const confidenceWeights = normalizeWeights(
+    calibration.confidence.componentWeights,
+    DEFAULT_CALIBRATION.confidence.componentWeights
+  );
+  const staleWeights = normalizeWeights(calibration.stale.componentWeights, DEFAULT_CALIBRATION.stale.componentWeights);
+  const timingWeights = normalizeWeights(calibration.timing.weights, DEFAULT_CALIBRATION.timing.weights);
+  const pinnedWeights = normalizeWeights(calibration.pinned.scoreWeights, DEFAULT_CALIBRATION.pinned.scoreWeights);
+  const freshMinutes = clampPositive(calibration.confidence.freshness.freshMinutes, DEFAULT_CALIBRATION.confidence.freshness.freshMinutes);
+  const staleMinutes = clampPositive(calibration.confidence.freshness.staleMinutes, DEFAULT_CALIBRATION.confidence.freshness.staleMinutes);
+  const staleAgeFreshMinutes = clampPositive(calibration.stale.age.freshMinutes, DEFAULT_CALIBRATION.stale.age.freshMinutes);
+  const staleAgeMinutes = clampPositive(calibration.stale.age.staleMinutes, DEFAULT_CALIBRATION.stale.age.staleMinutes);
+
   return {
     ...calibration,
     ranking: {
       ...calibration.ranking,
+      normalization: {
+        edgePctMax: clampPositive(calibration.ranking.normalization.edgePctMax, DEFAULT_CALIBRATION.ranking.normalization.edgePctMax),
+        evPctMax: clampPositive(calibration.ranking.normalization.evPctMax, DEFAULT_CALIBRATION.ranking.normalization.evPctMax),
+        sharpDeviationMax: clampPositive(
+          calibration.ranking.normalization.sharpDeviationMax,
+          DEFAULT_CALIBRATION.ranking.normalization.sharpDeviationMax
+        )
+      },
+      componentWeights: rankingWeights,
       penalties: {
         ...calibration.ranking.penalties,
         sparseCoverageThreshold: clamp01(calibration.ranking.penalties.sparseCoverageThreshold),
         limitedSharpThreshold: clamp01(calibration.ranking.penalties.limitedSharpThreshold),
-        staleFreshnessThreshold: clamp01(calibration.ranking.penalties.staleFreshnessThreshold)
+        staleFreshnessThreshold: clamp01(calibration.ranking.penalties.staleFreshnessThreshold),
+        sparseCoveragePenalty: clampNonNegative(
+          calibration.ranking.penalties.sparseCoveragePenalty,
+          DEFAULT_CALIBRATION.ranking.penalties.sparseCoveragePenalty
+        ),
+        limitedSharpPenalty: clampNonNegative(
+          calibration.ranking.penalties.limitedSharpPenalty,
+          DEFAULT_CALIBRATION.ranking.penalties.limitedSharpPenalty
+        ),
+        staleFreshnessPenalty: clampNonNegative(
+          calibration.ranking.penalties.staleFreshnessPenalty,
+          DEFAULT_CALIBRATION.ranking.penalties.staleFreshnessPenalty
+        ),
+        weakLabelPenalty: clampNonNegative(
+          calibration.ranking.penalties.weakLabelPenalty,
+          DEFAULT_CALIBRATION.ranking.penalties.weakLabelPenalty
+        )
       }
     },
     confidence: {
       ...calibration.confidence,
+      freshness: {
+        freshMinutes,
+        staleMinutes: Math.max(staleMinutes, freshMinutes + 1)
+      },
+      componentWeights: confidenceWeights,
       labelThresholds: {
         ...calibration.confidence.labelThresholds,
         thinCoverage: clamp01(calibration.confidence.labelThresholds.thinCoverage),
@@ -413,6 +473,31 @@ function sanitizeCalibration(calibration: OddsCalibration): OddsCalibration {
         limitedSharp: clamp01(calibration.confidence.labelThresholds.limitedSharp),
         highConfidence: clamp01(calibration.confidence.labelThresholds.highConfidence)
       }
+    },
+    stale: {
+      ...calibration.stale,
+      componentWeights: staleWeights,
+      age: {
+        freshMinutes: staleAgeFreshMinutes,
+        staleMinutes: Math.max(staleAgeMinutes, staleAgeFreshMinutes + 1)
+      },
+      scaling: {
+        edgePctMax: clampPositive(calibration.stale.scaling.edgePctMax, DEFAULT_CALIBRATION.stale.scaling.edgePctMax),
+        movementGapMax: clampPositive(calibration.stale.scaling.movementGapMax, DEFAULT_CALIBRATION.stale.scaling.movementGapMax),
+        consensusGapMax: clampPositive(calibration.stale.scaling.consensusGapMax, DEFAULT_CALIBRATION.stale.scaling.consensusGapMax),
+        consensusGapDenominatorPct: clampPositive(
+          calibration.stale.scaling.consensusGapDenominatorPct,
+          DEFAULT_CALIBRATION.stale.scaling.consensusGapDenominatorPct
+        )
+      }
+    },
+    timing: {
+      ...calibration.timing,
+      weights: timingWeights
+    },
+    pinned: {
+      ...calibration.pinned,
+      scoreWeights: pinnedWeights
     }
   };
 }

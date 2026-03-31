@@ -5,7 +5,8 @@ import styles from "./BoardShell.module.css";
 import { LeagueSelector } from "@/components/board/LeagueSelector";
 import { MarketTabs } from "@/components/board/MarketTabs";
 import { SearchControl } from "@/components/board/SearchControl";
-import type { BoardSideKey } from "@/components/board/board-helpers";
+import { SortControl } from "@/components/board/SortControl";
+import type { BoardSideKey, BoardSortKey } from "@/components/board/board-helpers";
 import { Button } from "@/components/ui/Button";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 
@@ -21,11 +22,13 @@ type BoardToolbarProps = {
   marketAvailability: FairBoardResponse["marketAvailability"];
   search: string;
   side: BoardSideKey;
+  sortBy: BoardSortKey;
   positiveEdgeOnly: boolean;
   onLeagueChange: (league: string) => void;
   onMarketChange: (market: FairBoardResponse["market"]) => void;
   onSearchChange: (search: string) => void;
   onSideChange: (side: BoardSideKey) => void;
+  onSortChange: (sortBy: BoardSortKey) => void;
   onTogglePositive: () => void;
   onRefresh: () => void;
 };
@@ -36,11 +39,13 @@ export function BoardToolbar({
   marketAvailability,
   search,
   side,
+  sortBy,
   positiveEdgeOnly,
   onLeagueChange,
   onMarketChange,
   onSearchChange,
   onSideChange,
+  onSortChange,
   onTogglePositive,
   onRefresh
 }: BoardToolbarProps) {
@@ -60,6 +65,10 @@ export function BoardToolbar({
       <div className={styles.toolbarGroup}>
         <span className={styles.toolbarLabel}>Side</span>
         <SegmentedControl value={side} options={SIDE_OPTIONS} onChange={onSideChange} ariaLabel="Side filter" />
+      </div>
+      <div className={styles.toolbarGroup}>
+        <span className={styles.toolbarLabel}>Sort</span>
+        <SortControl value={sortBy} onChange={onSortChange} />
       </div>
       <div className={styles.toolbarActions}>
         <Button active={positiveEdgeOnly} onClick={onTogglePositive}>

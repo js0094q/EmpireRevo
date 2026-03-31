@@ -61,8 +61,13 @@ export function rankOpportunity(params: RankParams): OpportunityRanking {
   const bestEdgePct = Math.max(0, best?.edgePct ?? 0);
   const bestEvPct = bestWithQualifiedEv?.evPct ?? 0;
   const bestBookKey = best?.bookKey ?? "";
-  const staleStrength = params.books.reduce((max, book) => Math.max(max, book.staleStrength ?? 0), 0);
+  const staleStrength = params.books.reduce(
+    (max, book) => (book.staleActionable ? Math.max(max, book.staleStrength ?? 0) : max),
+    0
+  );
   const sharpDev = sharpDeviation(params.books);
+  const sharpDevPositive = Math.max(0, sharpDev);
+  const sharpDevNegative = Math.max(0, -sharpDev);
   const coverageRatio = params.totalBooks > 0 ? params.contributingBooks / params.totalBooks : 0;
   const evFactor = calibration.ranking.evWeightByMarket[params.market];
 
@@ -73,7 +78,7 @@ export function rankOpportunity(params: RankParams): OpportunityRanking {
   const coverageScore = clamp01(coverageRatio);
   const sharpScore = params.confidence.sharpParticipation;
   const freshnessScore = params.confidence.freshnessScore;
-  const deviationScore = normalize(Math.abs(sharpDev), calibration.ranking.normalization.sharpDeviationMax);
+  const deviationScore = normalize(sharpDevPositive, calibration.ranking.normalization.sharpDeviationMax);
 
   const componentContributions = {
     edge: calibration.ranking.componentWeights.edge * edgeScore,
@@ -107,8 +112,18 @@ export function rankOpportunity(params: RankParams): OpportunityRanking {
   if (params.confidence.freshnessScore < calibration.ranking.penalties.staleFreshnessThreshold) {
     penalties.push({ reason: "Freshness penalty", delta: -calibration.ranking.penalties.staleFreshnessPenalty });
   }
+  if (sharpDevNegative > 0) {
+    penalties.push({
+      reason: "Sharp books disagree with displayed edge",
+      delta: -2 * normalize(sharpDevNegative, calibration.ranking.normalization.sharpDeviationMax)
+    });
+  }
   if (params.confidence.label === "Thin Market" || params.confidence.label === "Stale Market") {
     penalties.push({ reason: "Weak confidence label", delta: -calibration.ranking.penalties.weakLabelPenalty });
+  }
+  const offMarketOutlier = params.books.some((book) => book.staleFlag === "off_market");
+  if (offMarketOutlier) {
+    penalties.push({ reason: "Off-market outlier present", delta: -2 });
   }
 
   const appliedHistoryReasons: string[] = [];

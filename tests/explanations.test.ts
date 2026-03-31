@@ -104,7 +104,8 @@ const books: FairOutcomeBook[] = [
     edgePct: 1.2,
     evPct: 2.1,
     evQualified: true,
-    isBestPrice: true
+    isBestPrice: true,
+    staleActionable: true
   }
 ];
 
@@ -130,4 +131,22 @@ test("explanations mention stale signal when present", () => {
     timingSignal: { label: "Likely closing", urgencyScore: 0.8, reasons: ["test"] }
   });
   assert.match(text, /lagging book|stale/i);
+});
+
+test("explanations avoid overstating stale actionability when not actionable", () => {
+  const text = buildOpportunityExplanation({
+    outcomeName: "Boston Celtics",
+    confidence: moderate,
+    ranking,
+    books: [
+      {
+        ...books[0]!,
+        staleActionable: false
+      }
+    ],
+    staleSummary: "Lagging book",
+    timingSignal: { label: "Likely closing", urgencyScore: 0.8, reasons: ["test"] }
+  });
+
+  assert.match(text, /not fully actionable/i);
 });

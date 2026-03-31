@@ -61,7 +61,7 @@ async function runWithMock(payload: any[], fn: () => Promise<void>) {
 
 test("getAggregatedOdds returns point-aware spreads", async () => {
   await runWithMock(upstreamSpreads, async () => {
-    const response = await getAggregatedOdds({ sportKey: "basketball_nba", market: "spreads" });
+    const response = await getAggregatedOdds({ sportKey: "basketball_nba", market: "spreads", minBooks: 2 });
     assert.equal(response.games.length, 1);
     const game = response.games[0];
     const side = game.sides[0];

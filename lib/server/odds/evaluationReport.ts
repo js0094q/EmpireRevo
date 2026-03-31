@@ -217,6 +217,12 @@ function roiConfidenceIntervals(roiSummary: RoiSummary): {
   };
 }
 
+function confidenceIntervalWidth(interval: ConfidenceInterval | null): number | null {
+  if (!interval) return null;
+  if (!Number.isFinite(interval.low) || !Number.isFinite(interval.high)) return null;
+  return Math.max(0, interval.high - interval.low);
+}
+
 export async function buildEvaluationReports(
   limit = 1000,
   options?: { closeReference?: CloseReferenceMethod; nowMs?: number }
@@ -244,6 +250,8 @@ export async function buildEvaluationReports(
     const roiProfits = roiRows
       .map((row) => row.profit)
       .filter((value): value is number => Number.isFinite(value));
+    const clvCi = clvConfidenceIntervals(scoped.evaluations, closeReference);
+    const confidenceCiWidth = confidenceIntervalWidth(roiCi.winRate) ?? confidenceIntervalWidth(clvCi.beatCloseRate);
 
     return {
       window: window.key,
@@ -251,14 +259,16 @@ export async function buildEvaluationReports(
       toTs: window.toTs,
       sampleSize: scoped.events.length,
       settledSampleSize: roiSummary.settledSampleSize,
-      confidenceTier: confidenceTierForSampleSize(
-        roiSummary.settledSampleSize > 0 ? roiSummary.settledSampleSize : scoped.events.length
-      ),
+      confidenceTier: confidenceTierForSampleSize({
+        sampleSize: scoped.events.length,
+        settledSampleSize: roiSummary.settledSampleSize,
+        ciWidth: confidenceCiWidth
+      }),
       clvPerformance: {
         sampleSize: clvSummary.sampleSize,
         beatCloseRate: clvSummary.beatCloseRate,
         averageClvProbDelta: clvSummary.averageClvProbDelta,
-        confidenceIntervals: clvConfidenceIntervals(scoped.evaluations, closeReference)
+        confidenceIntervals: clvCi
       },
       roiPerformance: {
         ...roiSummary,

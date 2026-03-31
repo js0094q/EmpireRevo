@@ -45,8 +45,14 @@ function variance(values: number[]): number {
 
 function freshnessScore(books: FairOutcomeBook[], nowMs: number, calibration: OddsCalibration): number {
   const ages = books
-    .map((book) => (book.lastUpdate ? nowMs - Date.parse(book.lastUpdate) : Number.POSITIVE_INFINITY))
+    .map((book) => {
+      if (!book.lastUpdate) return Number.NaN;
+      const ts = Date.parse(book.lastUpdate);
+      if (!Number.isFinite(ts)) return Number.NaN;
+      return nowMs - ts;
+    })
     .filter((age) => Number.isFinite(age));
+  const missingRatio = books.length > 0 ? clamp01((books.length - ages.length) / books.length) : 1;
 
   if (!ages.length) return calibration.confidence.fallbackScores.missingFreshness;
 
@@ -54,9 +60,15 @@ function freshnessScore(books: FairOutcomeBook[], nowMs: number, calibration: Od
   const freshMs = calibration.confidence.freshness.freshMinutes * 60 * 1000;
   const staleMs = calibration.confidence.freshness.staleMinutes * 60 * 1000;
 
-  if (medianAgeMs <= freshMs) return 1;
-  if (medianAgeMs >= staleMs) return 0.1;
-  return clamp01(1 - (medianAgeMs - freshMs) / (staleMs - freshMs));
+  const freshnessBase =
+    medianAgeMs <= freshMs
+      ? 1
+      : medianAgeMs >= staleMs
+        ? 0.1
+        : clamp01(1 - (medianAgeMs - freshMs) / (staleMs - freshMs));
+
+  // Missing timestamps weaken freshness confidence even when known books look recent.
+  return clamp01(freshnessBase * (1 - 0.5 * missingRatio));
 }
 
 function dispersionScore(books: FairOutcomeBook[], calibration: OddsCalibration): number {
@@ -83,12 +95,14 @@ function normalizeActiveWeights(weights: {
   sharpParticipation: number;
   freshness: number;
   dispersion: number;
+  history: number;
   exclusions: number;
 }): {
   coverage: number;
   sharpParticipation: number;
   freshness: number;
   dispersion: number;
+  history: number;
   exclusions: number;
 } {
   const total =
@@ -96,15 +110,17 @@ function normalizeActiveWeights(weights: {
     weights.sharpParticipation +
     weights.freshness +
     weights.dispersion +
+    weights.history +
     weights.exclusions;
 
   if (total <= 0) {
     return {
-      coverage: 0.25,
+      coverage: 0.24,
       sharpParticipation: 0.2,
       freshness: 0.2,
-      dispersion: 0.2,
-      exclusions: 0.15
+      dispersion: 0.18,
+      history: 0.1,
+      exclusions: 0.08
     };
   }
 
@@ -113,6 +129,7 @@ function normalizeActiveWeights(weights: {
     sharpParticipation: weights.sharpParticipation / total,
     freshness: weights.freshness / total,
     dispersion: weights.dispersion / total,
+    history: weights.history / total,
     exclusions: weights.exclusions / total
   };
 }
@@ -127,21 +144,29 @@ export function assessConfidence(params: ConfidenceParams): ConfidenceAssessment
   const fresh = freshnessScore(params.books, nowMs, calibration);
   const disperse = dispersionScore(params.books, calibration);
   const history = historyQuality(params.books, calibration);
+  const missingFreshnessRatio = params.books.length
+    ? clamp01(
+        params.books.filter((book) => !book.lastUpdate || !Number.isFinite(Date.parse(book.lastUpdate))).length / params.books.length
+      )
+    : 1;
   const exclusionPenalty = clamp01(params.excludedBooks.length / total);
   const liveWeights = normalizeActiveWeights({
     coverage: calibration.confidence.componentWeights.coverage,
     sharpParticipation: calibration.confidence.componentWeights.sharpParticipation,
     freshness: calibration.confidence.componentWeights.freshness,
     dispersion: calibration.confidence.componentWeights.dispersion,
+    history: calibration.confidence.componentWeights.history,
     exclusions: calibration.confidence.componentWeights.exclusions
   });
+
+  const freshnessWithMissingPenalty = clamp01(fresh * (1 - 0.6 * missingFreshnessRatio));
 
   const contributions = {
     coverage: liveWeights.coverage * coverageRatio,
     sharpParticipation: liveWeights.sharpParticipation * sharpParticipation,
-    freshness: liveWeights.freshness * fresh,
+    freshness: liveWeights.freshness * freshnessWithMissingPenalty,
     dispersion: liveWeights.dispersion * disperse,
-    history: 0,
+    history: liveWeights.history * history,
     exclusions: liveWeights.exclusions * (1 - exclusionPenalty)
   };
 
@@ -163,6 +188,7 @@ export function assessConfidence(params: ConfidenceParams): ConfidenceAssessment
 
   if (fresh >= calibration.confidence.noteThresholds.fresh) notes.push("Recent market updates");
   else if (fresh < calibration.confidence.noteThresholds.stale) notes.push("Stale market timestamps");
+  if (missingFreshnessRatio >= 0.4) notes.push("Many books have missing timestamp metadata");
 
   if (disperse < calibration.confidence.noteThresholds.highDisagreement) notes.push("Book disagreement is elevated");
   if (history < calibration.confidence.noteThresholds.sparseHistory) notes.push("Movement history is sparse");
@@ -179,13 +205,13 @@ export function assessConfidence(params: ConfidenceParams): ConfidenceAssessment
     notes,
     coverageRatio,
     sharpParticipation,
-    freshnessScore: fresh,
+    freshnessScore: freshnessWithMissingPenalty,
     dispersionScore: disperse,
     historyQuality: history,
     breakdown: {
       coverageRatio,
       sharpParticipation,
-      freshnessScore: fresh,
+      freshnessScore: freshnessWithMissingPenalty,
       dispersionScore: disperse,
       historyQuality: history,
       exclusionPenalty,

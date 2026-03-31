@@ -33,10 +33,17 @@ export function buildOpportunityExplanation(params: ExplanationParams): string {
     clauses.push("confidence is moderate with mixed support");
   }
 
-  if (params.ranking.staleStrength >= 0.6) {
+  if (
+    params.ranking.staleStrength >= 0.6 &&
+    bestBook?.staleActionable &&
+    params.confidence.score >= 0.55 &&
+    bestBook.evQualified
+  ) {
     clauses.push(`${params.staleSummary.toLowerCase()} increases actionability`);
   } else if (params.ranking.staleStrength <= 0.25) {
     clauses.push("no strong stale-line signal is present");
+  } else if (params.ranking.staleStrength >= 0.6) {
+    clauses.push(`${params.staleSummary.toLowerCase()} is present but not fully actionable`);
   }
 
   if (Math.abs(params.ranking.sharpDeviation) >= 1.2) {

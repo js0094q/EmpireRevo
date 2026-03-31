@@ -13,7 +13,8 @@ test("calculateEvPercent can return negative EV for over-priced odds", () => {
 });
 
 test("calculateEvPercent guards against invalid input", () => {
-  assert.equal(calculateEvPercent(0, 110), 0);
+  assert.equal(calculateEvPercent(0, 110), -100);
+  assert.ok(Math.abs(calculateEvPercent(1, -110) - 90.9090909091) < 1e-6);
   assert.equal(calculateEvPercent(0.5, 0), 0);
   assert.equal(calculateEvPercent(NaN, -120), 0);
 });

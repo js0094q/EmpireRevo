@@ -1,7 +1,7 @@
 import { americanToDecimal } from "@/lib/server/odds/fairMath";
 
 function clampFairProbability(probability: number): number {
-  if (!Number.isFinite(probability)) return 0;
+  if (!Number.isFinite(probability)) return Number.NaN;
   if (probability <= 0) return 0;
   if (probability >= 1) return 1;
   return probability;
@@ -16,6 +16,6 @@ function clampFairProbability(probability: number): number {
 export function calculateEvPercent(fairProbability: number, americanOdds: number): number {
   const fair = clampFairProbability(fairProbability);
   const decimal = americanToDecimal(americanOdds);
-  if (fair <= 0 || decimal <= 0) return 0;
+  if (!Number.isFinite(fair) || decimal <= 0) return 0;
   return (fair * decimal - 1) * 100;
 }

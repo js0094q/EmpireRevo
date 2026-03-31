@@ -48,8 +48,9 @@ function eventMaxVisibleEdge(event: FairEvent, visibleBookKeys: Set<string>): nu
 }
 
 function eventHasPositiveEdge(event: FairEvent, visibleBookKeys: Set<string>): boolean {
-  const pick = buildPickSummary(event);
-  return Boolean(pick.book && visibleBookKeys.has(pick.book.bookKey) && pick.book.edgePct > 0);
+  return event.outcomes.some((outcome) =>
+    outcome.books.some((book) => visibleBookKeys.has(book.bookKey) && book.edgePct > 0)
+  );
 }
 
 function eventMatchesSideFilter(event: FairEvent, sideFilter: SideFilter): boolean {
@@ -145,6 +146,34 @@ function tierRank(tier: "sharp" | "signal" | "mainstream" | "promo" | "unknown")
   return 4;
 }
 
+type KickoffBucket = 0 | 1 | 2 | 3;
+
+function kickoffBucket(kickoffTs: number, nowTs: number): KickoffBucket {
+  if (kickoffTs <= nowTs) return 0;
+  const deltaMs = kickoffTs - nowTs;
+  if (deltaMs <= 2 * 60 * 60 * 1000) return 1;
+  if (deltaMs <= 6 * 60 * 60 * 1000) return 2;
+  return 3;
+}
+
+function qualityAdjustedOpportunityScore(event: FairEvent): number {
+  const coverageRatio = event.totalBookCount > 0 ? event.contributingBookCount / event.totalBookCount : 1;
+  let score = event.opportunityScore;
+
+  // Penalize thin/noisy surfaces so strong opportunities float within each time window.
+  if (event.confidenceScore < 0.45) score -= 30;
+  else if (event.confidenceScore < 0.6) score -= 15;
+
+  if (coverageRatio < 0.5) score -= 20;
+  else if (coverageRatio < 0.75) score -= 10;
+
+  if (event.confidenceLabel === "Thin Market") score -= 12;
+  if (event.confidenceLabel === "Stale Market") score -= 8;
+  if (event.confidenceLabel === "Limited Sharp Coverage") score -= 6;
+
+  return score;
+}
+
 export function filterEvents(events: FairEvent[], options: EventFilterOptions): FairEvent[] {
   const query = options.teamQuery.trim().toLowerCase();
   const now = Date.now();
@@ -229,7 +258,21 @@ export function sortEvents(
   const threshold = options?.pinnedActionableEdgeThreshold ?? 0.5;
 
   if (sortBy === "soonest") {
-    return [...events].sort((a, b) => Date.parse(a.commenceTime) - Date.parse(b.commenceTime));
+    const now = Date.now();
+    return [...events].sort((a, b) => {
+      const aKickoff = Date.parse(a.commenceTime);
+      const bKickoff = Date.parse(b.commenceTime);
+      const aBucket = kickoffBucket(Number.isFinite(aKickoff) ? aKickoff : Number.MAX_SAFE_INTEGER, now);
+      const bBucket = kickoffBucket(Number.isFinite(bKickoff) ? bKickoff : Number.MAX_SAFE_INTEGER, now);
+      if (aBucket !== bBucket) return aBucket - bBucket;
+
+      const scoreDiff = qualityAdjustedOpportunityScore(b) - qualityAdjustedOpportunityScore(a);
+      if (Math.abs(scoreDiff) > 0.0001) return scoreDiff;
+
+      const kickoffDiff = (Number.isFinite(aKickoff) ? aKickoff : Number.MAX_SAFE_INTEGER) - (Number.isFinite(bKickoff) ? bKickoff : Number.MAX_SAFE_INTEGER);
+      if (kickoffDiff) return kickoffDiff;
+      return b.maxAbsEdgePct - a.maxAbsEdgePct;
+    });
   }
 
   if (sortBy === "best") {

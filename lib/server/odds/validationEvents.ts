@@ -25,6 +25,7 @@ export type ValidationOpportunitySnapshot = {
   evDefensibility?: EvReliability;
   staleFlag: string;
   staleStrength: number;
+  marketPressureLabel?: string;
   timingLabel: string;
   timingUrgency?: number;
   contributingBookCount: number;
@@ -107,6 +108,7 @@ function toPersistedEvent(event: ValidationEvent): PersistedValidationEvent {
     },
     diagnostics: {
       stalePenalty: event.staleStrength,
+      marketPressureLabel: event.marketPressureLabel || null,
       timingPenalty: Number.isFinite(event.timingUrgency) ? 1 - Number(event.timingUrgency) : null,
       coveragePenalty: 1 - coverageRatio,
       widthPenalty: null,

@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { DEFAULT_ODDS_CALIBRATION, type OddsCalibration } from "../lib/server/odds/calibration";
+import { DEFAULT_ODDS_CALIBRATION, getOddsCalibration, resetCalibrationCacheForTests, type OddsCalibration } from "../lib/server/odds/calibration";
 import { assessConfidence } from "../lib/server/odds/confidence";
 import { rankOpportunity } from "../lib/server/odds/ranking";
 import { detectStaleForBook } from "../lib/server/odds/staleDetection";
@@ -109,4 +109,30 @@ test("ranking weights and penalties can reorder opportunities", () => {
   });
 
   assert.ok(broad.score > sparse.score);
+});
+
+test("calibration sanitization normalizes invalid weight overrides", () => {
+  process.env.ODDS_CALIBRATION_OVERRIDES_JSON = JSON.stringify({
+    ranking: {
+      componentWeights: {
+        edge: -2,
+        ev: 2,
+        confidence: 2,
+        coverage: 2,
+        sharpParticipation: 2,
+        freshness: 2,
+        stale: 2,
+        sharpDeviation: 2
+      }
+    }
+  });
+  resetCalibrationCacheForTests();
+  const calibration = getOddsCalibration();
+  const total = Object.values(calibration.ranking.componentWeights).reduce((sum, value) => sum + value, 0);
+
+  assert.ok(Math.abs(total - 1) < 1e-9);
+  assert.ok(calibration.ranking.componentWeights.edge >= 0);
+
+  delete process.env.ODDS_CALIBRATION_OVERRIDES_JSON;
+  resetCalibrationCacheForTests();
 });

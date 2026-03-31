@@ -14,7 +14,8 @@ import {
   formatUpdatedLabel,
   type BoardNavigationContext,
   type BoardMode,
-  type BoardSideKey
+  type BoardSideKey,
+  type BoardSortKey
 } from "@/components/board/board-helpers";
 import { filterEvents, sortEvents } from "@/components/board/selectors";
 
@@ -37,6 +38,13 @@ function parsePositiveEdgeParam(value: string | null): boolean {
   return value === "1" || value === "true";
 }
 
+function parseSortParam(value: string | null): BoardSortKey {
+  if (value === "score" || value === "edge" || value === "confidence" || value === "best" || value === "soonest" || value === "timing") {
+    return value;
+  }
+  return "soonest";
+}
+
 type BoardShellProps = {
   board: FairBoardResponse;
   league: string;
@@ -48,6 +56,7 @@ export function BoardShell({ board, league, mode = "board" }: BoardShellProps) {
   const searchParams = useSearchParams();
   const [search, setSearch] = useState(() => parseSearchParam(searchParams?.get("search") ?? null));
   const [side, setSide] = useState<BoardSideKey>(() => parseSideParam(searchParams?.get("side") ?? null));
+  const [sortBy, setSortBy] = useState<BoardSortKey>(() => parseSortParam(searchParams?.get("sort") ?? null));
   const [positiveEdgeOnly, setPositiveEdgeOnly] = useState(() => parsePositiveEdgeParam(searchParams?.get("edge") ?? null));
   const deferredSearch = useDeferredValue(search);
 
@@ -55,11 +64,12 @@ export function BoardShell({ board, league, mode = "board" }: BoardShellProps) {
     () => ({
       mode,
       windowKey: "all",
+      sortBy,
       side,
       search,
       positiveEdgeOnly
     }),
-    [mode, positiveEdgeOnly, search, side]
+    [mode, positiveEdgeOnly, search, side, sortBy]
   );
 
   function replaceParam(key: string, value: string) {
@@ -96,7 +106,7 @@ export function BoardShell({ board, league, mode = "board" }: BoardShellProps) {
     [allBookKeys, board.diagnostics.calibration.pinned.actionableEdgePct, board.events, deferredSearch, positiveEdgeOnly, side]
   );
 
-  const orderedEvents = useMemo(() => sortEvents(filteredEvents, "soonest"), [filteredEvents]);
+  const orderedEvents = useMemo(() => sortEvents(filteredEvents, sortBy), [filteredEvents, sortBy]);
 
   const currentMarketAvailability = board.marketAvailability.find((entry) => entry.market === board.market) ?? null;
   const limitedMarkets = board.marketAvailability.filter((entry) => entry.status === "limited");
@@ -161,11 +171,16 @@ export function BoardShell({ board, league, mode = "board" }: BoardShellProps) {
               marketAvailability={board.marketAvailability}
               search={search}
               side={side}
+              sortBy={sortBy}
               positiveEdgeOnly={positiveEdgeOnly}
               onLeagueChange={(value) => replaceParam("league", value)}
               onMarketChange={(value) => replaceParam("market", value)}
               onSearchChange={setSearch}
               onSideChange={setSide}
+              onSortChange={(value) => {
+                setSortBy(value);
+                replaceParam("sort", value);
+              }}
               onTogglePositive={() => setPositiveEdgeOnly((value) => !value)}
               onRefresh={() => router.refresh()}
             />
@@ -180,7 +195,20 @@ export function BoardShell({ board, league, mode = "board" }: BoardShellProps) {
               </p>
             ) : null}
             <p className={styles.marketNote}>{sharpReferenceNote}</p>
-            <p className={styles.sortReminder}>Sorted by Start Time</p>
+            <p className={styles.sortReminder}>
+              Sorted by{" "}
+              {sortBy === "score"
+                ? "Top Opportunities"
+                : sortBy === "edge"
+                  ? "Biggest Edge"
+                  : sortBy === "confidence"
+                    ? "Most Stable Market"
+                    : sortBy === "best"
+                      ? "Highest Listed Odds"
+                      : sortBy === "timing"
+                        ? "Closing Soon"
+                        : "Time Order (best opportunities first in each window)"}
+            </p>
 
             {orderedEvents.length ? (
               <BoardTable

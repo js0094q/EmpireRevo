@@ -77,6 +77,10 @@ export function detectStaleForBook(params: DetectParams): FairOutcomeBook[] {
   const sharpMoves = params.books.filter((book) => book.isSharpBook).map((book) => book.movement?.move ?? 0);
   const sharpAvgMove = mean(sharpMoves);
   const scale = calibration.stale.marketScale[params.market];
+  const evidenceWeightTotal =
+    calibration.stale.componentWeights.age +
+    calibration.stale.componentWeights.movement +
+    calibration.stale.componentWeights.consensusGap;
 
   return params.books.map((book) => {
     const gapPct = priceGapPct(book.priceAmerican, median);
@@ -86,13 +90,14 @@ export function detectStaleForBook(params: DetectParams): FairOutcomeBook[] {
     const moveSignal = clamp01(Math.abs(ownMovementGap) / calibration.stale.scaling.movementGapMax);
     const consensusSignal = clamp01(Math.abs(gapPct) / calibration.stale.scaling.consensusGapMax);
 
-    const staleStrength = clamp01(
-      scale *
-        (calibration.stale.componentWeights.edge * edgeSignal +
-          calibration.stale.componentWeights.age * ageSignal +
-          calibration.stale.componentWeights.movement * moveSignal +
-          calibration.stale.componentWeights.consensusGap * consensusSignal)
-    );
+    const evidenceStrength =
+      evidenceWeightTotal > 0
+        ? (calibration.stale.componentWeights.age * ageSignal +
+            calibration.stale.componentWeights.movement * moveSignal +
+            calibration.stale.componentWeights.consensusGap * consensusSignal) /
+          evidenceWeightTotal
+        : 0;
+    const staleStrength = clamp01(scale * evidenceStrength);
 
     let staleFlag: StaleFlag = "none";
     let summary = "In line with market";
@@ -151,6 +156,7 @@ export function detectStaleForBook(params: DetectParams): FairOutcomeBook[] {
       staleReasons: reasons,
       staleDiagnostics: {
         marketScale: scale,
+        evidenceStrength,
         edgeSignal,
         ageSignal,
         movementSignal: moveSignal,

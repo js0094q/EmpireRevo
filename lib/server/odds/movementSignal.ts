@@ -19,11 +19,14 @@ function average(values: number[]): number {
 export function summarizeMovementSignal(books: FairOutcomeBook[]): MovementSignal {
   const historyCounts = books.map((book) => book.movement?.history?.length ?? 0);
   const avgHistory = average(historyCounts);
-  const sharpMoves = books.filter((book) => book.isSharpBook).map((book) => book.movement?.move ?? 0);
+  const sharpMoveRows = books.filter((book) => book.isSharpBook);
+  const sharpMoves = sharpMoveRows.map((book) => book.movement?.move ?? 0);
   const retailMoves = books.filter((book) => !book.isSharpBook).map((book) => book.movement?.move ?? 0);
   const sharpAvg = average(sharpMoves);
   const retailAvg = average(retailMoves);
   const movedBooks = books.filter((book) => Math.abs(book.movement?.move ?? 0) >= 2).length;
+  const movedSharpBooks = sharpMoveRows.filter((book) => Math.abs(book.movement?.move ?? 0) >= 2).length;
+  const movedRatio = books.length > 0 ? movedBooks / books.length : 0;
 
   if (avgHistory < 2) {
     return {
@@ -38,7 +41,14 @@ export function summarizeMovementSignal(books: FairOutcomeBook[]): MovementSigna
     };
   }
 
-  if (Math.abs(sharpAvg) >= 5 && Math.abs(retailAvg) < 3) {
+  if (
+    Math.abs(sharpAvg) >= 5 &&
+    Math.abs(retailAvg) < 3 &&
+    books.length >= 4 &&
+    sharpMoveRows.length >= 2 &&
+    movedSharpBooks >= 1 &&
+    movedRatio >= 0.35
+  ) {
     return {
       summary: "Fair line moving with sharp books",
       quality: "strong",

@@ -222,7 +222,11 @@ function toBookRows(params: {
   includeBooks: Set<string> | null;
 }): {
   rows: BookMarketRow[];
-  excluded: Array<{ bookKey: string; title: string; reason: "point_mismatch" | "missing_market_or_outcomes" }>;
+  excluded: Array<{
+    bookKey: string;
+    title: string;
+    reason: "point_mismatch" | "missing_market_or_outcomes" | "unsupported_outcome_count";
+  }>;
   totalBookCount: number;
 } {
   const outcomeKey = createOutcomeKeyResolver({
@@ -230,7 +234,11 @@ function toBookRows(params: {
     event: params.event.event
   });
   const rows: BookMarketRow[] = [];
-  const excluded: Array<{ bookKey: string; title: string; reason: "point_mismatch" | "missing_market_or_outcomes" }> = [];
+  const excluded: Array<{
+    bookKey: string;
+    title: string;
+    reason: "point_mismatch" | "missing_market_or_outcomes" | "unsupported_outcome_count";
+  }> = [];
   let eligibleBookCount = 0;
   for (const book of params.event.books) {
     const keyLc = book.book.key.toLowerCase();
@@ -248,7 +256,16 @@ function toBookRows(params: {
       continue;
     }
 
-    const outcomes = targetMarket.outcomes.slice(0, 2).map<BookOutcome>((outcome) => ({
+    if (targetMarket.outcomes.length !== 2) {
+      excluded.push({
+        bookKey: book.book.key,
+        title: book.book.title,
+        reason: "unsupported_outcome_count"
+      });
+      continue;
+    }
+
+    const outcomes = targetMarket.outcomes.map<BookOutcome>((outcome) => ({
       name: outcome.name,
       key: outcomeKey(outcome.name),
       priceAmerican: outcome.price,
@@ -1089,6 +1106,7 @@ export async function emitValidationSnapshots(params: {
         evDefensibility: outcome.evReliability,
         staleFlag: outcome.staleDiagnostics?.topFlag ?? "none",
         staleStrength: outcome.staleStrength,
+        marketPressureLabel: outcome.marketPressure?.label ?? "none",
         timingLabel: outcome.timingSignal.label,
         timingUrgency: outcome.timingSignal.urgencyScore,
         contributingBookCount: event.contributingBookCount,

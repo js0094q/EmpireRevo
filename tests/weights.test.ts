@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { getBookRef, getWeight, isBookEnabledForModel } from "../lib/server/odds/weights";
+import { getBookRef, getBookWeightAudit, getWeight, isBookEnabledForModel } from "../lib/server/odds/weights";
 
 test("weight table matches the expanded sportsbook universe", () => {
   assert.equal(getWeight("betcris", "weighted"), 0.85);
@@ -25,4 +25,11 @@ test("book refs preserve exchange tier metadata", () => {
   assert.equal(book.tier, "exchange");
   assert.equal(book.weight, 0.6);
   assert.equal(book.isSharpWeighted, false);
+});
+
+test("audit uses the same alias normalization as weights", () => {
+  const audit = getBookWeightAudit("williamhill_us");
+  assert.equal(audit.tier, "mainstream");
+  assert.equal(audit.weighted, 0.34);
+  assert.equal(audit.fallback, false);
 });

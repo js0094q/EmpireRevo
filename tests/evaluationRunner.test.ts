@@ -169,6 +169,25 @@ test("sample confidence tier thresholds are stable", () => {
   assert.equal(confidenceTierForSampleSize(100), "high");
 });
 
+test("sample confidence tier can degrade with wide confidence interval", () => {
+  assert.equal(
+    confidenceTierForSampleSize({
+      sampleSize: 120,
+      settledSampleSize: 120,
+      ciWidth: 0.4
+    }),
+    "low"
+  );
+  assert.equal(
+    confidenceTierForSampleSize({
+      sampleSize: 120,
+      settledSampleSize: 120,
+      ciWidth: 0.1
+    }),
+    "high"
+  );
+});
+
 test("evaluation summary propagates ROI confidence metadata", () => {
   const summary = summarizeEvaluationResults([result("a", true, true)], {
     closeReference: "closing_global_best",

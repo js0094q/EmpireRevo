@@ -78,7 +78,8 @@ function resolveProfile(bookKey: string): BookWeightProfile {
 
 export function getBookWeightAudit(bookKey: string): BookWeightAudit {
   const key = bookKey.toLowerCase().trim();
-  const profile = BOOK_PROFILES[key];
+  const compact = key.replace(/[^a-z0-9]/g, "");
+  const profile = BOOK_PROFILES[key] ?? BOOK_PROFILES[compact];
   if (!profile) {
     return {
       key: bookKey,

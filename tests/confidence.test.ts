@@ -55,7 +55,7 @@ test("assessConfidence penalizes thin stale markets", () => {
   assert.ok(low.label === "Thin Market" || low.label === "Stale Market");
 });
 
-test("assessConfidence measures history quality without letting it change live confidence", () => {
+test("assessConfidence rewards deeper history quality in live confidence", () => {
   const now = Date.now();
   const sparse = assessConfidence({
     books: [
@@ -138,6 +138,35 @@ test("assessConfidence measures history quality without letting it change live c
   });
 
   assert.ok(sparse.historyQuality < deep.historyQuality);
-  assert.equal(sparse.score, deep.score);
-  assert.equal(sparse.label, deep.label);
+  assert.ok(sparse.score < deep.score);
+});
+
+test("assessConfidence penalizes missing timestamp metadata", () => {
+  const now = Date.now();
+  const complete = assessConfidence({
+    books: [
+      makeBook({ bookKey: "pinnacle", isSharpBook: true, tier: "sharp", impliedProbNoVig: 0.51, lastUpdate: new Date(now).toISOString() }),
+      makeBook({ bookKey: "circa", isSharpBook: true, tier: "sharp", impliedProbNoVig: 0.509, lastUpdate: new Date(now).toISOString() }),
+      makeBook({ bookKey: "fanduel", impliedProbNoVig: 0.507, lastUpdate: new Date(now).toISOString() })
+    ],
+    contributingBooks: 3,
+    totalBooks: 4,
+    excludedBooks: [],
+    nowMs: now
+  });
+
+  const missing = assessConfidence({
+    books: [
+      makeBook({ bookKey: "pinnacle", isSharpBook: true, tier: "sharp", impliedProbNoVig: 0.51, lastUpdate: new Date(now).toISOString() }),
+      makeBook({ bookKey: "circa", isSharpBook: true, tier: "sharp", impliedProbNoVig: 0.509, lastUpdate: "" }),
+      makeBook({ bookKey: "fanduel", impliedProbNoVig: 0.507, lastUpdate: "" })
+    ],
+    contributingBooks: 3,
+    totalBooks: 4,
+    excludedBooks: [],
+    nowMs: now
+  });
+
+  assert.ok(missing.score < complete.score);
+  assert.ok(missing.notes.some((note) => /missing timestamp metadata/i.test(note)));
 });

@@ -138,6 +138,31 @@ test("buildFairBoard aligns outcomes by name when books publish reversed order",
   assert.equal(draftKingsBook?.priceAmerican, -115);
 });
 
+test("buildFairBoard excludes non-two-way markets instead of truncating outcomes", async () => {
+  const event = buildEvent();
+  const pinnacle = event.books.find((book) => book.book.key === "pinnacle");
+  assert.ok(pinnacle);
+  const pinnacleH2h = pinnacle.markets.find((market) => market.market === "h2h");
+  assert.ok(pinnacleH2h);
+  pinnacleH2h.outcomes = [
+    { name: "Boston Celtics", price: -125 },
+    { name: "New York Knicks", price: 112 },
+    { name: "Draw", price: 1200 }
+  ];
+
+  const board = await buildFairBoard({
+    normalized: [event],
+    league: "nba",
+    sportKey: "basketball_nba",
+    market: "h2h",
+    model: "weighted",
+    minBooks: 2,
+    timeWindowHours: 24
+  });
+
+  assert.equal(board.events.length, 0);
+});
+
 test("buildFairBoard aligns outcomes across team-label aliases", async () => {
   const event = buildEvent();
   const draftKings = event.books.find((book) => book.book.key === "draftkings");

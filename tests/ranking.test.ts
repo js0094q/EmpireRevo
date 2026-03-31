@@ -121,6 +121,32 @@ test("ranking de-emphasizes EV outside moneyline", () => {
   assert.ok(spreadRank.bestEvPct <= 0);
 });
 
+test("ranking penalizes negative sharp deviation", () => {
+  const alignedWithSharp = rankOpportunity({
+    market: "h2h",
+    confidence: highConfidence,
+    books: [
+      makeBook({ bookKey: "pinnacle", title: "Pinnacle", isSharpBook: true, tier: "sharp", edgePct: 1.5, evPct: 3.2 }),
+      makeBook({ bookKey: "fanduel", title: "FanDuel", edgePct: 1.0, evPct: 2.1 })
+    ],
+    contributingBooks: 6,
+    totalBooks: 8
+  });
+
+  const sharpAgainst = rankOpportunity({
+    market: "h2h",
+    confidence: highConfidence,
+    books: [
+      makeBook({ bookKey: "pinnacle", title: "Pinnacle", isSharpBook: true, tier: "sharp", edgePct: 0.2, evPct: 0.4 }),
+      makeBook({ bookKey: "fanduel", title: "FanDuel", edgePct: 1.6, evPct: 3.5 })
+    ],
+    contributingBooks: 6,
+    totalBooks: 8
+  });
+
+  assert.ok(alignedWithSharp.score > sharpAgainst.score);
+});
+
 test("ranking uses conservative pressure history in live scoring by default", () => {
   const baseline = rankOpportunity({
     market: "h2h",
@@ -237,4 +263,30 @@ test("ranking mode can turn history off or enable full value timing adjustments"
 
   assert.ok(full.score > off.score);
   assert.ok(full.reasons.includes("Positive value has persisted"));
+});
+
+test("ranking penalizes when sharp books disagree with displayed edge", () => {
+  const aligned = rankOpportunity({
+    market: "h2h",
+    confidence: highConfidence,
+    books: [
+      makeBook({ bookKey: "pinnacle", title: "Pinnacle", isSharpBook: true, tier: "sharp", edgePct: 1.5, evPct: 2.5, evQualified: true, staleStrength: 0.2 }),
+      makeBook({ bookKey: "fanduel", title: "FanDuel", edgePct: 1.1, evPct: 2.2, evQualified: true, staleStrength: 0.2 })
+    ],
+    contributingBooks: 6,
+    totalBooks: 8
+  });
+
+  const disagreeing = rankOpportunity({
+    market: "h2h",
+    confidence: highConfidence,
+    books: [
+      makeBook({ bookKey: "pinnacle", title: "Pinnacle", isSharpBook: true, tier: "sharp", edgePct: 0.3, evPct: 1.4, evQualified: true, staleStrength: 0.2 }),
+      makeBook({ bookKey: "fanduel", title: "FanDuel", edgePct: 1.4, evPct: 2.6, evQualified: true, staleStrength: 0.2 })
+    ],
+    contributingBooks: 6,
+    totalBooks: 8
+  });
+
+  assert.ok(disagreeing.score < aligned.score);
 });

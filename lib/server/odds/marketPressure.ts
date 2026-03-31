@@ -49,11 +49,55 @@ type RelationshipAccumulator = {
   likelyClosingCount: number;
 };
 
-function pressureBucket(score: number | null | undefined): "low" | "medium" | "high" {
+function pressureBucketFromScore(score: number | null | undefined): "low" | "medium" | "high" {
   if (!Number.isFinite(score)) return "low";
   if ((score as number) >= 0.66) return "high";
   if ((score as number) >= 0.33) return "medium";
   return "low";
+}
+
+function pressureBucketFromLabel(label: string | null | undefined): "low" | "medium" | "high" | null {
+  if (!label) return null;
+  const normalized = label.trim().toLowerCase();
+  if (!normalized || normalized === "none") return null;
+  if (normalized === "sharp-up" || normalized === "sharp-down" || normalized === "broad-consensus") return "high";
+  if (normalized === "fragmented" || normalized === "stale") return "low";
+  return "medium";
+}
+
+function pressureBucketFromReasons(reasons: string[]): "low" | "medium" | "high" | null {
+  const normalized = reasons.map((reason) => reason.toLowerCase());
+  if (normalized.some((reason) => reason.includes("sharp books moved first"))) return "high";
+  if (
+    normalized.some(
+      (reason) =>
+        reason.includes("historical movement is fragmented") ||
+        reason.includes("historical signal is stale") ||
+        reason.includes("off-market outlier")
+    )
+  ) {
+    return "low";
+  }
+  if (
+    normalized.some(
+      (reason) =>
+        reason.includes("positive value has persisted") ||
+        reason.includes("positive value is developing") ||
+        reason.includes("market converging") ||
+        reason.includes("likely closing")
+    )
+  ) {
+    return "medium";
+  }
+  return null;
+}
+
+function pressureBucketForEvent(event: PersistedValidationEvent): "low" | "medium" | "high" {
+  const fromLabel = pressureBucketFromLabel(event.diagnostics.marketPressureLabel);
+  if (fromLabel) return fromLabel;
+  const fromReasons = pressureBucketFromReasons(event.diagnostics.reasons || []);
+  if (fromReasons) return fromReasons;
+  return pressureBucketFromScore(event.diagnostics.stalePenalty);
 }
 
 function avg(values: number[]): number | null {
@@ -140,7 +184,7 @@ export function analyzePressureRelationshipsFromData(
   ]);
 
   for (const event of events) {
-    const bucket = pressureBucket(event.diagnostics.stalePenalty);
+    const bucket = pressureBucketForEvent(event);
     const row = byBucket.get(bucket);
     if (!row) continue;
     row.samples += 1;

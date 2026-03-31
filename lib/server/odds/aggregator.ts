@@ -66,6 +66,7 @@ type AggregatorParams = {
   market?: MarketKey;
   regions?: string;
   oddsFormat?: string;
+  minBooks?: number;
 };
 
 const DEFAULT_SPORT = "basketball_nba";
@@ -73,6 +74,7 @@ const DEFAULT_MARKET: MarketKey = "h2h";
 const AGGREGATOR_WINDOW_HOURS = 24;
 const AGGREGATOR_HISTORY_HOURS = 24;
 const AGGREGATOR_RETENTION_HOURS = 72;
+const AGGREGATOR_DEFAULT_MIN_BOOKS = 4;
 
 function marketLabel(market: MarketKey): string {
   switch (market) {
@@ -178,6 +180,7 @@ export async function getAggregatedOdds(params: AggregatorParams = {}): Promise<
   const market: MarketKey = params.market || DEFAULT_MARKET;
   const regions = params.regions || "us";
   const oddsFormat = params.oddsFormat || "american";
+  const minBooks = Number.isFinite(params.minBooks) ? Math.max(1, Math.floor(params.minBooks as number)) : AGGREGATOR_DEFAULT_MIN_BOOKS;
 
   return withOddsCache(
     ["aggregated", sportKey, market, regions, oddsFormat, `hist:${AGGREGATOR_HISTORY_HOURS}`, `win:${AGGREGATOR_WINDOW_HOURS}`],
@@ -192,7 +195,7 @@ export async function getAggregatedOdds(params: AggregatorParams = {}): Promise<
       const fairBoard = await getFairBoard({
         market,
         model: "weighted",
-        minBooks: 1,
+        minBooks,
         windowHours: AGGREGATOR_WINDOW_HOURS,
         historyWindowHours: AGGREGATOR_HISTORY_HOURS,
         retentionHours: AGGREGATOR_RETENTION_HOURS,
