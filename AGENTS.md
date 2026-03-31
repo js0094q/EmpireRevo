@@ -86,6 +86,11 @@ To run the project locally:
 npm ci
 npm run dev
 
+To verify the production build locally:
+
+npm run build
+npm run start
+
 Observed helper workflow:
 
 bash scripts/setup.sh
@@ -98,6 +103,14 @@ Observed `scripts/setup.sh` behavior:
 - creates `.env.local` with `ODDS_API_KEY` and optional `NEXT_PUBLIC_DEFAULT_LEAGUE` if missing
 - runs `npm run -s typecheck` and `npm run -s lint`
 - starts the dev server
+
+Observed additional environment/config workflows from repo docs:
+
+- upstream controls: `ODDS_API_BASE`, `ODDS_API_ALLOWED_HOSTS`, `ODDS_ALLOWED_SPORT_KEYS`
+- calibration overrides: `ODDS_CALIBRATION_OVERRIDES_JSON`
+- persistence: `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`
+- internal/operator auth: `EMPIRE_INTERNAL_API_KEY`
+- history/snapshot tuning: `ODDS_SNAPSHOT_*`, `ODDS_HISTORY_*`, `ODDS_VALUE_PERSISTENCE_THRESHOLD_PCT`
 
 Development server:
 
@@ -375,6 +388,12 @@ Preferred solutions:
 - Redis odds snapshots
 - incremental updates
 
+Observed operator workflows:
+
+- internal diagnostics APIs under `/api/internal/*`
+- operator page at `/internal/engine`
+- snapshot collection route at `/api/internal/snapshots/collect` for cron/operator triggers
+
 ---
 
 # 10. Error Handling
@@ -466,6 +485,17 @@ Vercel
 Build command:
 
 npm run build
+
+Serve production build locally with:
+
+npm run start
+
+Observed post-deploy checks:
+
+1. Homepage loads
+2. `/games` renders
+3. `/api/health` returns success
+4. `/api/status` reports healthy services
 
 Agents must ensure builds succeed before merging changes.
 
