@@ -34,6 +34,8 @@ The current system extends the existing fair-engine path without adding a parall
 - persistence health telemetry (write success/failure/fallback + payload/latency signals)
 - conservative history pressure signals can inform live ranking, while broader historical signals remain available for UI, diagnostics, CLV, and research/backtests
 
+The next clean backtesting step is a shadow/offline variant that persists history-aware scores alongside the live baseline, so CLV and ROI can be compared without letting those broader features touch production ranking.
+
 ## Calibration in EmpirePicks
 
 Calibration is centralized in `lib/server/odds/calibration.ts`.

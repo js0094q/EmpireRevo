@@ -30,6 +30,8 @@ Historical signals are split into two tiers:
 
 This keeps some market-history context in production ordering without letting the full historical feature set dominate live scores.
 
+The next clean backtesting step is a shadow/offline variant that persists history-aware scores alongside the live baseline, so CLV and ROI can be compared without letting those broader features touch production ranking.
+
 ## Confidence Score
 
 Confidence is still deterministic and market-structure based:

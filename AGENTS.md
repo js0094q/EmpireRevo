@@ -63,10 +63,9 @@ app/
 api/ # Next.js API routes under app/api/
 games/ # game listings and related routes under app/games/ and app/game/
 
-lib/
-server/
-odds/ # odds math and aggregation
-ui/
+lib/server/ # server-side helpers and data access
+lib/server/odds/ # odds math and aggregation
+lib/ui/
 
 scripts/
 setup.sh
@@ -95,6 +94,7 @@ Observed `scripts/setup.sh` behavior:
 
 - checks for `node`, `npm`, and `git`
 - requires Node 20+
+- runs `npm ci`
 - creates `.env.local` with `ODDS_API_KEY` and optional `NEXT_PUBLIC_DEFAULT_LEAGUE` if missing
 - runs `npm run -s typecheck` and `npm run -s lint`
 - starts the dev server
@@ -441,6 +441,7 @@ Visual regression workflow:
 
 - `npm run test:visual`
 - `npm run test:visual -- --update` to refresh baselines
+- runner boots a local mock odds API and captures desktop/mobile snapshots for `/` and `/game/[eventId]`
 
 ---
 
