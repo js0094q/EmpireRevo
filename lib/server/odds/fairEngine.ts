@@ -1,4 +1,5 @@
 import type { LeagueKey, MarketKey, NormalizedEventOdds } from "@/lib/odds/schemas";
+import { buildPriceVsFairMetrics } from "@/lib/odds/priceValue";
 import { getCalibrationMeta, getOddsCalibration, type OddsCalibration } from "@/lib/server/odds/calibration";
 import type {
   FairBoardResponse,
@@ -82,7 +83,7 @@ const DEFAULT_MODEL: WeightModel = "weighted";
 const DEFAULT_MIN_BOOKS = 4;
 export const LIMITED_MARKET_MIN_BOOKS = 2;
 const FAIR_BOARD_DISCLAIMER =
-  "Market-based pricing, not predictions. All values are derived from real sportsbook data, adjusted for margin, and compared to fair market probability. Edge reflects pricing inefficiency, not guaranteed outcomes.";
+  "Market-based pricing, not predictions. All values are derived from real sportsbook data, adjusted for margin, and compared to fair market probability. Price vs Fair measures payout quality, while Probability Gap measures model disagreement.";
 const MARKET_ORDER: MarketKey[] = ["h2h", "spreads", "totals"];
 
 function normalizeModel(model?: string | null): WeightModel {
@@ -410,6 +411,7 @@ function buildOutcomeBooks(params: {
   outcomeKey: string;
   books: BookMarketRow[];
   fairProb: number;
+  fairAmerican: number;
 }): { rows: FairOutcomeBook[]; maxAbsEdge: number } {
   const booksWithOutcome = params.books
     .map((book) => ({
@@ -443,6 +445,12 @@ function buildOutcomeBooks(params: {
       maxAbsEdge = Math.abs(probabilityEdge);
     }
     const evPct = calculateEvPercent(params.fairProb, outcome.priceAmerican);
+    const priceMetrics = buildPriceVsFairMetrics({
+      marketPriceAmerican: outcome.priceAmerican,
+      fairPriceAmerican: params.fairAmerican,
+      marketImpliedProb: implied,
+      fairImpliedProb: params.fairProb
+    });
     return {
       bookKey: book.bookKey,
       title: book.title,
@@ -450,6 +458,13 @@ function buildOutcomeBooks(params: {
       isSharpBook: book.isSharpBook,
       weight: book.weight,
       priceAmerican: outcome.priceAmerican,
+      fairPriceAmerican: priceMetrics.fairPriceAmerican,
+      marketPriceAmerican: priceMetrics.marketPriceAmerican,
+      priceDeltaAmerican: priceMetrics.priceDeltaAmerican,
+      marketImpliedProb: priceMetrics.marketImpliedProb,
+      fairImpliedProb: priceMetrics.fairImpliedProb,
+      probabilityGapPct: priceMetrics.probabilityGapPct,
+      priceValueDirection: priceMetrics.priceValueDirection,
       impliedProb: outcome.impliedProb,
       impliedProbNoVig: implied,
       edgePct: probabilityEdge,
@@ -550,7 +565,8 @@ function buildFairEvent(params: {
       outcomeName,
       outcomeKey: definition.key,
       books: params.group.books,
-      fairProb: weighted
+      fairProb: weighted,
+      fairAmerican
     });
 
     if (!rows.length) continue;
@@ -913,20 +929,33 @@ function deriveDirectoryFromEvents(events: FairEvent[]): {
 function deriveTopOpportunities(events: FairEvent[]): FairBoardResponse["topOpportunities"] {
   return events
     .flatMap((event) =>
-      event.outcomes.map((outcome) => ({
-        eventId: event.id,
-        matchup: `${event.awayTeam} @ ${event.homeTeam}`,
-        outcome: outcome.name,
-        score: outcome.opportunityScore,
-        confidenceLabel: outcome.confidenceLabel,
-        staleSummary: outcome.staleSummary,
-        edgePct: outcome.pinnedActionability.globalBestEdgePct,
-        bestBook: outcome.bestBook,
-        timingLabel: outcome.timingSignal.label,
-        historySummary: outcome.historySummary,
-        pinnedActionable: outcome.pinnedActionability.actionable,
-        pinnedScore: outcome.pinnedActionability.pinnedScore
-      }))
+      event.outcomes.map((outcome) => {
+        const globalBestBook =
+          outcome.books.find((book) => book.bookKey === outcome.pinnedActionability.globalBestBookKey) ??
+          outcome.books.find((book) => book.isBestPrice) ??
+          outcome.books[0];
+        return {
+          eventId: event.id,
+          matchup: `${event.awayTeam} @ ${event.homeTeam}`,
+          outcome: outcome.name,
+          score: outcome.opportunityScore,
+          confidenceLabel: outcome.confidenceLabel,
+          staleSummary: outcome.staleSummary,
+          edgePct: outcome.pinnedActionability.globalBestEdgePct,
+          fairPriceAmerican: globalBestBook?.fairPriceAmerican ?? outcome.fairAmerican,
+          marketPriceAmerican: globalBestBook?.marketPriceAmerican ?? outcome.bestPrice,
+          priceDeltaAmerican: globalBestBook?.priceDeltaAmerican ?? (outcome.bestPrice - outcome.fairAmerican),
+          marketImpliedProb: globalBestBook?.marketImpliedProb ?? 0,
+          fairImpliedProb: globalBestBook?.fairImpliedProb ?? outcome.fairProb,
+          probabilityGapPct: globalBestBook?.probabilityGapPct ?? 0,
+          priceValueDirection: globalBestBook?.priceValueDirection ?? "near_fair",
+          bestBook: outcome.bestBook,
+          timingLabel: outcome.timingSignal.label,
+          historySummary: outcome.historySummary,
+          pinnedActionable: outcome.pinnedActionability.actionable,
+          pinnedScore: outcome.pinnedActionability.pinnedScore
+        };
+      })
     )
     .sort((a, b) => Math.abs(b.edgePct) - Math.abs(a.edgePct) || b.score - a.score)
     .slice(0, 12);

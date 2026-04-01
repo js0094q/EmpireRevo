@@ -136,23 +136,23 @@ export function BoardShell({ board, league, mode = "board" }: BoardShellProps) {
             </p>
             <div className={styles.definitionRow}>
               <div className={styles.definitionItem}>
-                <span className={styles.definitionTerm}>Value</span>
-                <p className={styles.definitionCopy}>A price and probability mismatch where the number you can bet is better than what fair probability implies.</p>
+                <span className={styles.definitionTerm}>Price vs Fair</span>
+                <p className={styles.definitionCopy}>Whether the available line pays better, worse, or near the model fair line.</p>
               </div>
               <div className={styles.definitionItem}>
                 <span className={styles.definitionTerm}>Fair Value</span>
                 <p className={styles.definitionCopy}>The no-vig, weighted market estimate converted back into a fair line.</p>
               </div>
               <div className={styles.definitionItem}>
-                <span className={styles.definitionTerm}>Edge</span>
-                <p className={styles.definitionCopy}>The gap between an available sportsbook price and fair market probability.</p>
+                <span className={styles.definitionTerm}>Probability Gap</span>
+                <p className={styles.definitionCopy}>Market-implied probability minus fair-implied probability.</p>
               </div>
             </div>
             <div className={styles.edgePrimer}>
-              <h2 className={styles.edgePrimerTitle}>Why Edge matters</h2>
-              <p className={styles.edgePrimerCopy}>Winning a single bet is short-term variance. Consistently taking positive value is what drives long-term profit.</p>
+              <h2 className={styles.edgePrimerTitle}>Why Price Discipline Matters</h2>
+              <p className={styles.edgePrimerCopy}>High win probability is not enough. Long-term performance depends on consistently getting prices that beat fair value.</p>
               <p className={styles.edgePrimerExample}>
-                Example: Bet A can lose today with positive edge, and Bet B can win today with negative edge. Over time, repeatedly taking Bet A is the stronger strategy because the price is more favorable relative to probability.
+                Example: A favorite can still be a poor price when you lay extra juice. Track both payout value and model disagreement before entering.
               </p>
             </div>
           </section>
@@ -200,7 +200,7 @@ export function BoardShell({ board, league, mode = "board" }: BoardShellProps) {
               {sortBy === "score"
                 ? "Top Opportunities"
                 : sortBy === "edge"
-                  ? "Biggest Edge"
+                  ? "Largest Probability Gap"
                   : sortBy === "confidence"
                     ? "Most Stable Market"
                     : sortBy === "best"
@@ -220,7 +220,7 @@ export function BoardShell({ board, league, mode = "board" }: BoardShellProps) {
             ) : (
               <EmptyState
                 title="No games match the current filters"
-                message="Try a broader search, switch market, or clear the Positive Edge filter."
+                message="Try a broader search, switch market, or clear the Better Than Fair filter."
                 actionLabel="Reset filters"
                 onAction={() => {
                   setSearch("");

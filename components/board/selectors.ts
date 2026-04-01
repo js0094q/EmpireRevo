@@ -48,9 +48,8 @@ function eventMaxVisibleEdge(event: FairEvent, visibleBookKeys: Set<string>): nu
 }
 
 function eventHasPositiveEdge(event: FairEvent, visibleBookKeys: Set<string>): boolean {
-  return event.outcomes.some((outcome) =>
-    outcome.books.some((book) => visibleBookKeys.has(book.bookKey) && book.edgePct > 0)
-  );
+  if (!eventHasVisibleBook(event, visibleBookKeys)) return false;
+  return buildPickSummary(event).hasRecommendation;
 }
 
 function eventMatchesSideFilter(event: FairEvent, sideFilter: SideFilter): boolean {

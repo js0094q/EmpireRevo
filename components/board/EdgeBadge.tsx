@@ -5,16 +5,17 @@ import { cn } from "@/lib/ui/cn";
 export type EdgeTier = "strong" | "moderate" | "weak";
 
 export function getEdgeTier(edge: number): EdgeTier {
-  if (edge >= 1.5) return "strong";
-  if (edge >= 0.75) return "moderate";
+  const magnitude = Math.abs(edge);
+  if (magnitude >= 1.5) return "strong";
+  if (magnitude >= 0.75) return "moderate";
   return "weak";
 }
 
-export function getEdgeTierLabel(edge: number): "Strong Value" | "Moderate" | "Marginal" {
+export function getEdgeTierLabel(edge: number): "Large Gap" | "Medium Gap" | "Small Gap" {
   const tier = getEdgeTier(edge);
-  if (tier === "strong") return "Strong Value";
-  if (tier === "moderate") return "Moderate";
-  return "Marginal";
+  if (tier === "strong") return "Large Gap";
+  if (tier === "moderate") return "Medium Gap";
+  return "Small Gap";
 }
 
 export function EdgeBadge({
@@ -43,7 +44,7 @@ export function EdgeBadge({
         edgePct < 0 && styles.edgeBadgeNegative
       )}
     >
-      {`Edge ${prefix}${edgePct.toFixed(2)}%`}
+      {`Prob Gap ${prefix}${edgePct.toFixed(2)}pp`}
       {showTierLabel ? <span className={styles.edgeBadgeTier}>{getEdgeTierLabel(edgePct)}</span> : null}
     </Pill>
   );

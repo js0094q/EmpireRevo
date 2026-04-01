@@ -211,6 +211,7 @@ test("filterEvents side filter matches the displayed recommended pick side", () 
   underdogPick.outcomes[0].books[0].evPct = -0.2;
   underdogPick.outcomes[1].books[0].edgePct = 1.1;
   underdogPick.outcomes[1].books[0].evPct = 0.8;
+  underdogPick.outcomes[1].opportunityScore = underdogPick.outcomes[0].opportunityScore + 10;
 
   const baseOptions = {
     teamQuery: "",

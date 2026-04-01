@@ -157,10 +157,10 @@ export function rankOpportunity(params: RankParams): OpportunityRanking {
 
     if (params.valueTiming.edgeTrend === "worsening") {
       penalties.push({
-        reason: "Edge trend worsening",
+        reason: "Probability-gap trend worsening",
         delta: -calibration.ranking.historyAdjustments.worseningEdgePenalty
       });
-      appliedHistoryReasons.push("Historical edge is worsening");
+      appliedHistoryReasons.push("Historical probability gap is worsening");
     }
   }
 
@@ -172,7 +172,7 @@ export function rankOpportunity(params: RankParams): OpportunityRanking {
 
   const reasons: string[] = [];
   if (bestEdgePct >= calibration.ranking.reasonThresholds.edgePct) {
-    reasons.push(`Edge ${bestEdgePct.toFixed(2)}% at ${best?.title ?? "best book"}`);
+    reasons.push(`Probability gap ${bestEdgePct.toFixed(2)}pp at ${best?.title ?? "best book"}`);
   }
   if (params.confidence.sharpParticipation >= calibration.ranking.reasonThresholds.sharpParticipation) {
     reasons.push("Sharp books are participating");

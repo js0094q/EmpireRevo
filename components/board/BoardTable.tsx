@@ -21,7 +21,7 @@ export function BoardTable({ events, league, model, navContext }: BoardTableProp
       <div className={styles.tableHeader}>
         <div>
           <div className={styles.tableHeadTitle}>Market Pricing Board</div>
-          <div className={styles.tableHeadMeta}>Each row compares the best available market line against model fair value and edge.</div>
+          <div className={styles.tableHeadMeta}>Each row compares best available line, fair value, price vs fair, and probability gap.</div>
         </div>
       </div>
 
@@ -30,8 +30,8 @@ export function BoardTable({ events, league, model, navContext }: BoardTableProp
           <thead>
             <tr>
               <th>Matchup</th>
-              <th>Value Snapshot</th>
-              <th>Edge</th>
+              <th>Price Snapshot</th>
+              <th>Probability Gap</th>
               <th>Open</th>
             </tr>
           </thead>

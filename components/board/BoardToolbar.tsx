@@ -72,7 +72,7 @@ export function BoardToolbar({
       </div>
       <div className={styles.toolbarActions}>
         <Button active={positiveEdgeOnly} onClick={onTogglePositive}>
-          Positive Edge
+          Better Than Fair
         </Button>
         <Button variant="ghost" onClick={onRefresh}>
           Refresh

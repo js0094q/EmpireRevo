@@ -1,4 +1,10 @@
 import type { FairBoardResponse, FairEvent, FairOutcome, FairOutcomeBook } from "@/lib/server/odds/types";
+import {
+  buildPriceVsFairExplanation,
+  buildPriceVsFairMetrics,
+  type PriceValueDirection,
+  type PriceVsFairMetrics
+} from "@/lib/odds/priceValue";
 import { toEventRouteId } from "@/lib/server/odds/eventRoute";
 
 export type BoardMode = "board" | "games";
@@ -16,7 +22,7 @@ export type BoardNavigationContext = {
 
 export const SORT_OPTIONS: Array<{ value: BoardSortKey; label: string }> = [
   { value: "score", label: "Top Opportunities" },
-  { value: "edge", label: "Biggest Edge" },
+  { value: "edge", label: "Largest Probability Gap" },
   { value: "confidence", label: "Most Stable Market" },
   { value: "best", label: "Highest Listed Odds" },
   { value: "soonest", label: "Starting Soon" },
@@ -94,20 +100,24 @@ export function bestPriceBook(outcome: FairOutcome): FairOutcomeBook | null {
 }
 
 export type PickStatus = "Favorite" | "Underdog";
+export type RecommendationLabel = "Best Value" | "Model Lean" | "Near Fair";
 export type PickSummary = {
   outcome: FairOutcome;
   book: FairOutcomeBook | null;
-  label: "Best Value Line" | "Best Listed Line";
+  label: RecommendationLabel;
   status: PickStatus;
+  priceValueDirection: PriceValueDirection;
+  priceVsFair: PriceVsFairMetrics | null;
+  probabilityGapPct: number;
   hasRecommendation: boolean;
   whyThisPick: string;
 };
 
 export function recommendedOutcome(event: FairEvent): FairOutcome {
   return [...event.outcomes].sort((a, b) => {
-    const aEdge = bestPriceBook(a)?.edgePct ?? Number.NEGATIVE_INFINITY;
-    const bEdge = bestPriceBook(b)?.edgePct ?? Number.NEGATIVE_INFINITY;
-    return bEdge - aEdge || b.opportunityScore - a.opportunityScore;
+    const aGap = Math.abs(priceVsFairMetrics(a, bestPriceBook(a))?.probabilityGapPct ?? 0);
+    const bGap = Math.abs(priceVsFairMetrics(b, bestPriceBook(b))?.probabilityGapPct ?? 0);
+    return b.opportunityScore - a.opportunityScore || bGap - aGap;
   })[0]!;
 }
 
@@ -118,15 +128,52 @@ export function pickStatus(outcome: FairOutcome): PickStatus {
 }
 
 export function whyThisPickText(params: {
-  edgePct: number;
+  direction: PriceValueDirection;
   hasRecommendation: boolean;
+  probabilityGapPct: number;
 }): string {
   if (params.hasRecommendation) {
-    return "This line is priced more favorably than its fair market probability.";
+    return `Model and market both support this side at the available price. Probability gap ${formatProbabilityGap(params.probabilityGapPct)}.`;
   }
 
-  if (params.edgePct < 0) return "This line is priced less favorably than its fair market probability.";
-  return "This line is currently close to fair market probability.";
+  if (params.direction === "worse_than_fair") {
+    return `Model disagreement exists, but available payout is worse than fair. Probability gap ${formatProbabilityGap(params.probabilityGapPct)}.`;
+  }
+  return `Available payout is close to fair value. Probability gap ${formatProbabilityGap(params.probabilityGapPct)}.`;
+}
+
+function toFavoriteStatus(outcome: FairOutcome): "favorite" | "underdog" | "neutral" {
+  if (outcome.consensusDirection === "favored") return "favorite";
+  if (outcome.consensusDirection === "underdog") return "underdog";
+  return "neutral";
+}
+
+export function formatProbabilityGap(probabilityGapPct: number): string {
+  const rounded = Math.round(probabilityGapPct * 100) / 100;
+  const prefix = rounded > 0 ? "+" : "";
+  return `${prefix}${rounded.toFixed(2)}pp`;
+}
+
+export function priceVsFairMetrics(outcome: FairOutcome, book: FairOutcomeBook | null): PriceVsFairMetrics | null {
+  if (!book) return null;
+  return buildPriceVsFairMetrics({
+    marketPriceAmerican: Number.isFinite(book.marketPriceAmerican) ? Number(book.marketPriceAmerican) : book.priceAmerican,
+    fairPriceAmerican: Number.isFinite(book.fairPriceAmerican) ? Number(book.fairPriceAmerican) : outcome.fairAmerican,
+    marketImpliedProb: Number.isFinite(book.marketImpliedProb) ? book.marketImpliedProb : book.impliedProbNoVig,
+    fairImpliedProb: Number.isFinite(book.fairImpliedProb) ? book.fairImpliedProb : outcome.fairProb
+  });
+}
+
+export function recommendationLabelFromDirection(direction: PriceValueDirection): RecommendationLabel {
+  if (direction === "better_than_fair") return "Best Value";
+  if (direction === "worse_than_fair") return "Model Lean";
+  return "Near Fair";
+}
+
+export function formatPriceValueDirection(direction: PriceValueDirection): string {
+  if (direction === "better_than_fair") return "Better Than Fair";
+  if (direction === "worse_than_fair") return "Worse Than Fair";
+  return "Near Fair";
 }
 
 export function marketVsModelCopy(params: {
@@ -137,32 +184,40 @@ export function marketVsModelCopy(params: {
   const fairValue = formatOffer(params.market, params.outcome);
   if (!params.book) return `Market pricing is unavailable. Model fair value is ${fairValue}.`;
 
-  const marketValue = formatOffer(params.market, params.book);
-  const edgeLabel = `${params.book.edgePct > 0 ? "+" : ""}${params.book.edgePct.toFixed(2)}%`;
-  if (params.book.edgePct > 0) {
-    return `Available at ${marketValue} versus fair value ${fairValue}. Edge ${edgeLabel} indicates favorable pricing relative to probability.`;
-  }
-  if (params.book.edgePct < 0) {
-    return `Available at ${marketValue} versus fair value ${fairValue}. Edge ${edgeLabel} indicates less favorable pricing relative to probability.`;
-  }
-  return `Available at ${marketValue} versus fair value ${fairValue}. Edge is neutral, so pricing is near fair probability.`;
+  const metrics = priceVsFairMetrics(params.outcome, params.book);
+  if (!metrics) return `Market pricing is unavailable. Model fair value is ${fairValue}.`;
+
+  return buildPriceVsFairExplanation({
+    marketPriceAmerican: metrics.marketPriceAmerican,
+    fairPriceAmerican: metrics.fairPriceAmerican,
+    marketImpliedProb: metrics.marketImpliedProb,
+    fairImpliedProb: metrics.fairImpliedProb,
+    direction: metrics.priceValueDirection,
+    favoriteStatus: toFavoriteStatus(params.outcome)
+  });
 }
 
 export function buildOutcomeSummary(outcome: FairOutcome): PickSummary {
   const book = bestPriceBook(outcome);
   const status = pickStatus(outcome);
-  const edgePct = book?.edgePct ?? 0;
-  const hasRecommendation = edgePct > 0;
+  const priceVsFair = priceVsFairMetrics(outcome, book);
+  const direction = priceVsFair?.priceValueDirection ?? "near_fair";
+  const hasRecommendation = direction === "better_than_fair";
+  const probabilityGapPct = priceVsFair?.probabilityGapPct ?? 0;
 
   return {
     outcome,
     book,
-    label: hasRecommendation ? "Best Value Line" : "Best Listed Line",
+    label: recommendationLabelFromDirection(direction),
     status,
+    priceValueDirection: direction,
+    priceVsFair,
+    probabilityGapPct,
     hasRecommendation,
     whyThisPick: whyThisPickText({
-      edgePct,
-      hasRecommendation
+      direction,
+      hasRecommendation,
+      probabilityGapPct
     })
   };
 }

@@ -20,7 +20,7 @@ export function buildEditorNote(params: {
 
   const signalLabel = topGame && topSignal
     ? `${topGame.event.away.name} at ${topGame.event.home.name} (${topSignal.label} ${topSignal.evPct.toFixed(1)}% EV)`
-    : "No high-confidence edge currently stands out";
+    : "No high-confidence model dislocation currently stands out";
 
   return {
     headline: "Live Market Brief",
@@ -38,4 +38,4 @@ export function buildEditorNote(params: {
 }
 
 export const BOARD_DISCLAIMER =
-  "Market-based pricing, not predictions. All values are derived from real sportsbook data, adjusted for margin, and compared to fair market probability. Edge reflects pricing inefficiency, not guaranteed outcomes.";
+  "Market-based pricing, not predictions. All values are derived from real sportsbook data, adjusted for margin, and compared to fair market probability. Price vs Fair measures payout quality, while Probability Gap measures model disagreement.";

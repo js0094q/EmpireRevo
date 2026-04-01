@@ -19,6 +19,8 @@ import {
   formatMarketLabel,
   formatOffer,
   formatPoint,
+  formatPriceValueDirection,
+  formatProbabilityGap,
   marketVsModelCopy,
   type BoardMode,
   type BoardSideKey,
@@ -392,6 +394,8 @@ export default async function GamePage({
   const featuredOutcome = pickSummary.outcome;
   const featuredBook = pickSummary.book;
   const featuredBooks = sortBooks(featuredOutcome.books);
+  const priceVsFairLabel = featuredBook ? formatPriceValueDirection(pickSummary.priceValueDirection) : "--";
+  const probabilityGapLabel = featuredBook ? formatProbabilityGap(pickSummary.probabilityGapPct) : "--";
   const valueStatement = marketVsModelCopy({
     market: event.market,
     outcome: featuredOutcome,
@@ -503,16 +507,20 @@ export default async function GamePage({
 
               <div className={styles.pickMetrics}>
                 <div className={styles.pickMetric}>
-                  <span>Best Line</span>
+                  <span>Best Available Line</span>
                   <strong>{featuredBook ? `${formatOffer(event.market, featuredBook)} at ${featuredBook.title}` : "--"}</strong>
                 </div>
                 <div className={styles.pickMetric}>
-                  <span>Fair Value (No-Vig)</span>
+                  <span>Fair Value</span>
                   <strong>{`${formatOffer(event.market, featuredOutcome)} (model)`}</strong>
                 </div>
                 <div className={styles.pickMetric}>
-                  <span>Edge</span>
-                  <strong>{featuredBook ? `${featuredBook.edgePct > 0 ? "+" : ""}${featuredBook.edgePct.toFixed(2)}%` : "--"}</strong>
+                  <span>Price vs Fair</span>
+                  <strong>{priceVsFairLabel}</strong>
+                </div>
+                <div className={styles.pickMetric}>
+                  <span>Probability Gap</span>
+                  <strong>{probabilityGapLabel}</strong>
                 </div>
               </div>
 
@@ -603,7 +611,7 @@ export default async function GamePage({
 
             <p className={styles.contextNote}>{pressureSignals[0]?.explanation ?? "Observed history is still sparse for this market."}</p>
             <p className={styles.contextNote}>
-              Edge trend {valueTiming.edgeTrend}. Positive EV observed for {formatDurationLabel(valueTiming.positiveEvDurationSeconds)}.
+              Probability-gap trend {valueTiming.edgeTrend}. Positive EV observed for {formatDurationLabel(valueTiming.positiveEvDurationSeconds)}.
             </p>
 
             <EventTimelinePanel outcome={featuredOutcome.name} timeline={timeline} pressureSignals={pressureSignals} />
@@ -627,14 +635,18 @@ export default async function GamePage({
                 <strong>{featuredBook ? formatImpliedPercent(featuredBook.impliedProbNoVig) : "--"}</strong>
               </div>
               <div className={styles.contextMetric}>
-                <span>EV at Best Price</span>
+                <span>Probability Gap</span>
+                <strong>{probabilityGapLabel}</strong>
+              </div>
+              <div className={styles.contextMetric}>
+                <span>EV at Best Available</span>
                 <strong>{featuredBook ? `${featuredBook.evPct > 0 ? "+" : ""}${featuredBook.evPct.toFixed(2)}%` : "--"}</strong>
               </div>
             </div>
 
             <p className={styles.contextNote}>Vig is removed from each market before computing consensus fair probability and fair value.</p>
             <p className={styles.contextNote}>{methodologyCopy}</p>
-            <p className={styles.contextNote}>Edge reflects pricing inefficiency, not guaranteed outcomes.</p>
+            <p className={styles.contextNote}>Price vs Fair reflects payout quality; Probability Gap reflects model disagreement.</p>
 
             <div className={styles.backRow}>
               <Link href={backToBoardHref} className="app-link">

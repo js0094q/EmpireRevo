@@ -1,4 +1,5 @@
 import type { MarketKey } from "@/lib/odds/schemas";
+import { buildPriceVsFairMetrics, type PriceValueDirection } from "@/lib/odds/priceValue";
 import { americanToProbability } from "@/lib/server/odds/fairMath";
 import { toEventOddsList } from "@/lib/server/odds/normalize";
 import type { EventOdds, FairEvent, FairOutcome, FairOutcomeBook } from "@/lib/server/odds/types";
@@ -9,6 +10,13 @@ export type AggregatedSportsbookLine = {
   book: string;
   bookKey: string;
   odds: number;
+  fairPriceAmerican: number;
+  marketPriceAmerican: number;
+  priceDeltaAmerican: number;
+  marketImpliedProb: number;
+  fairImpliedProb: number;
+  probabilityGapPct: number;
+  priceValueDirection: PriceValueDirection;
   impliedProbability: number;
   noVigProbability: number;
   weight: number;
@@ -29,7 +37,18 @@ export type AggregatedOutcome = {
   sportsbooks: AggregatedSportsbookLine[];
   bestLine: { book: string; bookKey: string; odds: number; point?: number } | null;
   bestEv: AggregatedSportsbookLine | null;
-  edges: Array<{ book: string; edge: number; ev: number }>;
+  edges: Array<{
+    book: string;
+    edge: number;
+    ev: number;
+    fairPriceAmerican: number;
+    marketPriceAmerican: number;
+    priceDeltaAmerican: number;
+    marketImpliedProb: number;
+    fairImpliedProb: number;
+    probabilityGapPct: number;
+    priceValueDirection: PriceValueDirection;
+  }>;
 };
 
 export type AggregatedGame = {
@@ -106,14 +125,31 @@ function arrowForDirection(direction: "up" | "down" | "flat"): "▲" | "▼" | "
   return "–";
 }
 
-function mapBookToLine(book: FairOutcomeBook): AggregatedSportsbookLine {
+function mapBookToLine(book: FairOutcomeBook, fairOdds: number, fairProbability: number): AggregatedSportsbookLine {
   const impliedProbability = americanToProbability(book.priceAmerican);
+  const marketPriceAmerican = Number.isFinite(book.marketPriceAmerican) ? Number(book.marketPriceAmerican) : book.priceAmerican;
+  const fairPriceAmerican = Number.isFinite(book.fairPriceAmerican) ? Number(book.fairPriceAmerican) : fairOdds;
+  const marketImpliedProb = Number.isFinite(book.marketImpliedProb) ? Number(book.marketImpliedProb) : impliedProbability;
+  const fairImpliedProb = Number.isFinite(book.fairImpliedProb) ? Number(book.fairImpliedProb) : fairProbability;
+  const priceMetrics = buildPriceVsFairMetrics({
+    marketPriceAmerican,
+    fairPriceAmerican,
+    marketImpliedProb,
+    fairImpliedProb
+  });
   const lineMovement = book.movement?.move ?? 0;
   const movementDirection = directionFromDelta(lineMovement);
   return {
     book: book.title,
     bookKey: book.bookKey,
     odds: book.priceAmerican,
+    fairPriceAmerican,
+    marketPriceAmerican,
+    priceDeltaAmerican: Number.isFinite(book.priceDeltaAmerican) ? Number(book.priceDeltaAmerican) : priceMetrics.priceDeltaAmerican,
+    marketImpliedProb,
+    fairImpliedProb,
+    probabilityGapPct: Number.isFinite(book.probabilityGapPct) ? Number(book.probabilityGapPct) : priceMetrics.probabilityGapPct,
+    priceValueDirection: book.priceValueDirection ?? priceMetrics.priceValueDirection,
     impliedProbability,
     noVigProbability: book.impliedProbNoVig,
     weight: book.weight,
@@ -128,7 +164,7 @@ function mapBookToLine(book: FairOutcomeBook): AggregatedSportsbookLine {
 }
 
 function buildOutcome(event: FairEvent, outcome: FairOutcome): AggregatedOutcome {
-  const sportsbooks = outcome.books.map(mapBookToLine);
+  const sportsbooks = outcome.books.map((book) => mapBookToLine(book, outcome.fairAmerican, outcome.fairProb));
   const bestLineEntry = sportsbooks.find((line) => line.isBestPrice) || sportsbooks[0] || null;
   const bestEv = sportsbooks.reduce<AggregatedSportsbookLine | null>((best, candidate) => {
     if (!best || candidate.ev > best.ev) return candidate;
@@ -136,7 +172,18 @@ function buildOutcome(event: FairEvent, outcome: FairOutcome): AggregatedOutcome
   }, null);
   const edges = sportsbooks
     .filter((line) => line.edge > 0)
-    .map((line) => ({ book: line.book, edge: line.edge, ev: line.ev }));
+    .map((line) => ({
+      book: line.book,
+      edge: line.edge,
+      ev: line.ev,
+      fairPriceAmerican: line.fairPriceAmerican,
+      marketPriceAmerican: line.marketPriceAmerican,
+      priceDeltaAmerican: line.priceDeltaAmerican,
+      marketImpliedProb: line.marketImpliedProb,
+      fairImpliedProb: line.fairImpliedProb,
+      probabilityGapPct: line.probabilityGapPct,
+      priceValueDirection: line.priceValueDirection
+    }));
 
   return {
     name: outcome.name,

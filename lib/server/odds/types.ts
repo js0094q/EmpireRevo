@@ -1,4 +1,5 @@
 import type { BookTier, MarketKey } from "@/lib/odds/schemas";
+import type { PriceValueDirection } from "@/lib/odds/priceValue";
 import type { CalibrationMeta, OddsCalibration } from "@/lib/server/odds/calibration";
 
 export type BookKey = string;
@@ -61,6 +62,13 @@ export type FairOutcomeBook = {
   isSharpBook: boolean;
   weight: number;
   priceAmerican: number;
+  fairPriceAmerican?: number;
+  marketPriceAmerican?: number;
+  priceDeltaAmerican?: number;
+  marketImpliedProb?: number;
+  fairImpliedProb?: number;
+  probabilityGapPct?: number;
+  priceValueDirection?: PriceValueDirection;
   impliedProb: number;
   impliedProbNoVig: number;
   edgePct: number;
@@ -263,6 +271,13 @@ export type FairBoardOpportunity = {
   confidenceLabel: "High Confidence" | "Moderate Confidence" | "Thin Market" | "Stale Market" | "Limited Sharp Coverage";
   staleSummary: string;
   edgePct: number;
+  fairPriceAmerican?: number;
+  marketPriceAmerican?: number;
+  priceDeltaAmerican?: number;
+  marketImpliedProb?: number;
+  fairImpliedProb?: number;
+  probabilityGapPct?: number;
+  priceValueDirection?: PriceValueDirection;
   bestBook: string;
   timingLabel: TimingSignalLabel;
   historySummary?: string;

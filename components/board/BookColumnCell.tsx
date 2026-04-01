@@ -2,7 +2,7 @@ import type { FairEvent, FairOutcomeBook } from "@/lib/server/odds/types";
 import styles from "./BoardShell.module.css";
 import { EdgeBadge, getEdgeTierLabel } from "@/components/board/EdgeBadge";
 import { Pill } from "@/components/ui/Pill";
-import { formatOffer } from "@/components/board/board-helpers";
+import { formatOffer, formatPriceValueDirection } from "@/components/board/board-helpers";
 import { cn } from "@/lib/ui/cn";
 
 export function BookColumnCell({
@@ -16,10 +16,14 @@ export function BookColumnCell({
 }) {
   const isSharpBook = book.isSharpBook || book.tier === "sharp";
   const edgeContext =
-    book.edgePct >= 0
-      ? "Priced more favorably than fair market probability"
-      : "Priced less favorably than fair market probability";
-  const edgeTierLabel = book.edgePct >= 0 ? getEdgeTierLabel(book.edgePct) : null;
+    book.priceValueDirection === "better_than_fair"
+      ? "Available price is better than fair value"
+      : book.priceValueDirection === "worse_than_fair"
+        ? "Available price is worse than fair value"
+        : "Available price is near fair value";
+  const direction = book.priceValueDirection ?? "near_fair";
+  const probabilityGapPct = Number.isFinite(book.probabilityGapPct) ? Number(book.probabilityGapPct) : book.edgePct;
+  const edgeTierLabel = getEdgeTierLabel(probabilityGapPct);
 
   return (
     <div className={cn(styles.detailRow, book.isBestPrice && styles.detailRowBest, isSharpBook && styles.detailRowSharp)}>
@@ -43,11 +47,11 @@ export function BookColumnCell({
       </div>
       <div className={styles.bookOdds}>{formatOffer(event.market, book)}</div>
       <div className={styles.edgeStack}>
-        <EdgeBadge edgePct={book.edgePct} />
+        <EdgeBadge edgePct={probabilityGapPct} />
         {edgeTierLabel ? <span className={styles.edgeTierHint}>{edgeTierLabel}</span> : null}
       </div>
       <div className={styles.rateNote}>
-        <span className={styles.bookMeta}>{edgeContext}</span>
+        <span className={styles.bookMeta}>{`${formatPriceValueDirection(direction)} · ${edgeContext}`}</span>
         {!compact && book.staleSummary ? <span className={styles.bookMeta}>{` · ${book.staleSummary}`}</span> : null}
       </div>
     </div>

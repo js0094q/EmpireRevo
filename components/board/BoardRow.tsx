@@ -3,7 +3,15 @@ import Link from "next/link";
 import type { FairEvent } from "@/lib/server/odds/types";
 import styles from "./BoardShell.module.css";
 import { EdgeBadge } from "@/components/board/EdgeBadge";
-import { buildPickSummary, formatCommenceTime, formatMarketLabel, formatOffer, marketVsModelCopy } from "@/components/board/board-helpers";
+import {
+  buildPickSummary,
+  formatCommenceTime,
+  formatMarketLabel,
+  formatOffer,
+  formatPriceValueDirection,
+  formatProbabilityGap,
+  marketVsModelCopy
+} from "@/components/board/board-helpers";
 import { cn } from "@/lib/ui/cn";
 import { TeamAvatar } from "@/components/board/TeamAvatar";
 
@@ -14,7 +22,7 @@ type BoardRowProps = {
 
 function BoardRowComponent({ event, detailHref }: BoardRowProps) {
   const pick = buildPickSummary(event);
-  const edgePct = pick.book?.edgePct ?? 0;
+  const probabilityGapPct = pick.probabilityGapPct;
   const marketPriceLabel = pick.book ? `${formatOffer(event.market, pick.book)} at ${pick.book.title}` : "--";
   const fairValueLabel = `${formatOffer(event.market, pick.outcome)} (model)`;
   const valueStatement = marketVsModelCopy({
@@ -27,7 +35,13 @@ function BoardRowComponent({ event, detailHref }: BoardRowProps) {
     <tr
       className={cn(
         styles.tableRow,
-        pick.book ? (edgePct >= 0 ? styles.tableRowPositive : styles.tableRowNegative) : null
+        pick.book
+          ? pick.priceValueDirection === "better_than_fair"
+            ? styles.tableRowPositive
+            : pick.priceValueDirection === "worse_than_fair"
+              ? styles.tableRowNegative
+              : null
+          : null
       )}
     >
       <td>
@@ -54,8 +68,12 @@ function BoardRowComponent({ event, detailHref }: BoardRowProps) {
           <strong className={styles.pickOutcomeName}>{pick.outcome.name}</strong>
           <div className={styles.pickLineValue}>{pick.book ? formatOffer(event.market, pick.book) : "--"}</div>
           <div className={styles.summaryStatRow}>
-            <span className={styles.cellLabel}>Edge</span>
-            <span className={styles.edgeInlineValue}>{pick.book ? `${edgePct > 0 ? "+" : ""}${edgePct.toFixed(2)}%` : "--"}</span>
+            <span className={styles.cellLabel}>Price vs Fair</span>
+            <span className={styles.edgeInlineValue}>{pick.book ? formatPriceValueDirection(pick.priceValueDirection) : "--"}</span>
+          </div>
+          <div className={styles.summaryStatRow}>
+            <span className={styles.cellLabel}>Probability Gap</span>
+            <span className={styles.edgeInlineValue}>{pick.book ? formatProbabilityGap(probabilityGapPct) : "--"}</span>
           </div>
           <div className={styles.marketModelMeta}>
             <span>
@@ -71,8 +89,8 @@ function BoardRowComponent({ event, detailHref }: BoardRowProps) {
       </td>
       <td>
         <div className={styles.edgeCell}>
-          {pick.book ? <EdgeBadge edgePct={pick.book.edgePct} size="lg" /> : <span className={styles.cellValue}>--</span>}
-          <span className={styles.metaText}>Edge</span>
+          {pick.book ? <EdgeBadge edgePct={pick.probabilityGapPct} size="lg" /> : <span className={styles.cellValue}>--</span>}
+          <span className={styles.metaText}>Probability Gap</span>
         </div>
       </td>
       <td className={styles.ctaCell}>

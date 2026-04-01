@@ -1,4 +1,5 @@
 import type { ConfidenceAssessment } from "@/lib/server/odds/confidence";
+import { buildPriceVsFairExplanation, buildPriceVsFairMetrics } from "@/lib/odds/priceValue";
 import type { OpportunityRanking } from "@/lib/server/odds/ranking";
 import type { FairOutcomeBook, TimingSignal } from "@/lib/server/odds/types";
 
@@ -16,9 +17,24 @@ export function buildOpportunityExplanation(params: ExplanationParams): string {
   const clauses: string[] = [];
 
   if (bestBook) {
-    clauses.push(`${bestBook.title} offers ${params.outcomeName} with ${params.ranking.bestEdgePct.toFixed(2)}% edge`);
+    const metrics = buildPriceVsFairMetrics({
+      marketPriceAmerican: Number.isFinite(bestBook.marketPriceAmerican) ? Number(bestBook.marketPriceAmerican) : bestBook.priceAmerican,
+      fairPriceAmerican: Number.isFinite(bestBook.fairPriceAmerican) ? Number(bestBook.fairPriceAmerican) : bestBook.priceAmerican,
+      marketImpliedProb: Number.isFinite(bestBook.marketImpliedProb) ? Number(bestBook.marketImpliedProb) : bestBook.impliedProbNoVig,
+      fairImpliedProb: Number.isFinite(bestBook.fairImpliedProb) ? Number(bestBook.fairImpliedProb) : bestBook.impliedProbNoVig
+    });
+    const favoriteStatus = metrics.fairPriceAmerican < 0 ? "favorite" : metrics.fairPriceAmerican > 0 ? "underdog" : "neutral";
+    const priceSummary = buildPriceVsFairExplanation({
+      marketPriceAmerican: metrics.marketPriceAmerican,
+      fairPriceAmerican: metrics.fairPriceAmerican,
+      marketImpliedProb: metrics.marketImpliedProb,
+      fairImpliedProb: metrics.fairImpliedProb,
+      direction: metrics.priceValueDirection,
+      favoriteStatus
+    }).replace(/\.$/, "");
+    clauses.push(`${bestBook.title} on ${params.outcomeName}: ${priceSummary}`);
   } else {
-    clauses.push(`${params.outcomeName} shows a measurable pricing edge`);
+    clauses.push(`${params.outcomeName} shows measurable model disagreement`);
   }
 
   if (params.confidence.label === "High Confidence") {
@@ -48,9 +64,9 @@ export function buildOpportunityExplanation(params: ExplanationParams): string {
 
   if (Math.abs(params.ranking.sharpDeviation) >= 1.2) {
     if (params.ranking.sharpDeviation > 0) {
-      clauses.push("sharp books are more favorable than retail consensus");
+      clauses.push("sharp books imply a better price than retail consensus");
     } else {
-      clauses.push("retail pricing is richer than sharp consensus");
+      clauses.push("retail books are pricing this side richer than sharp consensus");
     }
   }
 
