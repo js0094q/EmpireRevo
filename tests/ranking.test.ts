@@ -290,3 +290,50 @@ test("ranking penalizes when sharp books disagree with displayed edge", () => {
 
   assert.ok(disagreeing.score < aligned.score);
 });
+
+test("ranking applies longshot-thin guardrails before promoting top opportunities", () => {
+  const longshotThin = rankOpportunity({
+    market: "h2h",
+    confidence: thinConfidence,
+    books: [
+      makeBook({
+        bookKey: "book-longshot",
+        title: "Longshot Book",
+        edgePct: 2.6,
+        evPct: 3.8,
+        marketPriceAmerican: 950,
+        fairPriceAmerican: 848,
+        marketImpliedProb: 0.09,
+        fairImpliedProb: 0.1053,
+        probabilityGapPct: -1.53,
+        priceValueDirection: "better_than_fair"
+      })
+    ],
+    contributingBooks: 4,
+    totalBooks: 8
+  });
+
+  const actionable = rankOpportunity({
+    market: "h2h",
+    confidence: highConfidence,
+    books: [
+      makeBook({
+        bookKey: "book-actionable",
+        title: "Actionable Book",
+        edgePct: 1.8,
+        evPct: 3.1,
+        marketPriceAmerican: 150,
+        fairPriceAmerican: 120,
+        marketImpliedProb: 0.4,
+        fairImpliedProb: 0.455,
+        probabilityGapPct: -5.5,
+        priceValueDirection: "better_than_fair"
+      })
+    ],
+    contributingBooks: 4,
+    totalBooks: 8
+  });
+
+  assert.ok(actionable.score > longshotThin.score);
+  assert.ok(longshotThin.score < 40);
+});

@@ -1,4 +1,9 @@
 import type { MarketKey } from "@/lib/odds/schemas";
+import {
+  buildPriceVsFairMetrics,
+  classifyOpportunityStrength,
+  computeActionableValueScore
+} from "@/lib/odds/priceValue";
 import { getOddsCalibration, type OddsCalibration } from "@/lib/server/odds/calibration";
 import type { ConfidenceAssessment } from "@/lib/server/odds/confidence";
 import { getOddsHistoryConfig } from "@/lib/server/odds/historyConfig";
@@ -103,6 +108,51 @@ export function rankOpportunity(params: RankParams): OpportunityRanking {
       componentContributions.sharpDeviation);
 
   const penalties: Array<{ reason: string; delta: number }> = [];
+  if (best) {
+    const metrics = buildPriceVsFairMetrics({
+      marketPriceAmerican: Number.isFinite(best.marketPriceAmerican) ? Number(best.marketPriceAmerican) : best.priceAmerican,
+      fairPriceAmerican: Number.isFinite(best.fairPriceAmerican) ? Number(best.fairPriceAmerican) : best.priceAmerican,
+      marketImpliedProb: Number.isFinite(best.marketImpliedProb) ? Number(best.marketImpliedProb) : best.impliedProbNoVig,
+      fairImpliedProb: Number.isFinite(best.fairImpliedProb) ? Number(best.fairImpliedProb) : best.impliedProbNoVig
+    });
+    const actionableValueScore = computeActionableValueScore({
+      marketPrice: metrics.marketPriceAmerican,
+      fairPrice: metrics.fairPriceAmerican,
+      marketImpliedProb: metrics.marketImpliedProb,
+      fairImpliedProb: metrics.fairImpliedProb,
+      probabilityGapPctPoints: metrics.probabilityGapPct,
+      priceValueDirection: metrics.priceValueDirection
+    });
+    const strength = classifyOpportunityStrength({
+      marketPrice: metrics.marketPriceAmerican,
+      fairPrice: metrics.fairPriceAmerican,
+      marketImpliedProb: metrics.marketImpliedProb,
+      fairImpliedProb: metrics.fairImpliedProb,
+      probabilityGapPctPoints: metrics.probabilityGapPct,
+      priceValueDirection: metrics.priceValueDirection
+    });
+
+    // Actionability should directly influence ranking so thin longshots cannot dominate.
+    score += Math.max(-6, Math.min(12, actionableValueScore * 1.5));
+
+    if (metrics.priceValueDirection !== "better_than_fair") {
+      penalties.push({ reason: "Available price not better than fair", delta: -4 });
+    } else if (strength === "longshot_thin") {
+      penalties.push({ reason: "Longshot profile with thin signal", delta: -45 });
+    } else if (strength === "thin") {
+      penalties.push({ reason: "Thin value signal", delta: -12 });
+    } else if (strength === "moderate") {
+      score += 1.5;
+    } else if (strength === "strong") {
+      score += 3;
+    }
+
+    if (actionableValueScore < 0) {
+      penalties.push({ reason: "Negative actionable-value score", delta: -6 });
+    } else if (actionableValueScore < 2) {
+      penalties.push({ reason: "Low actionable-value score", delta: -4 });
+    }
+  }
   if (coverageRatio < calibration.ranking.penalties.sparseCoverageThreshold) {
     penalties.push({ reason: "Sparse market coverage", delta: -calibration.ranking.penalties.sparseCoveragePenalty });
   }

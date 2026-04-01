@@ -118,7 +118,7 @@ test("worse favorite price is labeled as model lean, not best value", () => {
   assert.doesNotMatch(explanation, /best value/i);
 });
 
-test("better underdog price is labeled as best value", () => {
+test("better underdog price can remain better-than-fair without best-value promotion", () => {
   const underdogOutcome = buildOutcome({
     name: "Underdog Side",
     fairProb: 0.4292,
@@ -144,7 +144,7 @@ test("better underdog price is labeled as best value", () => {
     book: underdogOutcome.books[0]!
   });
 
-  assert.equal(summary.label, "Best Value");
+  assert.equal(summary.label, "Better Than Fair");
   assert.equal(summary.hasRecommendation, true);
   assert.match(explanation, /better price than fair/i);
 });
@@ -171,4 +171,35 @@ test("event-level recommendation label follows price-vs-fair direction", () => {
 
   const summary = buildPickSummary(buildEvent(favoriteOutcome));
   assert.equal(summary.label, "Model Lean");
+});
+
+test("longshot better-than-fair profile uses longshot price advantage badge", () => {
+  const longshotOutcome = buildOutcome({
+    name: "Longshot Side",
+    fairProb: 0.1053,
+    fairAmerican: 848,
+    consensusDirection: "underdog",
+    books: [
+      buildBook({
+        priceAmerican: 950,
+        impliedProbNoVig: 0.09,
+        edgePct: 1.53,
+        marketPriceAmerican: 950,
+        fairPriceAmerican: 848,
+        marketImpliedProb: 0.09,
+        fairImpliedProb: 0.1053
+      })
+    ]
+  });
+
+  const summary = buildOutcomeSummary(longshotOutcome);
+  const explanation = marketVsModelCopy({
+    market: "h2h",
+    outcome: longshotOutcome,
+    book: longshotOutcome.books[0]!
+  });
+
+  assert.equal(summary.label, "Longshot Price Advantage");
+  assert.notEqual(summary.label, "Best Value");
+  assert.match(explanation, /longshot|thin/i);
 });

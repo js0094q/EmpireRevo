@@ -161,6 +161,41 @@ test("sortEvents sorts by opportunity score", () => {
   assert.deepEqual(sorted.map((event) => event.id), ["b", "a"]);
 });
 
+test("sortEvents score ranking demotes thin longshot artifacts", () => {
+  const longshot = mockEvent("longshot", { edge: 2.4 });
+  longshot.opportunityScore = 92;
+  longshot.outcomes[0].opportunityScore = 92;
+  longshot.outcomes[0].fairProb = 0.1053;
+  longshot.outcomes[0].fairAmerican = 848;
+  longshot.outcomes[0].consensusDirection = "underdog";
+  longshot.outcomes[0].books[0].priceAmerican = 950;
+  longshot.outcomes[0].books[0].marketPriceAmerican = 950;
+  longshot.outcomes[0].books[0].fairPriceAmerican = 848;
+  longshot.outcomes[0].books[0].marketImpliedProb = 0.09;
+  longshot.outcomes[0].books[0].fairImpliedProb = 0.1053;
+  longshot.outcomes[0].books[0].probabilityGapPct = -1.53;
+  longshot.outcomes[1].opportunityScore = 10;
+  longshot.outcomes[1].books[0].edgePct = -2;
+
+  const strong = mockEvent("strong", { edge: 1.2 });
+  strong.opportunityScore = 70;
+  strong.outcomes[0].opportunityScore = 70;
+  strong.outcomes[0].fairProb = 0.455;
+  strong.outcomes[0].fairAmerican = 120;
+  strong.outcomes[0].consensusDirection = "underdog";
+  strong.outcomes[0].books[0].priceAmerican = 150;
+  strong.outcomes[0].books[0].marketPriceAmerican = 150;
+  strong.outcomes[0].books[0].fairPriceAmerican = 120;
+  strong.outcomes[0].books[0].marketImpliedProb = 0.4;
+  strong.outcomes[0].books[0].fairImpliedProb = 0.455;
+  strong.outcomes[0].books[0].probabilityGapPct = -5.5;
+  strong.outcomes[1].opportunityScore = 8;
+  strong.outcomes[1].books[0].edgePct = -1.1;
+
+  const sorted = sortEvents([longshot, strong], "score");
+  assert.deepEqual(sorted.map((event) => event.id), ["strong", "longshot"]);
+});
+
 test("orderBooksForGrid keeps pinned books first", () => {
   const ordered = orderBooksForGrid(
     [
@@ -207,8 +242,12 @@ test("filterEvents can require stale opportunities and pinned-book actionability
 test("filterEvents side filter matches the displayed recommended pick side", () => {
   const favoritePick = mockEvent("favorite-pick", { edge: 1.2 });
   const underdogPick = mockEvent("underdog-pick", { edge: 1.2 });
+  underdogPick.outcomes[0].fairAmerican = -108;
+  underdogPick.outcomes[0].books[0].priceAmerican = -130;
   underdogPick.outcomes[0].books[0].edgePct = -0.4;
   underdogPick.outcomes[0].books[0].evPct = -0.2;
+  underdogPick.outcomes[1].fairAmerican = 108;
+  underdogPick.outcomes[1].books[0].priceAmerican = 130;
   underdogPick.outcomes[1].books[0].edgePct = 1.1;
   underdogPick.outcomes[1].books[0].evPct = 0.8;
   underdogPick.outcomes[1].opportunityScore = underdogPick.outcomes[0].opportunityScore + 10;
@@ -243,11 +282,15 @@ test("filterEvents side filter matches the displayed recommended pick side", () 
   assert.deepEqual(underdogsOnly.map((event) => event.id), ["underdog-pick"]);
 });
 
-test("filterEvents positive-edge filter follows the displayed pick edge instead of EV", () => {
+test("filterEvents positive toggle follows better-than-fair recommendation instead of EV", () => {
   const edgeOnly = mockEvent("edge-only", { edge: 1.1, ev: -0.4 });
   const evOnly = mockEvent("ev-only", { edge: -0.2, ev: 1.6 });
+  evOnly.outcomes[0].fairAmerican = -108;
+  evOnly.outcomes[0].books[0].priceAmerican = -130;
   evOnly.outcomes[0].books[0].edgePct = -0.2;
   evOnly.outcomes[0].books[0].evPct = 1.6;
+  evOnly.outcomes[1].fairAmerican = 108;
+  evOnly.outcomes[1].books[0].priceAmerican = 100;
   evOnly.outcomes[1].books[0].edgePct = -0.6;
   evOnly.outcomes[1].books[0].evPct = -0.3;
 

@@ -1,5 +1,5 @@
 import type { ConfidenceAssessment } from "@/lib/server/odds/confidence";
-import { buildPriceVsFairExplanation, buildPriceVsFairMetrics } from "@/lib/odds/priceValue";
+import { buildPriceVsFairExplanation, buildPriceVsFairMetrics, classifyOpportunityStrength } from "@/lib/odds/priceValue";
 import type { OpportunityRanking } from "@/lib/server/odds/ranking";
 import type { FairOutcomeBook, TimingSignal } from "@/lib/server/odds/types";
 
@@ -23,6 +23,14 @@ export function buildOpportunityExplanation(params: ExplanationParams): string {
       marketImpliedProb: Number.isFinite(bestBook.marketImpliedProb) ? Number(bestBook.marketImpliedProb) : bestBook.impliedProbNoVig,
       fairImpliedProb: Number.isFinite(bestBook.fairImpliedProb) ? Number(bestBook.fairImpliedProb) : bestBook.impliedProbNoVig
     });
+    const strength = classifyOpportunityStrength({
+      marketPrice: metrics.marketPriceAmerican,
+      fairPrice: metrics.fairPriceAmerican,
+      marketImpliedProb: metrics.marketImpliedProb,
+      fairImpliedProb: metrics.fairImpliedProb,
+      probabilityGapPctPoints: metrics.probabilityGapPct,
+      priceValueDirection: metrics.priceValueDirection
+    });
     const favoriteStatus = metrics.fairPriceAmerican < 0 ? "favorite" : metrics.fairPriceAmerican > 0 ? "underdog" : "neutral";
     const priceSummary = buildPriceVsFairExplanation({
       marketPriceAmerican: metrics.marketPriceAmerican,
@@ -30,6 +38,7 @@ export function buildOpportunityExplanation(params: ExplanationParams): string {
       marketImpliedProb: metrics.marketImpliedProb,
       fairImpliedProb: metrics.fairImpliedProb,
       direction: metrics.priceValueDirection,
+      strength,
       favoriteStatus
     }).replace(/\.$/, "");
     clauses.push(`${bestBook.title} on ${params.outcomeName}: ${priceSummary}`);

@@ -1,5 +1,5 @@
 import type { BookTier, MarketKey } from "@/lib/odds/schemas";
-import type { PriceValueDirection } from "@/lib/odds/priceValue";
+import type { OpportunityStrength, PriceValueDirection, RecommendationBadge } from "@/lib/odds/priceValue";
 import type { CalibrationMeta, OddsCalibration } from "@/lib/server/odds/calibration";
 
 export type BookKey = string;
@@ -278,6 +278,9 @@ export type FairBoardOpportunity = {
   fairImpliedProb?: number;
   probabilityGapPct?: number;
   priceValueDirection?: PriceValueDirection;
+  opportunityStrength?: OpportunityStrength;
+  recommendationBadge?: RecommendationBadge;
+  actionableValueScore?: number;
   bestBook: string;
   timingLabel: TimingSignalLabel;
   historySummary?: string;

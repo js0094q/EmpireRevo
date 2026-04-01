@@ -102,7 +102,9 @@ test("buildFairBoard produces a weighted fair moneyline", async () => {
   assert.ok(firstOutcome.books.some((book) => book.isBestPrice));
   assert.ok(board.events[0].maxAbsEdgePct > 0);
   assert.ok(board.topOpportunities.length > 0);
-  assert.ok(Math.abs(board.topOpportunities[0]?.edgePct ?? 0) >= Math.abs(board.topOpportunities[1]?.edgePct ?? 0));
+  if ((board.topOpportunities[0]?.actionableValueScore ?? 0) !== (board.topOpportunities[1]?.actionableValueScore ?? 0)) {
+    assert.ok((board.topOpportunities[0]?.actionableValueScore ?? 0) >= (board.topOpportunities[1]?.actionableValueScore ?? 0));
+  }
 
   const sampleBook = firstOutcome.books[0]!;
   const expectedEdge = (firstOutcome.fairProb - sampleBook.impliedProbNoVig) * 100;

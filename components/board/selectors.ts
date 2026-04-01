@@ -173,6 +173,23 @@ function qualityAdjustedOpportunityScore(event: FairEvent): number {
   return score;
 }
 
+function eventDecisionScore(event: FairEvent): number {
+  const pick = buildPickSummary(event);
+  let score = qualityAdjustedOpportunityScore(event) + pick.actionableValueScore;
+
+  if (pick.badge === "best_value") score += 8;
+  if (pick.badge === "better_than_fair") score += 3;
+  if (pick.badge === "model_lean") score += 1;
+  if (pick.badge === "longshot_price_advantage") score -= 4;
+  if (pick.badge === "none") score -= 2;
+
+  if (pick.opportunityStrength === "strong") score += 2;
+  if (pick.opportunityStrength === "longshot_thin") score -= 5;
+  if (pick.opportunityStrength === "thin") score -= 2;
+
+  return score;
+}
+
 export function filterEvents(events: FairEvent[], options: EventFilterOptions): FairEvent[] {
   const query = options.teamQuery.trim().toLowerCase();
   const now = Date.now();
@@ -265,7 +282,7 @@ export function sortEvents(
       const bBucket = kickoffBucket(Number.isFinite(bKickoff) ? bKickoff : Number.MAX_SAFE_INTEGER, now);
       if (aBucket !== bBucket) return aBucket - bBucket;
 
-      const scoreDiff = qualityAdjustedOpportunityScore(b) - qualityAdjustedOpportunityScore(a);
+      const scoreDiff = eventDecisionScore(b) - eventDecisionScore(a);
       if (Math.abs(scoreDiff) > 0.0001) return scoreDiff;
 
       const kickoffDiff = (Number.isFinite(aKickoff) ? aKickoff : Number.MAX_SAFE_INTEGER) - (Number.isFinite(bKickoff) ? bKickoff : Number.MAX_SAFE_INTEGER);
@@ -325,7 +342,11 @@ export function sortEvents(
   }
 
   if (sortBy === "score") {
-    return [...events].sort((a, b) => b.opportunityScore - a.opportunityScore);
+    return [...events].sort((a, b) => {
+      const decisionDiff = eventDecisionScore(b) - eventDecisionScore(a);
+      if (Math.abs(decisionDiff) > 0.0001) return decisionDiff;
+      return b.opportunityScore - a.opportunityScore;
+    });
   }
 
   if (sortBy === "edge") {

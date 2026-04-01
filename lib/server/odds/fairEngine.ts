@@ -1,5 +1,10 @@
 import type { LeagueKey, MarketKey, NormalizedEventOdds } from "@/lib/odds/schemas";
-import { buildPriceVsFairMetrics } from "@/lib/odds/priceValue";
+import {
+  buildPriceVsFairMetrics,
+  classifyOpportunityStrength,
+  computeActionableValueScore,
+  deriveRecommendationBadge
+} from "@/lib/odds/priceValue";
 import { getCalibrationMeta, getOddsCalibration, type OddsCalibration } from "@/lib/server/odds/calibration";
 import type {
   FairBoardResponse,
@@ -451,6 +456,26 @@ function buildOutcomeBooks(params: {
       marketImpliedProb: implied,
       fairImpliedProb: params.fairProb
     });
+    const opportunityStrength = classifyOpportunityStrength({
+      marketPrice: priceMetrics.marketPriceAmerican,
+      fairPrice: priceMetrics.fairPriceAmerican,
+      marketImpliedProb: priceMetrics.marketImpliedProb,
+      fairImpliedProb: priceMetrics.fairImpliedProb,
+      probabilityGapPctPoints: priceMetrics.probabilityGapPct,
+      priceValueDirection: priceMetrics.priceValueDirection
+    });
+    const actionableValueScore = computeActionableValueScore({
+      marketPrice: priceMetrics.marketPriceAmerican,
+      fairPrice: priceMetrics.fairPriceAmerican,
+      marketImpliedProb: priceMetrics.marketImpliedProb,
+      fairImpliedProb: priceMetrics.fairImpliedProb,
+      probabilityGapPctPoints: priceMetrics.probabilityGapPct,
+      priceValueDirection: priceMetrics.priceValueDirection
+    });
+    const recommendationBadge = deriveRecommendationBadge({
+      priceValueDirection: priceMetrics.priceValueDirection,
+      strength: opportunityStrength
+    });
     return {
       bookKey: book.bookKey,
       title: book.title,
@@ -465,6 +490,9 @@ function buildOutcomeBooks(params: {
       fairImpliedProb: priceMetrics.fairImpliedProb,
       probabilityGapPct: priceMetrics.probabilityGapPct,
       priceValueDirection: priceMetrics.priceValueDirection,
+      opportunityStrength,
+      recommendationBadge,
+      actionableValueScore,
       impliedProb: outcome.impliedProb,
       impliedProbNoVig: implied,
       edgePct: probabilityEdge,
@@ -934,6 +962,27 @@ function deriveTopOpportunities(events: FairEvent[]): FairBoardResponse["topOppo
           outcome.books.find((book) => book.bookKey === outcome.pinnedActionability.globalBestBookKey) ??
           outcome.books.find((book) => book.isBestPrice) ??
           outcome.books[0];
+        const opportunityStrength = classifyOpportunityStrength({
+          marketPrice: globalBestBook?.marketPriceAmerican ?? outcome.bestPrice,
+          fairPrice: globalBestBook?.fairPriceAmerican ?? outcome.fairAmerican,
+          marketImpliedProb: globalBestBook?.marketImpliedProb ?? 0,
+          fairImpliedProb: globalBestBook?.fairImpliedProb ?? outcome.fairProb,
+          probabilityGapPctPoints: globalBestBook?.probabilityGapPct ?? 0,
+          priceValueDirection: globalBestBook?.priceValueDirection ?? "near_fair"
+        });
+        const actionableValueScore = computeActionableValueScore({
+          marketPrice: globalBestBook?.marketPriceAmerican ?? outcome.bestPrice,
+          fairPrice: globalBestBook?.fairPriceAmerican ?? outcome.fairAmerican,
+          marketImpliedProb: globalBestBook?.marketImpliedProb ?? 0,
+          fairImpliedProb: globalBestBook?.fairImpliedProb ?? outcome.fairProb,
+          probabilityGapPctPoints: globalBestBook?.probabilityGapPct ?? 0,
+          priceValueDirection: globalBestBook?.priceValueDirection ?? "near_fair"
+        });
+        const recommendationBadge = deriveRecommendationBadge({
+          priceValueDirection: globalBestBook?.priceValueDirection ?? "near_fair",
+          strength: opportunityStrength
+        });
+
         return {
           eventId: event.id,
           matchup: `${event.awayTeam} @ ${event.homeTeam}`,
@@ -949,6 +998,9 @@ function deriveTopOpportunities(events: FairEvent[]): FairBoardResponse["topOppo
           fairImpliedProb: globalBestBook?.fairImpliedProb ?? outcome.fairProb,
           probabilityGapPct: globalBestBook?.probabilityGapPct ?? 0,
           priceValueDirection: globalBestBook?.priceValueDirection ?? "near_fair",
+          opportunityStrength,
+          recommendationBadge,
+          actionableValueScore,
           bestBook: outcome.bestBook,
           timingLabel: outcome.timingSignal.label,
           historySummary: outcome.historySummary,
@@ -957,7 +1009,11 @@ function deriveTopOpportunities(events: FairEvent[]): FairBoardResponse["topOppo
         };
       })
     )
-    .sort((a, b) => Math.abs(b.edgePct) - Math.abs(a.edgePct) || b.score - a.score)
+    .sort((a, b) => {
+      const actionableDiff = (b.actionableValueScore ?? 0) - (a.actionableValueScore ?? 0);
+      if (Math.abs(actionableDiff) > 0.0001) return actionableDiff;
+      return b.score - a.score;
+    })
     .slice(0, 12);
 }
 

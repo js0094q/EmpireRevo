@@ -6,8 +6,15 @@ import type {
   MarketKey,
   NormalizedEventOdds
 } from "@/lib/odds/schemas";
+import {
+  buildPriceVsFairMetrics,
+  classifyOpportunityStrength,
+  computeActionableValueScore,
+  deriveRecommendationBadge
+} from "@/lib/odds/priceValue";
 import { compareOffersByMarket } from "@/lib/server/odds/marketCompare";
 import { calculateEvPercent } from "@/lib/server/odds/ev";
+import { americanFromProb } from "@/lib/server/odds/fairMath";
 
 type MovementState = {
   openByKey: Record<string, number>;
@@ -120,6 +127,47 @@ function normalizeBookMarket(entry: {
 
 function topEv(game: DerivedGame): number {
   return game.markets.flatMap((market) => market.sides).reduce((max, side) => Math.max(max, side.evPct), -999);
+}
+
+function sideActionableValueScore(side: DerivedSide): number {
+  const fairPrice = americanFromProb(side.fairProb);
+  const marketImpliedProb = impliedProbAmerican(side.bestPrice.price);
+  const metrics = buildPriceVsFairMetrics({
+    marketPriceAmerican: side.bestPrice.price,
+    fairPriceAmerican: fairPrice,
+    marketImpliedProb,
+    fairImpliedProb: side.fairProb
+  });
+  const strength = classifyOpportunityStrength({
+    marketPrice: metrics.marketPriceAmerican,
+    fairPrice: metrics.fairPriceAmerican,
+    marketImpliedProb: metrics.marketImpliedProb,
+    fairImpliedProb: metrics.fairImpliedProb,
+    probabilityGapPctPoints: metrics.probabilityGapPct,
+    priceValueDirection: metrics.priceValueDirection
+  });
+  const badge = deriveRecommendationBadge({
+    priceValueDirection: metrics.priceValueDirection,
+    strength
+  });
+  let score = computeActionableValueScore({
+    marketPrice: metrics.marketPriceAmerican,
+    fairPrice: metrics.fairPriceAmerican,
+    marketImpliedProb: metrics.marketImpliedProb,
+    fairImpliedProb: metrics.fairImpliedProb,
+    probabilityGapPctPoints: metrics.probabilityGapPct,
+    priceValueDirection: metrics.priceValueDirection
+  });
+  if (badge === "best_value") score += 5;
+  if (badge === "longshot_price_advantage") score -= 4;
+  if (badge === "model_lean") score -= 2;
+  return score;
+}
+
+function topActionableScore(game: DerivedGame): number {
+  return game.markets
+    .flatMap((market) => market.sides)
+    .reduce((max, side) => Math.max(max, sideActionableValueScore(side)), Number.NEGATIVE_INFINITY);
 }
 
 function topConfidence(game: DerivedGame): number {
@@ -337,6 +385,8 @@ export function selectComingUp(games: DerivedGame[], windowHours: number): Deriv
 export function selectBestValue(games: DerivedGame[]): DerivedGame[] {
   return [...games]
     .sort((a, b) => {
+      const actionableDiff = topActionableScore(b) - topActionableScore(a);
+      if (Math.abs(actionableDiff) > 0.0001) return actionableDiff;
       const evDiff = topEv(b) - topEv(a);
       if (Math.abs(evDiff) > 0.0001) return evDiff;
       return topConfidence(b) - topConfidence(a);
