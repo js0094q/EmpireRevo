@@ -19,6 +19,7 @@ function average(values: number[]): number {
 export function summarizeMovementSignal(books: FairOutcomeBook[]): MovementSignal {
   const historyCounts = books.map((book) => book.movement?.history?.length ?? 0);
   const avgHistory = average(historyCounts);
+  const sparseHistory = avgHistory < 2;
   const sharpMoveRows = books.filter((book) => book.isSharpBook);
   const sharpMoves = sharpMoveRows.map((book) => book.movement?.move ?? 0);
   const retailMoves = books.filter((book) => !book.isSharpBook).map((book) => book.movement?.move ?? 0);
@@ -27,19 +28,12 @@ export function summarizeMovementSignal(books: FairOutcomeBook[]): MovementSigna
   const movedBooks = books.filter((book) => Math.abs(book.movement?.move ?? 0) >= 2).length;
   const movedSharpBooks = sharpMoveRows.filter((book) => Math.abs(book.movement?.move ?? 0) >= 2).length;
   const movedRatio = books.length > 0 ? movedBooks / books.length : 0;
-
-  if (avgHistory < 2) {
-    return {
-      summary: "Movement signal weak due to sparse history",
-      quality: "weak",
-      diagnostics: {
-        sharpAverageMove: sharpAvg,
-        retailAverageMove: retailAvg,
-        movedBooks,
-        totalBooks: books.length
-      }
-    };
-  }
+  const diagnostics = {
+    sharpAverageMove: sharpAvg,
+    retailAverageMove: retailAvg,
+    movedBooks,
+    totalBooks: books.length
+  };
 
   if (
     Math.abs(sharpAvg) >= 5 &&
@@ -49,15 +43,18 @@ export function summarizeMovementSignal(books: FairOutcomeBook[]): MovementSigna
     movedSharpBooks >= 1 &&
     movedRatio >= 0.35
   ) {
+    if (sparseHistory) {
+      return {
+        summary: "Sharp books are moving, but history is still forming",
+        quality: "moderate",
+        diagnostics
+      };
+    }
+
     return {
       summary: "Fair line moving with sharp books",
       quality: "strong",
-      diagnostics: {
-        sharpAverageMove: sharpAvg,
-        retailAverageMove: retailAvg,
-        movedBooks,
-        totalBooks: books.length
-      }
+      diagnostics
     };
   }
 
@@ -65,12 +62,7 @@ export function summarizeMovementSignal(books: FairOutcomeBook[]): MovementSigna
     return {
       summary: "Retail drift only",
       quality: "moderate",
-      diagnostics: {
-        sharpAverageMove: sharpAvg,
-        retailAverageMove: retailAvg,
-        movedBooks,
-        totalBooks: books.length
-      }
+      diagnostics
     };
   }
 
@@ -78,23 +70,21 @@ export function summarizeMovementSignal(books: FairOutcomeBook[]): MovementSigna
     return {
       summary: "Books are moving out of sync",
       quality: "moderate",
-      diagnostics: {
-        sharpAverageMove: sharpAvg,
-        retailAverageMove: retailAvg,
-        movedBooks,
-        totalBooks: books.length
-      }
+      diagnostics
+    };
+  }
+
+  if (sparseHistory) {
+    return {
+      summary: "History still forming",
+      quality: "weak",
+      diagnostics
     };
   }
 
   return {
     summary: "Movement mixed across books",
     quality: "weak",
-    diagnostics: {
-      sharpAverageMove: sharpAvg,
-      retailAverageMove: retailAvg,
-      movedBooks,
-      totalBooks: books.length
-    }
+    diagnostics
   };
 }

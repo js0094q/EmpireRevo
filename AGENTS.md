@@ -111,6 +111,7 @@ Observed additional environment/config workflows from repo docs:
 - persistence: `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`
 - internal/operator auth: `EMPIRE_INTERNAL_API_KEY`
 - history/snapshot tuning: `ODDS_SNAPSHOT_*`, `ODDS_HISTORY_*`, `ODDS_VALUE_PERSISTENCE_THRESHOLD_PCT`
+- diagnostics/evaluation TTL tuning: `ODDS_TIMELINE_TTL_SECONDS`, `ODDS_VALIDATION_TTL_SECONDS`, `ODDS_EVALUATION_TTL_SECONDS`, `ODDS_DIAGNOSTICS_TTL_SECONDS`
 
 Development server:
 
@@ -390,9 +391,10 @@ Preferred solutions:
 
 Observed operator workflows:
 
-- internal diagnostics APIs under `/api/internal/*`
+- internal diagnostics APIs include `GET /api/internal/diagnostics`, `GET /api/internal/timeline`, and `GET /api/internal/evaluation`
 - operator page at `/internal/engine`
-- snapshot collection route at `/api/internal/snapshots/collect` for cron/operator triggers
+- snapshot collection supports `GET` and `POST` at `/api/internal/snapshots/collect` for cron, external scheduler, or operator-triggered runs
+- when `EMPIRE_INTERNAL_API_KEY` is configured, internal routes expect `x-empire-internal-key`
 
 ---
 

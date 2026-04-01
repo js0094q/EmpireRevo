@@ -65,3 +65,97 @@ test("movement signal does not report strong quality on thin sharp evidence", ()
 
   assert.notEqual(signal.quality, "strong");
 });
+
+test("movement signal keeps moderate out-of-sync classification when history is sparse", () => {
+  const signal = summarizeMovementSignal([
+    book({
+      bookKey: "pinnacle",
+      isSharpBook: true,
+      tier: "sharp",
+      movement: {
+        openPrice: -120,
+        prevPrice: -115,
+        currentPrice: -114,
+        delta: 1,
+        move: 6,
+        updatedAt: new Date().toISOString(),
+        history: [{ ts: new Date().toISOString(), priceAmerican: -114 }]
+      }
+    }),
+    book({
+      bookKey: "fanduel",
+      movement: {
+        openPrice: -110,
+        prevPrice: -109,
+        currentPrice: -109,
+        delta: 0,
+        move: 1,
+        updatedAt: new Date().toISOString(),
+        history: [{ ts: new Date().toISOString(), priceAmerican: -109 }]
+      }
+    })
+  ]);
+
+  assert.equal(signal.quality, "moderate");
+  assert.equal(signal.summary, "Books are moving out of sync");
+});
+
+test("movement signal caps sharp-led call to moderate when history is sparse", () => {
+  const signal = summarizeMovementSignal([
+    book({
+      bookKey: "pinnacle",
+      isSharpBook: true,
+      tier: "sharp",
+      movement: {
+        openPrice: -120,
+        prevPrice: -115,
+        currentPrice: -114,
+        delta: 1,
+        move: 6,
+        updatedAt: new Date().toISOString(),
+        history: [{ ts: new Date().toISOString(), priceAmerican: -114 }]
+      }
+    }),
+    book({
+      bookKey: "circa",
+      isSharpBook: true,
+      tier: "sharp",
+      movement: {
+        openPrice: -119,
+        prevPrice: -115,
+        currentPrice: -114,
+        delta: 1,
+        move: 5,
+        updatedAt: new Date().toISOString(),
+        history: [{ ts: new Date().toISOString(), priceAmerican: -114 }]
+      }
+    }),
+    book({
+      bookKey: "fanduel",
+      movement: {
+        openPrice: -110,
+        prevPrice: -109,
+        currentPrice: -109,
+        delta: 0,
+        move: 1,
+        updatedAt: new Date().toISOString(),
+        history: [{ ts: new Date().toISOString(), priceAmerican: -109 }]
+      }
+    }),
+    book({
+      bookKey: "draftkings",
+      movement: {
+        openPrice: -111,
+        prevPrice: -111,
+        currentPrice: -111,
+        delta: 0,
+        move: 0,
+        updatedAt: new Date().toISOString(),
+        history: [{ ts: new Date().toISOString(), priceAmerican: -111 }]
+      }
+    })
+  ]);
+
+  assert.equal(signal.quality, "moderate");
+  assert.equal(signal.summary, "Sharp books are moving, but history is still forming");
+});

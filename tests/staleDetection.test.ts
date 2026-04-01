@@ -23,7 +23,7 @@ function book(partial: Partial<FairOutcomeBook>): FairOutcomeBook {
   };
 }
 
-test("stale detection flags actionable stale price conservatively", () => {
+test("stale detection scores stale price pressure conservatively", () => {
   const staleTs = new Date(Date.now() - 90 * 60 * 1000).toISOString();
   const rows = detectStaleForBook({
     market: "h2h",
@@ -36,7 +36,9 @@ test("stale detection flags actionable stale price conservatively", () => {
   });
   const fd = rows.find((entry) => entry.bookKey === "fanduel");
   assert.ok(fd);
-  assert.ok(["stale_price", "best_market_confirmed", "lagging_book"].includes(fd?.staleFlag || "none"));
+  assert.ok((fd?.staleStrength ?? 0) > 0.5);
+  assert.ok((fd?.consensusGapPct ?? 0) < 0);
+  assert.notEqual(fd?.staleFlag, "off_market");
 });
 
 test("stale detection avoids noisy over-triggering for tiny gaps", () => {
@@ -50,4 +52,36 @@ test("stale detection avoids noisy over-triggering for tiny gaps", () => {
     ]
   });
   assert.ok(rows.every((entry) => (entry.staleFlag || "none") === "none" || entry.staleStrength! < 0.62));
+});
+
+test("stale detection measures consensus gap in implied-probability space for favorites", () => {
+  const rows = detectStaleForBook({
+    market: "h2h",
+    confidenceScore: 0.65,
+    books: [
+      book({ bookKey: "a", priceAmerican: -110, edgePct: 0.1 }),
+      book({ bookKey: "b", priceAmerican: -110, edgePct: 0.1 }),
+      book({ bookKey: "c", priceAmerican: -115, edgePct: 0.1 })
+    ]
+  });
+  const shaded = rows.find((entry) => entry.bookKey === "c");
+  assert.ok(shaded);
+  assert.ok((shaded?.consensusGapPct ?? 0) > 1);
+  assert.ok((shaded?.consensusGapPct ?? 0) < 2);
+});
+
+test("stale detection treats underdog shading consistently with favorite shading", () => {
+  const rows = detectStaleForBook({
+    market: "h2h",
+    confidenceScore: 0.65,
+    books: [
+      book({ bookKey: "a", priceAmerican: +115, edgePct: 0.1 }),
+      book({ bookKey: "b", priceAmerican: +115, edgePct: 0.1 }),
+      book({ bookKey: "c", priceAmerican: +110, edgePct: 0.1 })
+    ]
+  });
+  const shaded = rows.find((entry) => entry.bookKey === "c");
+  assert.ok(shaded);
+  assert.ok((shaded?.consensusGapPct ?? 0) > 1);
+  assert.ok((shaded?.consensusGapPct ?? 0) < 2);
 });

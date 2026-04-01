@@ -1,5 +1,6 @@
 import type { MarketKey } from "@/lib/odds/schemas";
 import { getOddsCalibration, type OddsCalibration } from "@/lib/server/odds/calibration";
+import { americanToProbability } from "@/lib/server/odds/fairMath";
 import type { FairOutcomeBook, StaleFlag } from "@/lib/server/odds/types";
 
 export type StaleAssessment = {
@@ -30,15 +31,27 @@ function mean(values: number[]): number {
   return values.reduce((sum, value) => sum + value, 0) / values.length;
 }
 
-function consensusPrice(books: FairOutcomeBook[]): number {
-  const sorted = books.map((book) => book.priceAmerican).sort((a, b) => a - b);
+function impliedProbability(book: FairOutcomeBook): number {
+  const fromPrice = americanToProbability(book.priceAmerican);
+  if (fromPrice > 0) return fromPrice;
+  if (Number.isFinite(book.impliedProb) && book.impliedProb > 0 && book.impliedProb < 1) {
+    return Number(book.impliedProb);
+  }
+  return 0;
+}
+
+function consensusImpliedProbability(books: FairOutcomeBook[]): number {
+  const sorted = books.map((book) => impliedProbability(book)).sort((a, b) => a - b);
   if (!sorted.length) return 0;
   return sorted[Math.floor(sorted.length / 2)] ?? sorted[0] ?? 0;
 }
 
-function priceGapPct(bookPrice: number, medianPrice: number): number {
-  if (!Number.isFinite(bookPrice) || !Number.isFinite(medianPrice) || medianPrice === 0) return 0;
-  return ((bookPrice - medianPrice) / Math.abs(medianPrice)) * 100;
+function consensusGapPct(book: FairOutcomeBook, medianImpliedProb: number): number {
+  if (!Number.isFinite(medianImpliedProb) || medianImpliedProb <= 0 || medianImpliedProb >= 1) return 0;
+  const bookImpliedProb = impliedProbability(book);
+  if (!Number.isFinite(bookImpliedProb) || bookImpliedProb <= 0 || bookImpliedProb >= 1) return 0;
+  // Positive values mean this book implies a higher win probability than market consensus.
+  return (bookImpliedProb - medianImpliedProb) * 100;
 }
 
 function movementGap(book: FairOutcomeBook, sharpAvgMove: number): number {
@@ -73,7 +86,7 @@ export function detectStaleForBook(params: DetectParams): FairOutcomeBook[] {
 
   const calibration = params.calibration ?? getOddsCalibration();
   const nowMs = params.nowMs ?? Date.now();
-  const median = consensusPrice(params.books);
+  const medianImpliedProb = consensusImpliedProbability(params.books);
   const sharpMoves = params.books.filter((book) => book.isSharpBook).map((book) => book.movement?.move ?? 0);
   const sharpAvgMove = mean(sharpMoves);
   const scale = calibration.stale.marketScale[params.market];
@@ -83,7 +96,7 @@ export function detectStaleForBook(params: DetectParams): FairOutcomeBook[] {
     calibration.stale.componentWeights.consensusGap;
 
   return params.books.map((book) => {
-    const gapPct = priceGapPct(book.priceAmerican, median);
+    const gapPct = consensusGapPct(book, medianImpliedProb);
     const ownMovementGap = movementGap(book, sharpAvgMove);
     const edgeSignal = clamp01(Math.max(0, book.edgePct) / calibration.stale.scaling.edgePctMax);
     const ageSignal = staleAgeScore(book, nowMs, calibration);
