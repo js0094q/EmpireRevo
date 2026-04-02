@@ -236,10 +236,10 @@ export function deriveRecommendationBadge(input: {
 }
 
 export function recommendationBadgeLabel(badge: RecommendationBadge): string {
-  if (badge === "best_value") return "Best Value";
+  if (badge === "best_value") return "Strong Deviation";
   if (badge === "model_lean") return "Model Lean";
-  if (badge === "better_than_fair") return "Better Than Fair";
-  if (badge === "longshot_price_advantage") return "Longshot Price Advantage";
+  if (badge === "better_than_fair") return "Positive Deviation";
+  if (badge === "longshot_price_advantage") return "Longshot Deviation";
   return "Near Fair";
 }
 

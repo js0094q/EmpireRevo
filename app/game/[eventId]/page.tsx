@@ -19,9 +19,7 @@ import {
   formatMarketLabel,
   formatOffer,
   formatPoint,
-  formatPriceValueDirection,
   formatProbabilityGap,
-  marketVsModelCopy,
   type BoardMode,
   type BoardSideKey,
   type BoardSortKey,
@@ -394,13 +392,7 @@ export default async function GamePage({
   const featuredOutcome = pickSummary.outcome;
   const featuredBook = pickSummary.book;
   const featuredBooks = sortBooks(featuredOutcome.books);
-  const priceVsFairLabel = featuredBook ? formatPriceValueDirection(pickSummary.priceValueDirection) : "--";
   const probabilityGapLabel = featuredBook ? formatProbabilityGap(pickSummary.probabilityGapPct) : "--";
-  const valueStatement = marketVsModelCopy({
-    market: event.market,
-    outcome: featuredOutcome,
-    book: featuredBook
-  });
 
   const sharpBooksUsed = Array.from(
     new Set(
@@ -454,7 +446,7 @@ export default async function GamePage({
         <AppHeader
           eyebrow="EmpirePicks"
           title="Game Detail"
-          subtitle="Model fair value versus live market pricing."
+          subtitle="Model consensus fair line and market deviation context."
           breadcrumbs={[
             { label: boardContext.mode === "games" ? "Games" : "Board", href: backToBoardHref },
             { label: `${event.awayTeam} @ ${event.homeTeam}` }
@@ -498,33 +490,19 @@ export default async function GamePage({
             ) : null}
 
             <div className={styles.pickSummary}>
-              <div className={styles.pickHeader}>
-                <span className={styles.pickLabel}>{pickSummary.label}</span>
-                <span className={styles.pickStatus}>{pickSummary.status}</span>
-              </div>
               <strong className={styles.pickName}>{featuredOutcome.name}</strong>
-              <div className={styles.pickLine}>{featuredBook ? formatOffer(event.market, featuredBook) : "--"}</div>
+              <div className={styles.pickLine}>{formatOffer(event.market, featuredOutcome)}</div>
 
               <div className={styles.pickMetrics}>
                 <div className={styles.pickMetric}>
-                  <span>Best Available Line</span>
-                  <strong>{featuredBook ? `${formatOffer(event.market, featuredBook)} at ${featuredBook.title}` : "--"}</strong>
-                </div>
-                <div className={styles.pickMetric}>
-                  <span>Fair Value</span>
+                  <span>Fair Line</span>
                   <strong>{`${formatOffer(event.market, featuredOutcome)} (model)`}</strong>
-                </div>
-                <div className={styles.pickMetric}>
-                  <span>Price vs Fair</span>
-                  <strong>{priceVsFairLabel}</strong>
                 </div>
                 <div className={styles.pickMetric}>
                   <span>Probability Gap</span>
                   <strong>{probabilityGapLabel}</strong>
                 </div>
               </div>
-
-              <p className={styles.valueFraming}>{valueStatement}</p>
             </div>
           </section>
 
@@ -646,7 +624,7 @@ export default async function GamePage({
 
             <p className={styles.contextNote}>Vig is removed from each market before computing consensus fair probability and fair value.</p>
             <p className={styles.contextNote}>{methodologyCopy}</p>
-            <p className={styles.contextNote}>Price vs Fair reflects payout quality; Probability Gap reflects model disagreement.</p>
+            <p className={styles.contextNote}>Probability Gap reflects the deviation between market-implied and fair-implied probability.</p>
 
             <div className={styles.backRow}>
               <Link href={backToBoardHref} className="app-link">

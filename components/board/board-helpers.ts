@@ -105,7 +105,7 @@ export function bestPriceBook(outcome: FairOutcome): FairOutcomeBook | null {
 }
 
 export type PickStatus = "Favorite" | "Underdog";
-export type RecommendationLabel = "Best Value" | "Model Lean" | "Better Than Fair" | "Longshot Price Advantage" | "Near Fair";
+export type RecommendationLabel = "Strong Deviation" | "Model Lean" | "Positive Deviation" | "Longshot Deviation" | "Near Fair";
 export type PickSummary = {
   outcome: FairOutcome;
   book: FairOutcomeBook | null;
@@ -183,16 +183,16 @@ export function priceVsFairMetrics(outcome: FairOutcome, book: FairOutcomeBook |
 }
 
 export function recommendationLabelFromBadge(badge: RecommendationBadge): RecommendationLabel {
-  if (badge === "best_value") return "Best Value";
+  if (badge === "best_value") return "Strong Deviation";
   if (badge === "model_lean") return "Model Lean";
-  if (badge === "better_than_fair") return "Better Than Fair";
-  if (badge === "longshot_price_advantage") return "Longshot Price Advantage";
+  if (badge === "better_than_fair") return "Positive Deviation";
+  if (badge === "longshot_price_advantage") return "Longshot Deviation";
   return "Near Fair";
 }
 
 export function formatPriceValueDirection(direction: PriceValueDirection): string {
-  if (direction === "better_than_fair") return "Better Than Fair";
-  if (direction === "worse_than_fair") return "Worse Than Fair";
+  if (direction === "better_than_fair") return "Positive Deviation";
+  if (direction === "worse_than_fair") return "Negative Deviation";
   return "Near Fair";
 }
 

@@ -101,4 +101,4 @@ export function buildEditorNote(params: {
 }
 
 export const BOARD_DISCLAIMER =
-  "Market-based pricing, not predictions. All values are derived from real sportsbook data, adjusted for margin, and compared to fair market probability. Price vs Fair measures payout quality, while Probability Gap measures model disagreement.";
+  "Market-based pricing, not predictions. All values are derived from real sportsbook data, adjusted for margin, and compared to fair market probability. Fair line is the primary signal, while Probability Gap quantifies market deviation from fair probability.";

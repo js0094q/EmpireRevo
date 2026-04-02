@@ -144,7 +144,7 @@ test("better underdog price can remain better-than-fair without best-value promo
     book: underdogOutcome.books[0]!
   });
 
-  assert.equal(summary.label, "Better Than Fair");
+  assert.equal(summary.label, "Positive Deviation");
   assert.equal(summary.hasRecommendation, true);
   assert.match(explanation, /better price than fair/i);
 });
@@ -199,7 +199,7 @@ test("longshot better-than-fair profile uses longshot price advantage badge", ()
     book: longshotOutcome.books[0]!
   });
 
-  assert.equal(summary.label, "Longshot Price Advantage");
-  assert.notEqual(summary.label, "Best Value");
+  assert.equal(summary.label, "Longshot Deviation");
+  assert.notEqual(summary.label, "Strong Deviation");
   assert.match(explanation, /longshot|thin/i);
 });

@@ -126,22 +126,22 @@ export function BoardShell({ board, league, mode = "board" }: BoardShellProps) {
                 <BrandMark className={styles.heroBrandMark} />
                 <div className={styles.heroBrandCopy}>
                   <h1 className={styles.heroTitle}>EmpirePicks</h1>
-                  <p className={styles.heroSubhead}>We don&apos;t predict winners. We identify mispriced bets.</p>
+                  <p className={styles.heroSubhead}>We surface where the market should be priced.</p>
                 </div>
               </div>
               <span className={styles.summaryTimestamp}>Updated {formatUpdatedLabel(board.updatedAt)}</span>
             </div>
             <p className={styles.heroLead}>
-              Sportsbooks build margin into every line. We remove that margin, estimate true market probability, and show where prices are off.
+              Sportsbooks build margin into every line. We remove that margin, estimate fair market probability, and convert it into a consensus fair line.
             </p>
             <div className={styles.definitionRow}>
               <div className={styles.definitionItem}>
-                <span className={styles.definitionTerm}>Price vs Fair</span>
-                <p className={styles.definitionCopy}>Whether the available line pays better, worse, or near the model fair line.</p>
+                <span className={styles.definitionTerm}>Fair Line</span>
+                <p className={styles.definitionCopy}>The no-vig, weighted market estimate converted back into a fair line.</p>
               </div>
               <div className={styles.definitionItem}>
-                <span className={styles.definitionTerm}>Fair Value</span>
-                <p className={styles.definitionCopy}>The no-vig, weighted market estimate converted back into a fair line.</p>
+                <span className={styles.definitionTerm}>Fair Probability</span>
+                <p className={styles.definitionCopy}>Consensus win probability after removing vig and weighting books by signal quality.</p>
               </div>
               <div className={styles.definitionItem}>
                 <span className={styles.definitionTerm}>Probability Gap</span>
@@ -161,7 +161,7 @@ export function BoardShell({ board, league, mode = "board" }: BoardShellProps) {
             <div className={styles.liveBoardHeader}>
               <div>
                 <p className={styles.sectionEyebrow}>Board</p>
-                <h2 className={styles.sectionTitle}>Live Line Shopping</h2>
+                <h2 className={styles.sectionTitle}>Live Fair Value Board</h2>
               </div>
             </div>
 
@@ -220,7 +220,7 @@ export function BoardShell({ board, league, mode = "board" }: BoardShellProps) {
             ) : (
               <EmptyState
                 title="No games match the current filters"
-                message="Try a broader search, switch market, or clear the Better Than Fair filter."
+                message="Try a broader search, switch market, or clear the positive deviation filter."
                 actionLabel="Reset filters"
                 onAction={() => {
                   setSearch("");

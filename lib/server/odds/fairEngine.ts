@@ -88,7 +88,7 @@ const DEFAULT_MODEL: WeightModel = "weighted";
 const DEFAULT_MIN_BOOKS = 4;
 export const LIMITED_MARKET_MIN_BOOKS = 2;
 const FAIR_BOARD_DISCLAIMER =
-  "Market-based pricing, not predictions. All values are derived from real sportsbook data, adjusted for margin, and compared to fair market probability. Price vs Fair measures payout quality, while Probability Gap measures model disagreement.";
+  "Market-based pricing, not predictions. All values are derived from real sportsbook data, adjusted for margin, and compared to fair market probability. Fair line is the primary signal, while Probability Gap quantifies market deviation from fair probability.";
 const MARKET_ORDER: MarketKey[] = ["h2h", "spreads", "totals"];
 
 function normalizeModel(model?: string | null): WeightModel {
