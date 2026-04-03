@@ -120,9 +120,10 @@ export async function fetchFairBoardPageData(params: {
     minBooks: effectiveMinBooks,
     includeBooks: params.includeBooks,
     windowHours: params.windowHours,
-    historyWindowHours: params.historyWindowHours
+    historyWindowHours: params.historyWindowHours,
+    marketAvailability
   });
-  board.boardRows = buildBoardDrilldownRows(board, { minBooks });
+  board.boardRows = buildBoardDrilldownRows(board, { minBooks: effectiveMinBooks });
   board.activeMarkets = activeMarkets;
   board.marketAvailability = marketAvailability;
   return {

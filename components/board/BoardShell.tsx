@@ -1,7 +1,7 @@
 "use client";
 
 import { startTransition, useDeferredValue, useMemo, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import type { FairBoardResponse } from "@/lib/server/odds/types";
 import { AppContainer } from "@/components/layout/AppContainer";
 import { BrandMark } from "@/components/layout/BrandMark";
@@ -15,7 +15,6 @@ import { SearchControl } from "@/components/board/SearchControl";
 type BoardShellProps = {
   board: FairBoardResponse;
   league: string;
-  mode?: "board" | "games";
 };
 
 type BoardSort = "value" | "soonest" | "fair" | "consensus";
@@ -25,8 +24,9 @@ function parseSort(value: string | null): BoardSort {
   return "value";
 }
 
-export function BoardShell({ board, league, mode = "board" }: BoardShellProps) {
+export function BoardShell({ board, league }: BoardShellProps) {
   const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
   const [search, setSearch] = useState((searchParams?.get("search") || "").trim());
   const [sortBy, setSortBy] = useState<BoardSort>(parseSort(searchParams?.get("sort")));
@@ -36,7 +36,7 @@ export function BoardShell({ board, league, mode = "board" }: BoardShellProps) {
   function replaceParam(key: string, value: string) {
     const params = new URLSearchParams(searchParams?.toString() || "");
     params.set(key, value);
-    const path = mode === "games" ? "/games" : "/";
+    const path = pathname?.startsWith("/games") ? "/games" : "/";
     startTransition(() => {
       router.replace(`${path}?${params.toString()}`);
     });

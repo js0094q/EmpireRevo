@@ -91,7 +91,7 @@ export default async function GamesPage({ searchParams }: { searchParams?: Promi
   }
 
   const board = pageData.board;
-  if (!board.events.length) {
+  if (!(board.boardRows?.length ?? 0)) {
     return (
       <ErrorState
         title="No live lines available"

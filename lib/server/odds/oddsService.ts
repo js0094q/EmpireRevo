@@ -1,5 +1,5 @@
 import type { LeagueKey, MarketKey, NormalizedEventOdds } from "@/lib/odds/schemas";
-import type { FairBoardResponse } from "@/lib/server/odds/types";
+import type { FairBoardResponse, MarketAvailability } from "@/lib/server/odds/types";
 import { cacheGet, cacheKey, cacheSet } from "@/lib/server/odds/cache";
 import { fetchOddsFromUpstream, sportKeyToLeague } from "@/lib/server/odds/client";
 import { normalizeOddsApiResponse } from "@/lib/server/odds/normalize";
@@ -65,6 +65,7 @@ export type FairBoardQuery = NormalizedOddsQuery & {
   movementMaxPoints?: number;
   includeMovement?: boolean;
   normalizedResult?: NormalizedOddsResult;
+  marketAvailability?: MarketAvailability[];
 };
 
 function clampRange(value: number, min: number, max: number): number {
@@ -239,7 +240,8 @@ export async function getFairBoard(params: FairBoardQuery): Promise<FairBoardRes
     model,
     minBooks,
     includeBooks,
-    timeWindowHours: windowHours
+    timeWindowHours: windowHours,
+    marketAvailability: params.marketAvailability
   });
 
   const capturedAtMs = Date.now();

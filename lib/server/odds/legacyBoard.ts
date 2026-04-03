@@ -176,7 +176,6 @@ function selectRepresentativeEvents(boards: FairBoardResponse[]): Map<string, { 
       const marketEvents = existing.markets.get(event.market) ?? [];
       if (!marketEvents.some((candidate) => candidate.id === event.id)) {
         marketEvents.push(event);
-        marketEvents.sort(compareMarketEvents);
         existing.markets.set(event.market, marketEvents);
       }
     }
@@ -198,19 +197,23 @@ export function buildLegacyBoardGames(params: {
       const derivedMarkets = Array.from(markets.entries())
         .sort(([a], [b]) => MARKET_ORDER[a] - MARKET_ORDER[b])
         .flatMap(([marketKey, marketEvents]) =>
-          marketEvents.map<DerivedMarket>((event) => ({
-            market: marketKey,
-            linePoint: Number.isFinite(Number(event.linePoint)) ? Number(event.linePoint) : undefined,
-            sides: event.outcomes.map(buildDerivedSide).sort((a, b) => b.evPct - a.evPct)
-          }))
+          [...marketEvents]
+            .sort(compareMarketEvents)
+            .map<DerivedMarket>((event) => ({
+              market: marketKey,
+              linePoint: Number.isFinite(Number(event.linePoint)) ? Number(event.linePoint) : undefined,
+              sides: event.outcomes.map(buildDerivedSide).sort((a, b) => b.evPct - a.evPct)
+            }))
         );
 
-      const marketUpdatedMs = Array.from(markets.values())
-        .flat()
-        .reduce((latest, event) => {
-          const outcomeLatest = event.outcomes.reduce((max, outcome) => Math.max(max, latestUpdateMs(outcome.books)), 0);
-          return Math.max(latest, outcomeLatest);
-        }, 0);
+      let marketUpdatedMs = 0;
+      for (const marketEvents of markets.values()) {
+        for (const event of marketEvents) {
+          for (const outcome of event.outcomes) {
+            marketUpdatedMs = Math.max(marketUpdatedMs, latestUpdateMs(outcome.books));
+          }
+        }
+      }
       const updatedAt = marketUpdatedMs ? new Date(marketUpdatedMs).toISOString() : params.fallbackUpdatedAt;
 
       return {

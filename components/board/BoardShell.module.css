@@ -47,8 +47,7 @@
 .drawerCard,
 .detailPanel,
 .stateCard,
-.emptyCard,
-.toolbar {
+.emptyCard {
   border: 1px solid color-mix(in srgb, var(--color-border) 92%, rgba(255, 255, 255, 0.03));
   border-radius: var(--radius-xl);
   background: linear-gradient(165deg, rgba(14, 24, 36, 0.95), rgba(8, 15, 26, 0.94));
@@ -65,7 +64,6 @@
 .liveBoardSection,
 .stateCard,
 .emptyCard,
-.toolbar,
 .detailPanel,
 .drawerCard {
   padding: 1rem 1.1rem;
@@ -201,7 +199,6 @@
 .sectionHeader,
 .analysisHeader,
 .liveBoardHeader,
-.toolbarRow,
 .detailHeader,
 .cardTop,
 .drawerHeader,
@@ -240,7 +237,6 @@
 .analysisContext,
 .sectionMuted,
 .featuredCopy,
-.marketNote,
 .edgeContextNote,
 .edgeTierHint,
 .metaText {
@@ -294,7 +290,6 @@
 .analysisCopy,
 .sectionMuted,
 .featuredCopy,
-.marketNote,
 .disclosure {
   margin: 0;
 }
@@ -329,9 +324,6 @@
 
 .pulseRow,
 .opportunityMatchup,
-.toolbarLeft,
-.toolbarRight,
-.toolbarFilters,
 .rowPills,
 .mobileCardMeta,
 .detailPills,
@@ -545,67 +537,8 @@
     linear-gradient(165deg, rgba(12, 22, 34, 0.95), rgba(8, 15, 25, 0.95));
 }
 
-.toolbar {
-  display: flex;
-  align-items: flex-end;
-  flex-wrap: wrap;
-  gap: 0.95rem;
-  border-color: color-mix(in srgb, var(--color-accent) 16%, rgba(255, 255, 255, 0.07));
-  background:
-    linear-gradient(145deg, rgba(124, 227, 191, 0.07), transparent 34%),
-    rgba(255, 255, 255, 0.02);
-  box-shadow: none;
-}
-
-.toolbarGroup {
-  display: grid;
-  gap: 0.2rem;
-  min-width: max-content;
-}
-
-.toolbarLabel {
-  color: var(--color-text-dim);
-  font-size: 0.66rem;
-  letter-spacing: 0.11em;
-  text-transform: uppercase;
-  padding-inline: 0.1rem;
-}
-
-.toolbarActions {
-  margin-left: auto;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  flex-wrap: wrap;
-}
-
 .search {
   min-width: 16rem;
-}
-
-.selectCompact {
-  min-width: 10.5rem;
-}
-
-.marketNote {
-  font-size: 0.8rem;
-  line-height: 1.45;
-  padding: 0.45rem 0.65rem;
-  border-radius: var(--radius-md);
-  border: 1px solid color-mix(in srgb, var(--color-accent) 20%, rgba(255, 255, 255, 0.05));
-  background: color-mix(in srgb, var(--color-accent) 7%, rgba(255, 255, 255, 0.02));
-}
-
-.sortReminder {
-  margin: 0;
-  font-size: 0.76rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: color-mix(in srgb, var(--color-positive) 86%, white 14%);
-  padding: 0.35rem 0.65rem;
-  border-radius: var(--radius-md);
-  border: 1px solid color-mix(in srgb, var(--color-positive) 42%, transparent);
-  background: color-mix(in srgb, var(--color-positive) 14%, rgba(34, 70, 118, 0.2));
 }
 
 .tableWrap {
@@ -1307,31 +1240,14 @@
 }
 
 @media (max-width: 1080px) {
-  .toolbarActions {
-    margin-left: 0;
-  }
-
   .expandedGrid {
     grid-template-columns: 1fr;
   }
 }
 
 @media (max-width: 860px) {
-  .search,
-  .selectCompact {
+  .search {
     min-width: min(100%, 14rem);
-  }
-
-  .toolbarGroup {
-    min-width: 100%;
-  }
-
-  .toolbarActions {
-    width: 100%;
-  }
-
-  .toolbarActions button {
-    flex: 1 1 auto;
   }
 
   .detailRow {
@@ -1368,7 +1284,6 @@
   .analysisPanel,
   .opportunitySection,
   .liveBoardSection,
-  .toolbar,
   .stateCard,
   .emptyCard,
   .detailPanel,

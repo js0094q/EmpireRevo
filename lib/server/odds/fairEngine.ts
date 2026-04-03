@@ -56,6 +56,7 @@ type BuildFairBoardParams = {
   minBooks?: number;
   includeBooks?: Set<string>;
   timeWindowHours?: number;
+  marketAvailability?: MarketAvailability[];
 };
 
 type BookOutcome = {
@@ -1238,13 +1239,15 @@ export async function buildFairBoard(options: BuildFairBoardParams): Promise<Fai
   const minBooks = Math.max(1, options.minBooks ?? DEFAULT_MIN_BOOKS);
   const includeBooks = normalizeIncludedBooks(options.includeBooks);
   const inSeasonEvents = filterInSeasonEvents(options.normalized, options.timeWindowHours);
-  const marketAvailability = getMarketAvailabilityForBoard({
-    normalized: options.normalized,
-    inSeasonEvents,
-    model,
-    minBooks,
-    includeBooks
-  });
+  const marketAvailability =
+    options.marketAvailability ??
+    getMarketAvailabilityForBoard({
+      normalized: options.normalized,
+      inSeasonEvents,
+      model,
+      minBooks,
+      includeBooks
+    });
   const activeMarkets = marketAvailability.filter((entry) => entry.status === "active").map((entry) => entry.market);
   const events: FairEvent[] = [];
 
