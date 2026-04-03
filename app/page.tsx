@@ -1,5 +1,5 @@
-import { OddsGridClient } from "./ui-client";
 import { ErrorState } from "@/components/board/ErrorState";
+import { BoardShell } from "@/components/board/BoardShell";
 import { fetchFairBoardPageData, hasOddsKey } from "@/lib/server/odds/pageData";
 import { redirect } from "next/navigation";
 
@@ -77,7 +77,7 @@ export default async function Page({
   }
 
   const board = pageData.board;
-  if (!board.events.length) {
+  if (!(board.boardRows?.length ?? 0)) {
     return (
       <ErrorState
         title="No live lines available"
@@ -87,5 +87,5 @@ export default async function Page({
     );
   }
 
-  return <OddsGridClient board={board} league={league} mode="board" />;
+  return <BoardShell board={board} league={league} />;
 }

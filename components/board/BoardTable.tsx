@@ -1,53 +1,36 @@
 "use client";
 
-import type { FairEvent } from "@/lib/server/odds/types";
+import type { BoardDrilldownRow } from "@/lib/server/odds/types";
 import styles from "./BoardShell.module.css";
 import { BoardRow } from "@/components/board/BoardRow";
-import {
-  eventDetailHref,
-  type BoardNavigationContext
-} from "@/components/board/board-helpers";
 
 type BoardTableProps = {
-  events: FairEvent[];
-  league: string;
-  model: "sharp" | "equal" | "weighted";
-  navContext: BoardNavigationContext;
+  rows: BoardDrilldownRow[];
 };
 
-export function BoardTable({ events, league, model, navContext }: BoardTableProps) {
+export function BoardTable({ rows }: BoardTableProps) {
   return (
     <section className={styles.tableWrap}>
-      <div className={styles.tableHeader}>
-        <div>
-          <div className={styles.tableHeadTitle}>Fair Value Board</div>
-          <div className={styles.tableHeadMeta}>Each row centers the model consensus fair line and probability gap.</div>
-        </div>
+      <div className={styles.mobileCards}>
+        {rows.map((row) => (
+          <BoardRow key={`${row.id}:mobile`} row={row} variant="card" />
+        ))}
       </div>
-
       <div className={styles.tableScroller}>
         <table className={styles.table}>
           <thead>
             <tr>
-              <th>Matchup</th>
-              <th>Fair Value Snapshot</th>
-              <th>Probability Gap</th>
-              <th>Open</th>
+              <th>Event</th>
+              <th>Recommended Bet</th>
+              <th>Best vs Fair</th>
+              <th>Value ($ / $100)</th>
+              <th>Confidence</th>
+              <th>Detail</th>
             </tr>
           </thead>
           <tbody>
-            {events.map((event) => (
-              <BoardRow
-                key={event.id}
-                event={event}
-                detailHref={eventDetailHref({
-                  event,
-                  league,
-                  market: event.market,
-                  model,
-                  context: navContext
-                })}
-              />
+            {rows.map((row) => (
+              <BoardRow key={row.id} row={row} />
             ))}
           </tbody>
         </table>

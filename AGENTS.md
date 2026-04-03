@@ -108,10 +108,12 @@ Observed additional environment/config workflows from repo docs:
 
 - upstream controls: `ODDS_API_BASE`, `ODDS_API_ALLOWED_HOSTS`, `ODDS_ALLOWED_SPORT_KEYS`
 - calibration overrides: `ODDS_CALIBRATION_OVERRIDES_JSON`
+- snapshot collection controls: `ODDS_SNAPSHOT_COLLECTION_ENABLED`, `ODDS_SNAPSHOT_INTERVAL_SECONDS`, `ODDS_SNAPSHOT_RETENTION_HOURS`, `ODDS_SNAPSHOT_BATCH_SIZE`
+- history/live-ranking tuning: `ODDS_HISTORY_SHORT_WINDOW_MINUTES`, `ODDS_HISTORY_LONG_WINDOW_MINUTES`, `ODDS_HISTORY_LIVE_RANKING_MODE`, `ODDS_VALUE_PERSISTENCE_THRESHOLD_PCT`
 - persistence: `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`
 - internal/operator auth: `EMPIRE_INTERNAL_API_KEY`
-- history/snapshot tuning: `ODDS_SNAPSHOT_*`, `ODDS_HISTORY_*`, `ODDS_VALUE_PERSISTENCE_THRESHOLD_PCT`
 - diagnostics/evaluation TTL tuning: `ODDS_TIMELINE_TTL_SECONDS`, `ODDS_VALIDATION_TTL_SECONDS`, `ODDS_EVALUATION_TTL_SECONDS`, `ODDS_DIAGNOSTICS_TTL_SECONDS`
+- edge cache tuning: `EDGE_CACHE_S_MAXAGE`, `EDGE_CACHE_SWR`
 
 Development server:
 
@@ -394,7 +396,9 @@ Observed operator workflows:
 - internal diagnostics APIs include `GET /api/internal/diagnostics`, `GET /api/internal/timeline`, and `GET /api/internal/evaluation`
 - operator page at `/internal/engine`
 - snapshot collection supports `GET` and `POST` at `/api/internal/snapshots/collect` for cron, external scheduler, or operator-triggered runs
-- when `EMPIRE_INTERNAL_API_KEY` is configured, internal routes expect `x-empire-internal-key`
+- snapshot collection accepts `sportKey`, `sportKeys`, `regions`, `markets`, and `force=true` query params for targeted/manual runs
+- internal auth is gated by `EMPIRE_INTERNAL_API_KEY` and accepts `Authorization: Bearer`, `x-empire-internal-key`, or the HttpOnly internal session cookie
+- operator auth session management is available at `POST /api/internal/session` and `DELETE /api/internal/session`
 
 ---
 

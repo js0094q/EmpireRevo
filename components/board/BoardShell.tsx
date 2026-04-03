@@ -6,233 +6,121 @@ import type { FairBoardResponse } from "@/lib/server/odds/types";
 import { AppContainer } from "@/components/layout/AppContainer";
 import { BrandMark } from "@/components/layout/BrandMark";
 import styles from "./BoardShell.module.css";
-import { BoardToolbar } from "@/components/board/BoardToolbar";
 import { BoardTable } from "@/components/board/BoardTable";
 import { EmptyState } from "@/components/board/EmptyState";
-import {
-  formatMarketLabel,
-  formatUpdatedLabel,
-  type BoardNavigationContext,
-  type BoardMode,
-  type BoardSideKey,
-  type BoardSortKey
-} from "@/components/board/board-helpers";
-import { filterEvents, sortEvents } from "@/components/board/selectors";
-
-function joinTitles(values: string[]): string {
-  if (values.length <= 1) return values[0] ?? "";
-  if (values.length === 2) return `${values[0]} and ${values[1]}`;
-  return `${values.slice(0, -1).join(", ")}, and ${values[values.length - 1]}`;
-}
-
-function parseSideParam(value: string | null): BoardSideKey {
-  if (value === "favored" || value === "underdogs") return value;
-  return "all";
-}
-
-function parseSearchParam(value: string | null): string {
-  return (value || "").trim();
-}
-
-function parsePositiveEdgeParam(value: string | null): boolean {
-  return value === "1" || value === "true";
-}
-
-function parseSortParam(value: string | null): BoardSortKey {
-  if (value === "score" || value === "edge" || value === "confidence" || value === "best" || value === "soonest" || value === "timing") {
-    return value;
-  }
-  return "soonest";
-}
+import { LeagueSelector } from "@/components/board/LeagueSelector";
+import { MarketTabs } from "@/components/board/MarketTabs";
+import { SearchControl } from "@/components/board/SearchControl";
 
 type BoardShellProps = {
   board: FairBoardResponse;
   league: string;
-  mode?: BoardMode;
+  mode?: "board" | "games";
 };
+
+type BoardSort = "value" | "soonest" | "fair" | "consensus";
+
+function parseSort(value: string | null): BoardSort {
+  if (value === "soonest" || value === "fair" || value === "consensus") return value;
+  return "value";
+}
 
 export function BoardShell({ board, league, mode = "board" }: BoardShellProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [search, setSearch] = useState(() => parseSearchParam(searchParams?.get("search") ?? null));
-  const [side, setSide] = useState<BoardSideKey>(() => parseSideParam(searchParams?.get("side") ?? null));
-  const [sortBy, setSortBy] = useState<BoardSortKey>(() => parseSortParam(searchParams?.get("sort") ?? null));
-  const [positiveEdgeOnly, setPositiveEdgeOnly] = useState(() => parsePositiveEdgeParam(searchParams?.get("edge") ?? null));
+  const [search, setSearch] = useState((searchParams?.get("search") || "").trim());
+  const [sortBy, setSortBy] = useState<BoardSort>(parseSort(searchParams?.get("sort")));
   const deferredSearch = useDeferredValue(search);
-
-  const navigationContext = useMemo<BoardNavigationContext>(
-    () => ({
-      mode,
-      windowKey: "all",
-      sortBy,
-      side,
-      search,
-      positiveEdgeOnly
-    }),
-    [mode, positiveEdgeOnly, search, side, sortBy]
-  );
+  const rows = useMemo(() => board.boardRows ?? [], [board.boardRows]);
 
   function replaceParam(key: string, value: string) {
     const params = new URLSearchParams(searchParams?.toString() || "");
     params.set(key, value);
     const path = mode === "games" ? "/games" : "/";
     startTransition(() => {
-      router.replace(`${path}${params.toString() ? `?${params.toString()}` : ""}`);
+      router.replace(`${path}?${params.toString()}`);
     });
   }
 
-  const allBookKeys = useMemo(() => new Set(board.books.map((book) => book.key)), [board.books]);
+  const filteredRows = useMemo(() => {
+    const query = deferredSearch.toLowerCase();
+    const base = query
+      ? rows.filter((row) => row.event.toLowerCase().includes(query) || row.market.toLowerCase().includes(query) || row.bestBook.toLowerCase().includes(query))
+      : rows;
 
-  const filteredEvents = useMemo(
-    () =>
-      filterEvents(board.events, {
-        teamQuery: deferredSearch,
-        visibleBookKeys: allBookKeys,
-        edgeThresholdPct: 0,
-        minContributingBooks: 1,
-        minConfidenceScore: 0,
-        minSharpParticipation: 0,
-        startWindow: "all",
-        positiveEdgeOnly,
-        sideFilter: side,
-        bestEdgesOnly: false,
-        staleOnly: false,
-        highCoverageOnly: false,
-        trustedBooksOnly: false,
-        pinnedOnly: false,
-        pinnedBooks: new Set<string>(),
-        pinnedActionableEdgeThreshold: board.diagnostics.calibration.pinned.actionableEdgePct
-      }),
-    [allBookKeys, board.diagnostics.calibration.pinned.actionableEdgePct, board.events, deferredSearch, positiveEdgeOnly, side]
-  );
-
-  const orderedEvents = useMemo(() => sortEvents(filteredEvents, sortBy), [filteredEvents, sortBy]);
-
-  const currentMarketAvailability = board.marketAvailability.find((entry) => entry.market === board.market) ?? null;
-  const limitedMarkets = board.marketAvailability.filter((entry) => entry.status === "limited");
-  const sharpReferenceTitles = board.sharpBooksUsed.slice(0, 3);
-  const sharpReferenceNote =
-    sharpReferenceTitles.length > 0
-      ? `Sharp books are weighted in model fair value when available (${joinTitles(sharpReferenceTitles)}).`
-      : "Sharp books are weighted in model fair value when available.";
+    const sorted = [...base];
+    sorted.sort((a, b) => {
+      if (sortBy === "soonest") {
+        return Date.parse(a.commenceTime) - Date.parse(b.commenceTime) || b.valuePer100 - a.valuePer100;
+      }
+      if (sortBy === "fair") {
+        return b.marketFairOdds - a.marketFairOdds || b.valuePer100 - a.valuePer100;
+      }
+      if (sortBy === "consensus") {
+        return b.booksInConsensus - a.booksInConsensus || b.valuePer100 - a.valuePer100;
+      }
+      return b.valuePer100 - a.valuePer100 || Date.parse(a.commenceTime) - Date.parse(b.commenceTime);
+    });
+    return sorted;
+  }, [deferredSearch, rows, sortBy]);
 
   return (
     <AppContainer>
       <div className={styles.page}>
-        <div className={styles.stack}>
-          <section className={styles.heroPanel}>
-            <div className={styles.heroTopRow}>
-              <div className={styles.heroBrand}>
-                <BrandMark className={styles.heroBrandMark} />
-                <div className={styles.heroBrandCopy}>
-                  <h1 className={styles.heroTitle}>EmpirePicks</h1>
-                  <p className={styles.heroSubhead}>We surface where the market should be priced.</p>
-                </div>
-              </div>
-              <span className={styles.summaryTimestamp}>Updated {formatUpdatedLabel(board.updatedAt)}</span>
+        <section className={styles.simpleHeader}>
+          <div className={styles.brandBlock}>
+            <BrandMark className={styles.heroBrandMark} />
+            <div>
+              <h1 className={styles.heroTitle}>EmpirePicks Board</h1>
+              <p className={styles.heroSubhead}>Compare the best offered line against weighted fair odds, then size by value per $100.</p>
             </div>
-            <p className={styles.heroLead}>
-              Sportsbooks build margin into every line. We remove that margin, estimate fair market probability, and convert it into a consensus fair line.
-            </p>
-            <div className={styles.definitionRow}>
-              <div className={styles.definitionItem}>
-                <span className={styles.definitionTerm}>Fair Line</span>
-                <p className={styles.definitionCopy}>The no-vig, weighted market estimate converted back into a fair line.</p>
-              </div>
-              <div className={styles.definitionItem}>
-                <span className={styles.definitionTerm}>Fair Probability</span>
-                <p className={styles.definitionCopy}>Consensus win probability after removing vig and weighting books by signal quality.</p>
-              </div>
-              <div className={styles.definitionItem}>
-                <span className={styles.definitionTerm}>Probability Gap</span>
-                <p className={styles.definitionCopy}>Market-implied probability minus fair-implied probability.</p>
-              </div>
-            </div>
-            <div className={styles.edgePrimer}>
-              <h2 className={styles.edgePrimerTitle}>Why Price Discipline Matters</h2>
-              <p className={styles.edgePrimerCopy}>High win probability is not enough. Long-term performance depends on consistently getting prices that beat fair value.</p>
-              <p className={styles.edgePrimerExample}>
-                Example: A favorite can still be a poor price when you lay extra juice. Track both payout value and model disagreement before entering.
-              </p>
-            </div>
-          </section>
-
-          <section className={styles.liveBoardSection}>
-            <div className={styles.liveBoardHeader}>
-              <div>
-                <p className={styles.sectionEyebrow}>Board</p>
-                <h2 className={styles.sectionTitle}>Live Fair Value Board</h2>
-              </div>
-            </div>
-
-            <BoardToolbar
-              league={league}
-              market={board.market}
-              marketAvailability={board.marketAvailability}
-              search={search}
-              side={side}
-              sortBy={sortBy}
-              positiveEdgeOnly={positiveEdgeOnly}
-              onLeagueChange={(value) => replaceParam("league", value)}
-              onMarketChange={(value) => replaceParam("market", value)}
-              onSearchChange={setSearch}
-              onSideChange={setSide}
-              onSortChange={(value) => {
-                setSortBy(value);
-                replaceParam("sort", value);
-              }}
-              onTogglePositive={() => setPositiveEdgeOnly((value) => !value)}
-              onRefresh={() => router.refresh()}
-            />
-
-            {currentMarketAvailability?.status === "limited" ? (
-              <p className={styles.marketNote}>
-                {formatMarketLabel(board.market)} has limited live availability. Showing only comparable two-sided prices currently in the feed.
-              </p>
-            ) : limitedMarkets.length ? (
-              <p className={styles.marketNote}>
-                {joinTitles(limitedMarkets.map((entry) => formatMarketLabel(entry.market)))} currently have limited live availability.
-              </p>
-            ) : null}
-            <p className={styles.marketNote}>{sharpReferenceNote}</p>
-            <p className={styles.sortReminder}>
-              Sorted by{" "}
-              {sortBy === "score"
-                ? "Top Opportunities"
-                : sortBy === "edge"
-                  ? "Largest Probability Gap"
-                  : sortBy === "confidence"
-                    ? "Most Stable Market"
-                    : sortBy === "best"
-                      ? "Highest Listed Odds"
-                      : sortBy === "timing"
-                        ? "Closing Soon"
-                        : "Time Order (best opportunities first in each window)"}
-            </p>
-
-            {orderedEvents.length ? (
-              <BoardTable
-                events={orderedEvents}
-                league={league}
-                model={board.model}
-                navContext={navigationContext}
-              />
-            ) : (
-              <EmptyState
-                title="No games match the current filters"
-                message="Try a broader search, switch market, or clear the positive deviation filter."
-                actionLabel="Reset filters"
-                onAction={() => {
-                  setSearch("");
-                  setPositiveEdgeOnly(false);
-                  setSide("all");
+          </div>
+          <div className={styles.controlRow}>
+            <LeagueSelector value={league} onChange={(value) => replaceParam("league", value)} />
+            <MarketTabs value={board.market} onChange={(value) => replaceParam("market", value)} marketAvailability={board.marketAvailability} />
+            <SearchControl value={search} onChange={setSearch} className={styles.search} />
+            <label className={styles.sortLabel}>
+              Sort
+              <select
+                value={sortBy}
+                onChange={(event) => {
+                  const next = parseSort(event.target.value);
+                  setSortBy(next);
+                  replaceParam("sort", next);
                 }}
-              />
-            )}
-          </section>
+                className={styles.sortSelect}
+              >
+                <option value="value">Value ($ / $100)</option>
+                <option value="soonest">Start Time</option>
+                <option value="fair">Market Fair Odds</option>
+                <option value="consensus">Books in Consensus</option>
+              </select>
+            </label>
+          </div>
+          <div className={styles.glossaryRow}>
+            <p>
+              <strong>Fair Odds:</strong> Consensus no-vig price from weighted books.
+            </p>
+            <p>
+              <strong>Best Price:</strong> Highest payout currently offered for the same side and line.
+            </p>
+            <p>
+              <strong>Value:</strong> Estimated profit per $100 stake if fair odds are correct.
+            </p>
+          </div>
+          <p className={styles.primerExample}>Example: best +110 vs fair +102 projects +3.4 per $100. EV can be suppressed when coverage is thin.</p>
+        </section>
 
-          <p className={styles.disclosure}>{board.disclaimer}</p>
-        </div>
+        {filteredRows.length ? (
+          <BoardTable rows={filteredRows} />
+        ) : (
+          <EmptyState
+            title="No markets match this view"
+            message="Try a different league, market, or search."
+            actionLabel="Refresh"
+            onAction={() => router.refresh()}
+          />
+        )}
       </div>
     </AppContainer>
   );

@@ -1,5 +1,5 @@
-import { OddsGridClient } from "@/app/ui-client";
 import { ErrorState } from "@/components/board/ErrorState";
+import { BoardShell } from "@/components/board/BoardShell";
 import { fetchFairBoardPageData, hasOddsKey } from "@/lib/server/odds/pageData";
 import { sportKeyToLeague } from "@/lib/server/odds/client";
 import { redirect } from "next/navigation";
@@ -101,5 +101,5 @@ export default async function GamesPage({ searchParams }: { searchParams?: Promi
     );
   }
 
-  return <OddsGridClient board={board} league={league} mode="games" />;
+  return <BoardShell board={board} league={league} />;
 }

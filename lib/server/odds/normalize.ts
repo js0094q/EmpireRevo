@@ -11,6 +11,31 @@ function eventId(league: LeagueKey, away: string, home: string, commenceTime: st
   return `${league}_${slugify(away)}_at_${slugify(home)}_${commenceTime}`;
 }
 
+function deriveEventStatus(rawEvent: any, commenceTime: string, nowMs: number): EventRef["status"] {
+  const statusRaw = String(rawEvent?.status || rawEvent?.state || "").trim().toLowerCase();
+  if (
+    rawEvent?.completed === true ||
+    rawEvent?.is_completed === true ||
+    statusRaw === "final" ||
+    statusRaw === "closed" ||
+    statusRaw === "complete" ||
+    statusRaw === "completed"
+  ) {
+    return "final";
+  }
+
+  if (rawEvent?.in_progress === true || rawEvent?.live === true || statusRaw === "in_progress" || statusRaw === "live") {
+    return "live";
+  }
+
+  const commenceTs = Date.parse(commenceTime);
+  if (Number.isFinite(commenceTs) && commenceTs <= nowMs) {
+    return "live";
+  }
+
+  return "upcoming";
+}
+
 export function normalizeOddsApiResponse(params: {
   league: LeagueKey;
   raw: any[];
@@ -19,6 +44,7 @@ export function normalizeOddsApiResponse(params: {
   const { league, raw } = params;
   const teamLogoMap = params.teamLogoMap || TEAM_LOGO_MAP;
   const fetchedAt = new Date().toISOString();
+  const nowMs = Date.now();
 
   return raw.map((event: any) => {
     const homeName = String(event.home_team || "Home");
@@ -44,7 +70,7 @@ export function normalizeOddsApiResponse(params: {
       commenceTime: String(event.commence_time || ""),
       home,
       away,
-      status: "upcoming"
+      status: deriveEventStatus(event, String(event.commence_time || ""), nowMs)
     };
 
     const books = (event.bookmakers || []).map((bookmaker: any) => ({

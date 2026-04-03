@@ -516,3 +516,53 @@ test("representative total point favors market-making quality over fringe pricin
     [228.5, 229.5]
   );
 });
+
+test("buildFairBoard keeps live events and removes completed events", async () => {
+  const live = buildEvent();
+  live.event.id = "live-event";
+  live.event.status = "live";
+  live.event.commenceTime = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString();
+
+  const completed = buildEvent();
+  completed.event.id = "completed-event";
+  completed.event.status = "final";
+  completed.event.commenceTime = new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString();
+
+  const board = await buildFairBoard({
+    normalized: [live, completed],
+    league: "nba",
+    sportKey: "basketball_nba",
+    market: "h2h",
+    model: "weighted",
+    minBooks: 2,
+    timeWindowHours: 24
+  });
+
+  assert.equal(board.events.some((event) => event.baseEventId === "live-event"), true);
+  assert.equal(board.events.some((event) => event.baseEventId === "completed-event"), false);
+});
+
+test("buildFairBoard excludes out-of-window upcoming events for in-season board visibility", async () => {
+  const upcomingNear = buildEvent();
+  upcomingNear.event.id = "upcoming-near";
+  upcomingNear.event.status = "upcoming";
+  upcomingNear.event.commenceTime = new Date(Date.now() + 4 * 60 * 60 * 1000).toISOString();
+
+  const upcomingFar = buildEvent();
+  upcomingFar.event.id = "upcoming-far";
+  upcomingFar.event.status = "upcoming";
+  upcomingFar.event.commenceTime = new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString();
+
+  const board = await buildFairBoard({
+    normalized: [upcomingNear, upcomingFar],
+    league: "nba",
+    sportKey: "basketball_nba",
+    market: "h2h",
+    model: "weighted",
+    minBooks: 2,
+    timeWindowHours: 24
+  });
+
+  assert.equal(board.events.some((event) => event.baseEventId === "upcoming-near"), true);
+  assert.equal(board.events.some((event) => event.baseEventId === "upcoming-far"), false);
+});

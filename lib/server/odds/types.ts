@@ -316,6 +316,45 @@ export type MarketAvailability = {
   qualifiedEventCount: number;
 };
 
+export type BoardRow = {
+  event: string;
+  market: string;
+  bestBook: string;
+  bestOdds: number;
+  marketFairOdds: number;
+  valuePer100: number;
+  booksInConsensus: number;
+  confidenceLabel?: "High Confidence" | "Moderate Confidence" | "Thin Market" | "Stale Market" | "Limited Sharp Coverage";
+  coverageBooks?: number;
+  coverageRequiredBooks?: number;
+};
+
+export type ExpandedMarket = {
+  weightedMarketFairProbability: number;
+  weightedMarketFairOdds: number;
+  weightedMarketFairDecimal: number;
+  booksInConsensus: number;
+  totalWeight: number;
+  offers: Array<{
+    book: string;
+    americanOdds: number;
+    decimalOdds: number;
+    impliedProbability: number;
+    devigProbability: number;
+    probabilityDiffVsMarket: number;
+    valuePer100: number;
+    position: "above_market" | "at_market" | "below_market";
+  }>;
+};
+
+export type BoardDrilldownRow = BoardRow & {
+  id: string;
+  baseEventId: string;
+  commenceTime: string;
+  isLive: boolean;
+  expanded: ExpandedMarket;
+};
+
 export type FairBoardResponse = {
   ok: boolean;
   league: string;
@@ -329,6 +368,7 @@ export type FairBoardResponse = {
   sharpBooksUsed: string[];
   books: { key: string; title: string; tier: BookTier }[];
   events: FairEvent[];
+  boardRows?: BoardDrilldownRow[];
   topOpportunities: FairBoardOpportunity[];
   bookBehavior: BookBehaviorSummary[];
   diagnostics: {

@@ -106,6 +106,19 @@ function formatWindowLabel(windowHours?: number): string {
   return `Rolling ${safe}h window`;
 }
 
+function filterInSeasonEvents(events: NormalizedEventOdds[], windowHours?: number): NormalizedEventOdds[] {
+  const nowMs = Date.now();
+  const windowMs = Math.max(1, Math.floor(windowHours ?? 168)) * 60 * 60 * 1000;
+  return events.filter((entry) => {
+    if (entry.event.status === "final") return false;
+    if (entry.event.status === "live") return true;
+    const commenceMs = Date.parse(entry.event.commenceTime);
+    if (!Number.isFinite(commenceMs)) return false;
+    if (commenceMs <= nowMs) return true;
+    return commenceMs - nowMs <= windowMs;
+  });
+}
+
 function formatDurationLabel(seconds: number | null | undefined): string {
   if (!Number.isFinite(seconds) || Number(seconds) <= 0) return "0m";
   const totalSeconds = Math.round(Number(seconds));
@@ -838,10 +851,12 @@ export function buildFairEventsForNormalizedEvent(options: {
 
 export function getMarketAvailabilityForBoard(options: {
   normalized: NormalizedEventOdds[];
+  inSeasonEvents?: NormalizedEventOdds[];
   model?: WeightModel;
   minBooks?: number;
   includeBooks?: Set<string> | null;
 }): MarketAvailability[] {
+  const inSeasonEvents = options.inSeasonEvents ?? filterInSeasonEvents(options.normalized, 168);
   const model = normalizeModel(options.model);
   const minBooks = Math.max(1, options.minBooks ?? DEFAULT_MIN_BOOKS);
   const includeBooks = normalizeIncludedBooks(options.includeBooks);
@@ -854,7 +869,7 @@ export function getMarketAvailabilityForBoard(options: {
     let comparableBookCount = 0;
     let qualifiedBookCount = 0;
 
-    for (const event of options.normalized) {
+    for (const event of inSeasonEvents) {
       if (rawMarketPresence(event, market, includeBooks)) {
         feedEventCount += 1;
       }
@@ -1222,8 +1237,10 @@ export async function buildFairBoard(options: BuildFairBoardParams): Promise<Fai
   const model = normalizeModel(options.model);
   const minBooks = Math.max(1, options.minBooks ?? DEFAULT_MIN_BOOKS);
   const includeBooks = normalizeIncludedBooks(options.includeBooks);
+  const inSeasonEvents = filterInSeasonEvents(options.normalized, options.timeWindowHours);
   const marketAvailability = getMarketAvailabilityForBoard({
     normalized: options.normalized,
+    inSeasonEvents,
     model,
     minBooks,
     includeBooks
@@ -1231,7 +1248,7 @@ export async function buildFairBoard(options: BuildFairBoardParams): Promise<Fai
   const activeMarkets = marketAvailability.filter((entry) => entry.status === "active").map((entry) => entry.market);
   const events: FairEvent[] = [];
 
-  for (const normalized of options.normalized) {
+  for (const normalized of inSeasonEvents) {
     const normalizedEvents = buildFairEventsForNormalizedEvent({
       normalized,
       sportKey: options.sportKey,

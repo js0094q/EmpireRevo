@@ -1,6 +1,7 @@
 import { getOddsApiKey } from "@/lib/server/odds/env";
 import { getMarketAvailabilityForBoard, LIMITED_MARKET_MIN_BOOKS } from "@/lib/server/odds/fairEngine";
 import { getFairBoard, getNormalizedOdds } from "@/lib/server/odds/oddsService";
+import { buildBoardDrilldownRows } from "@/lib/server/odds/boardView";
 import type { MarketKey } from "@/lib/odds/schemas";
 import type { FairBoardResponse, MarketAvailability, MarketAvailabilityStatus } from "@/lib/server/odds/types";
 
@@ -121,6 +122,7 @@ export async function fetchFairBoardPageData(params: {
     windowHours: params.windowHours,
     historyWindowHours: params.historyWindowHours
   });
+  board.boardRows = buildBoardDrilldownRows(board, { minBooks });
   board.activeMarkets = activeMarkets;
   board.marketAvailability = marketAvailability;
   return {
