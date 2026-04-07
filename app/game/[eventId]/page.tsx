@@ -73,6 +73,27 @@ function formatDurationLabel(seconds: number | null | undefined): string {
   return `${minutes}m`;
 }
 
+function formatSignedPercent(value: number | null | undefined): string {
+  if (!Number.isFinite(value)) return "--";
+  const numeric = Number(value);
+  return `${numeric > 0 ? "+" : ""}${numeric.toFixed(2)}%`;
+}
+
+function formatTierLabel(tier: FairOutcomeBook["tier"]): string {
+  if (tier === "sharp") return "Sharp reference";
+  if (tier === "signal") return "Signal book";
+  if (tier === "exchange") return "Exchange";
+  if (tier === "mainstream") return "Retail book";
+  if (tier === "promo") return "Promo book";
+  return "Market input";
+}
+
+function formatBookRole(book: FairOutcomeBook): string {
+  if (book.isBestPrice) return "Best available";
+  if (book.isSharpBook || book.tier === "sharp") return "Sharp input";
+  return "Contributing";
+}
+
 type NormalizedEvent = Awaited<ReturnType<typeof getNormalizedOdds>>["normalized"][number];
 type EventCandidate = {
   source: NormalizedEvent;
@@ -393,6 +414,13 @@ export default async function GamePage({
   const featuredBook = pickSummary.book;
   const featuredBooks = sortBooks(featuredOutcome.books);
   const probabilityGapLabel = featuredBook ? formatProbabilityGap(pickSummary.probabilityGapPct) : "--";
+  const bestAvailableCopy = featuredBook
+    ? `${formatAmerican(featuredBook.priceAmerican)} at ${featuredBook.title}`
+    : "No live offer available";
+  const fairLineCopy = `${formatOffer(event.market, featuredOutcome)} (model)`;
+  const focusCopy = featuredBook
+    ? `Best available is ${formatAmerican(featuredBook.priceAmerican)} at ${featuredBook.title} versus model fair ${formatOffer(event.market, featuredOutcome)}.`
+    : `Model fair line is ${formatOffer(event.market, featuredOutcome)}.`;
 
   const sharpBooksUsed = Array.from(
     new Set(
@@ -490,17 +518,32 @@ export default async function GamePage({
             ) : null}
 
             <div className={styles.pickSummary}>
-              <strong className={styles.pickName}>{featuredOutcome.name}</strong>
+              <div className={styles.pickHeader}>
+                <div>
+                  <p className={styles.pickLabel}>Market Focus</p>
+                  <strong className={styles.pickName}>{featuredOutcome.name}</strong>
+                </div>
+                <span className={styles.pickStatus}>{formatMarketLabel(event.market)}</span>
+              </div>
               <div className={styles.pickLine}>{formatOffer(event.market, featuredOutcome)}</div>
+              <p className={styles.valueFraming}>{focusCopy}</p>
 
               <div className={styles.pickMetrics}>
                 <div className={styles.pickMetric}>
-                  <span>Fair Line</span>
-                  <strong>{`${formatOffer(event.market, featuredOutcome)} (model)`}</strong>
+                  <span>Best Available</span>
+                  <strong>{bestAvailableCopy}</strong>
+                </div>
+                <div className={styles.pickMetric}>
+                  <span>Fair Probability</span>
+                  <strong>{`${(featuredOutcome.fairProb * 100).toFixed(2)}%`}</strong>
                 </div>
                 <div className={styles.pickMetric}>
                   <span>Probability Gap</span>
                   <strong>{probabilityGapLabel}</strong>
+                </div>
+                <div className={styles.pickMetric}>
+                  <span>EV at Best Price</span>
+                  <strong>{featuredBook ? formatSignedPercent(featuredBook.evPct) : "--"}</strong>
                 </div>
               </div>
             </div>
@@ -519,9 +562,12 @@ export default async function GamePage({
                 <thead>
                   <tr>
                     <th>Book</th>
+                    <th>Role</th>
                     <th>Line</th>
                     <th>Odds</th>
-                    <th>Implied %</th>
+                    <th>No-Vig %</th>
+                    <th>Prob Gap</th>
+                    <th>EV</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -535,15 +581,15 @@ export default async function GamePage({
                         <td>
                           <div className={styles.bookCell}>
                             <strong>{book.title}</strong>
-                            <div className={styles.badgeRow}>
-                              {book.isBestPrice ? <span className={styles.badge}>Best Price</span> : null}
-                              {isSharp ? <span className={styles.badge}>Sharp</span> : null}
-                            </div>
+                            <span className={styles.bookMeta}>{formatTierLabel(book.tier)}</span>
                           </div>
                         </td>
+                        <td>{formatBookRole(book)}</td>
                         <td>{formatTableLine(event.market, book.point)}</td>
                         <td className={styles.numeric}>{formatAmerican(book.priceAmerican)}</td>
-                        <td className={styles.numeric}>{formatImpliedPercent(book.impliedProb)}</td>
+                        <td className={styles.numeric}>{formatImpliedPercent(book.impliedProbNoVig)}</td>
+                        <td className={styles.numeric}>{formatProbabilityGap(book.edgePct)}</td>
+                        <td className={styles.numeric}>{formatSignedPercent(book.evPct)}</td>
                       </tr>
                     );
                   })}
@@ -605,11 +651,19 @@ export default async function GamePage({
 
             <div className={styles.contextGrid}>
               <div className={styles.contextMetric}>
+                <span>Best Available</span>
+                <strong>{bestAvailableCopy}</strong>
+              </div>
+              <div className={styles.contextMetric}>
+                <span>Fair Line</span>
+                <strong>{fairLineCopy}</strong>
+              </div>
+              <div className={styles.contextMetric}>
                 <span>Fair Probability</span>
                 <strong>{`${(featuredOutcome.fairProb * 100).toFixed(2)}%`}</strong>
               </div>
               <div className={styles.contextMetric}>
-                <span>Market Implied (No-Vig)</span>
+                <span>Break-Even Rate</span>
                 <strong>{featuredBook ? formatImpliedPercent(featuredBook.impliedProbNoVig) : "--"}</strong>
               </div>
               <div className={styles.contextMetric}>
@@ -618,13 +672,13 @@ export default async function GamePage({
               </div>
               <div className={styles.contextMetric}>
                 <span>EV at Best Available</span>
-                <strong>{featuredBook ? `${featuredBook.evPct > 0 ? "+" : ""}${featuredBook.evPct.toFixed(2)}%` : "--"}</strong>
+                <strong>{featuredBook ? formatSignedPercent(featuredBook.evPct) : "--"}</strong>
               </div>
             </div>
 
             <p className={styles.contextNote}>Vig is removed from each market before computing consensus fair probability and fair value.</p>
             <p className={styles.contextNote}>{methodologyCopy}</p>
-            <p className={styles.contextNote}>Probability Gap reflects the deviation between market-implied and fair-implied probability.</p>
+            <p className={styles.contextNote}>Probability Gap reflects model fair probability versus the break-even rate of the offered price.</p>
 
             <div className={styles.backRow}>
               <Link href={backToBoardHref} className="app-link">

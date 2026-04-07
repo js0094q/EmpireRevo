@@ -21,16 +21,35 @@ function formatValue(value: number): string {
   return `${prefix}$${value.toFixed(2)} / $100`;
 }
 
+function formatGap(value: number): string {
+  if (!Number.isFinite(value)) return "--";
+  const prefix = value > 0 ? "+" : "";
+  return `${prefix}${value.toFixed(2)}pp`;
+}
+
 function valueTone(value: number): string {
   if (value >= 0.2) return styles.valuePositive;
   if (value <= -0.2) return styles.valueNegative;
   return styles.valueNeutral;
 }
 
+function gapTone(value: number): string {
+  if (value >= 0.5) return styles.gapPositive;
+  if (value <= -0.5) return styles.gapNegative;
+  return styles.gapNeutral;
+}
+
 function positionLabel(position: "above_market" | "at_market" | "below_market"): string {
   if (position === "above_market") return "Above Market";
   if (position === "below_market") return "Below Market";
   return "At Market";
+}
+
+function signalLabel(value: number): string {
+  if (value >= 1.5) return "Strong edge";
+  if (value >= 0.5) return "Model edge";
+  if (value <= -0.5) return "Below fair";
+  return "Near fair";
 }
 
 type BoardRowProps = {
@@ -46,9 +65,14 @@ function BoardRowComponent({ row, variant = "table" }: BoardRowProps) {
     () => [...row.expanded.offers].sort((a, b) => b.valuePer100 - a.valuePer100),
     [row.expanded.offers]
   );
+  const bestOffer = useMemo(
+    () => row.expanded.offers.find((offer) => offer.book === row.bestBook) ?? sortedOffers[0] ?? null,
+    [row.bestBook, row.expanded.offers, sortedOffers]
+  );
   const coverageRequired = Math.max(1, row.coverageRequiredBooks ?? row.booksInConsensus);
   const coverageBooks = row.coverageBooks ?? row.booksInConsensus;
   const coverageStatus = `${coverageBooks}/${coverageRequired} books`;
+  const bestGap = bestOffer?.probabilityDiffVsMarket ?? 0;
 
   const detailsContent = (
     <>
@@ -56,19 +80,19 @@ function BoardRowComponent({ row, variant = "table" }: BoardRowProps) {
         <h4 className={styles.drilldownTitle}>Market Summary</h4>
         <div className={styles.summaryGrid}>
           <div>
-            <span>Weighted Market Fair Odds</span>
+            <span>Fair Line</span>
             <strong>{formatAmerican(row.expanded.weightedMarketFairOdds)}</strong>
           </div>
           <div>
-            <span>Weighted Market Fair Probability</span>
+            <span>Fair Probability</span>
             <strong>{formatPercent(row.expanded.weightedMarketFairProbability)}</strong>
           </div>
           <div>
-            <span>Books in Consensus</span>
-            <strong>{row.expanded.booksInConsensus}</strong>
+            <span>Best Book</span>
+            <strong>{row.bestBook}</strong>
           </div>
           <div>
-            <span>Total Consensus Weight</span>
+            <span>Total Weight</span>
             <strong>{row.expanded.totalWeight.toFixed(2)}</strong>
           </div>
         </div>
@@ -80,11 +104,10 @@ function BoardRowComponent({ row, variant = "table" }: BoardRowProps) {
           <thead>
             <tr>
               <th>Book</th>
+              <th>Line</th>
               <th>Odds</th>
-              <th>Decimal</th>
-              <th>Implied Prob</th>
-              <th>De-vigged Prob</th>
-              <th>Delta vs Market</th>
+              <th>No-Vig</th>
+              <th>Gap</th>
               <th>Value</th>
               <th>Position</th>
             </tr>
@@ -93,11 +116,10 @@ function BoardRowComponent({ row, variant = "table" }: BoardRowProps) {
             {sortedOffers.map((offer) => (
               <tr key={`${row.id}:${offer.book}`}>
                 <td>{offer.book}</td>
+                <td>{row.market.replace(/^.+\s(?=[+-]?\d|ML)/, "")}</td>
                 <td>{formatAmerican(offer.americanOdds)}</td>
-                <td>{offer.decimalOdds.toFixed(2)}</td>
-                <td>{formatPercent(offer.impliedProbability)}</td>
                 <td>{formatPercent(offer.devigProbability)}</td>
-                <td>{`${offer.probabilityDiffVsMarket > 0 ? "+" : ""}${offer.probabilityDiffVsMarket.toFixed(2)}%`}</td>
+                <td className={gapTone(offer.probabilityDiffVsMarket)}>{formatGap(offer.probabilityDiffVsMarket)}</td>
                 <td className={valueTone(offer.valuePer100)}>{formatValue(offer.valuePer100)}</td>
                 <td>{positionLabel(offer.position)}</td>
               </tr>
@@ -108,21 +130,9 @@ function BoardRowComponent({ row, variant = "table" }: BoardRowProps) {
 
       <div className={styles.drilldownSection}>
         <p className={styles.explanationText}>
-          Fair odds use no-vig probabilities aggregated with book weights. Value compares each book&apos;s payout against that fair line at the same
-          side and point.
+          Fair odds remove vig inside each exact market group before weighted aggregation. Probability gap compares fair probability to the break-even rate of the offered price.
         </p>
       </div>
-
-      <details className={styles.drilldownSection}>
-        <summary className={styles.diagnosticsSummary}>Optional Diagnostics</summary>
-        <ul className={styles.diagnosticsList}>
-          {sortedOffers.map((offer) => (
-            <li key={`${row.id}:${offer.book}:diag`}>
-              {offer.book}: value {formatValue(offer.valuePer100)}, delta {offer.probabilityDiffVsMarket.toFixed(2)}%
-            </li>
-          ))}
-        </ul>
-      </details>
     </>
   );
 
@@ -134,21 +144,29 @@ function BoardRowComponent({ row, variant = "table" }: BoardRowProps) {
             <strong>{row.event}</strong>
             <span>{row.isLive ? "Live" : new Date(row.commenceTime).toLocaleString("en-US", { timeZone: "America/New_York" })}</span>
           </div>
-          <span className={styles.recommendedTag}>Recommended</span>
+          <span className={styles.rowStatus}>{row.isLive ? "Live" : "Upcoming"}</span>
         </div>
 
         <div className={styles.mobilePick}>{row.market}</div>
 
         <div className={styles.mobileComparison}>
           <div>
-            <span>Best</span>
+            <span>Best Price</span>
             <strong>
               {formatAmerican(row.bestOdds)} <em>@ {row.bestBook}</em>
             </strong>
           </div>
           <div>
-            <span>Fair</span>
+            <span>Fair Line</span>
             <strong>{formatAmerican(row.marketFairOdds)}</strong>
+          </div>
+          <div>
+            <span>Prob Gap</span>
+            <strong className={gapTone(bestGap)}>{formatGap(bestGap)}</strong>
+          </div>
+          <div>
+            <span>Signal</span>
+            <strong>{signalLabel(bestGap)}</strong>
           </div>
         </div>
 
@@ -183,22 +201,32 @@ function BoardRowComponent({ row, variant = "table" }: BoardRowProps) {
           </div>
         </td>
         <td>
-          <div className={styles.recommendedCell}>
-            <span className={styles.recommendedTag}>Recommended</span>
+          <div className={styles.marketCell}>
             <strong>{row.market}</strong>
+            <span className={`${styles.signalText} ${gapTone(bestGap)}`}>{signalLabel(bestGap)}</span>
           </div>
         </td>
         <td>
-          <div className={styles.priceCompareCell}>
-            <span>
-              Best: <strong>{formatAmerican(row.bestOdds)}</strong> @ {row.bestBook}
-            </span>
-            <span>
-              Fair: <strong>{formatAmerican(row.marketFairOdds)}</strong>
-            </span>
+          <div className={styles.priceCluster}>
+            <strong className={styles.priceValue}>{formatAmerican(row.bestOdds)}</strong>
+            <span>@ {row.bestBook}</span>
           </div>
         </td>
-        <td className={valueTone(row.valuePer100)}>{formatValue(row.valuePer100)}</td>
+        <td>
+          <div className={styles.priceCluster}>
+            <strong className={styles.priceValue}>{formatAmerican(row.marketFairOdds)}</strong>
+            <span>Model consensus</span>
+          </div>
+        </td>
+        <td>
+          <strong className={`${styles.gapValue} ${gapTone(bestGap)}`}>{formatGap(bestGap)}</strong>
+        </td>
+        <td>
+          <div className={styles.valueCell}>
+            <strong className={valueTone(row.valuePer100)}>{formatValue(row.valuePer100)}</strong>
+            <span>Expected return</span>
+          </div>
+        </td>
         <td>
           <div className={styles.confidenceCell}>
             {row.confidenceLabel ? <ConfidencePill label={row.confidenceLabel} /> : null}

@@ -21,10 +21,12 @@ export function BoardTable({ rows }: BoardTableProps) {
           <thead>
             <tr>
               <th>Event</th>
-              <th>Recommended Bet</th>
-              <th>Best vs Fair</th>
+              <th>Market</th>
+              <th>Best Price</th>
+              <th>Fair Line</th>
+              <th>Gap</th>
               <th>Value ($ / $100)</th>
-              <th>Confidence</th>
+              <th>Market Support</th>
               <th>Detail</th>
             </tr>
           </thead>

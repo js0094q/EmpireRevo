@@ -19,6 +19,7 @@ export type PriceVsFairMetrics = {
   priceDeltaAmerican: number;
   marketImpliedProb: number;
   fairImpliedProb: number;
+  breakEvenProb: number;
   probabilityGapPct: number;
   priceValueDirection: PriceValueDirection;
 };
@@ -128,6 +129,7 @@ export function buildPriceVsFairMetrics(params: {
   const impliedFromFairPrice = americanToImpliedProbability(params.fairPriceAmerican);
   const marketImpliedProb = Number.isFinite(params.marketImpliedProb) ? Number(params.marketImpliedProb) : impliedFromMarketPrice;
   const fairImpliedProb = Number.isFinite(params.fairImpliedProb) ? Number(params.fairImpliedProb) : impliedFromFairPrice;
+  const breakEvenProb = marketImpliedProb;
 
   return {
     fairPriceAmerican: params.fairPriceAmerican,
@@ -135,7 +137,8 @@ export function buildPriceVsFairMetrics(params: {
     priceDeltaAmerican: comparison.delta,
     marketImpliedProb,
     fairImpliedProb,
-    probabilityGapPct: (marketImpliedProb - fairImpliedProb) * 100,
+    breakEvenProb,
+    probabilityGapPct: (fairImpliedProb - breakEvenProb) * 100,
     priceValueDirection: comparison.direction
   };
 }
@@ -254,15 +257,16 @@ function describeProbabilityGap(probabilityGapPct: number): string {
     return "Probability gap is effectively flat.";
   }
   if (probabilityGapPct > 0) {
-    return `Probability gap: ${formatProbabilityGap(probabilityGapPct)} (market implied above fair implied).`;
+    return `Probability gap: ${formatProbabilityGap(probabilityGapPct)} (fair implied above break-even).`;
   }
-  return `Probability gap: ${formatProbabilityGap(probabilityGapPct)} (market implied below fair implied).`;
+  return `Probability gap: ${formatProbabilityGap(probabilityGapPct)} (fair implied below break-even).`;
 }
 
 export function buildPriceVsFairExplanation(params: PriceVsFairExplanationParams): string {
   const market = formatAmericanPrice(params.marketPriceAmerican);
   const fair = formatAmericanPrice(params.fairPriceAmerican);
-  const probabilityGapPct = (params.marketImpliedProb - params.fairImpliedProb) * 100;
+  const probabilityGapPct =
+    (params.fairImpliedProb - americanToImpliedProbability(params.marketPriceAmerican)) * 100;
 
   if (params.direction === "better_than_fair") {
     if (params.strength === "strong") {

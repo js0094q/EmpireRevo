@@ -7,7 +7,7 @@ import {
   getActiveMarketsForBoard,
   getMarketAvailabilityForBoard
 } from "../lib/server/odds/fairEngine";
-import { americanToDecimal } from "../lib/server/odds/fairMath";
+import { americanToDecimal, americanToProbability } from "../lib/server/odds/fairMath";
 
 function buildEvent(): NormalizedEventOdds {
   return {
@@ -109,8 +109,10 @@ test("buildFairBoard produces a weighted fair moneyline", async () => {
   const sampleBook = firstOutcome.books[0]!;
   const expectedEdge = (firstOutcome.fairProb - sampleBook.impliedProbNoVig) * 100;
   const expectedEv = (firstOutcome.fairProb * americanToDecimal(sampleBook.priceAmerican) - 1) * 100;
+  const expectedBreakEven = americanToProbability(sampleBook.priceAmerican);
   assert.ok(Math.abs(sampleBook.edgePct - expectedEdge) < 1e-6);
   assert.ok(Math.abs(sampleBook.evPct - expectedEv) < 1e-6);
+  assert.ok(Math.abs((sampleBook.marketImpliedProb ?? 0) - expectedBreakEven) < 1e-6);
   assert.notEqual(sampleBook.edgePct.toFixed(4), sampleBook.evPct.toFixed(4));
 });
 

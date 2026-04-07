@@ -177,7 +177,7 @@ export function priceVsFairMetrics(outcome: FairOutcome, book: FairOutcomeBook |
   return buildPriceVsFairMetrics({
     marketPriceAmerican: Number.isFinite(book.marketPriceAmerican) ? Number(book.marketPriceAmerican) : book.priceAmerican,
     fairPriceAmerican: Number.isFinite(book.fairPriceAmerican) ? Number(book.fairPriceAmerican) : outcome.fairAmerican,
-    marketImpliedProb: Number.isFinite(book.marketImpliedProb) ? book.marketImpliedProb : book.impliedProbNoVig,
+    marketImpliedProb: Number.isFinite(book.marketImpliedProb) ? book.marketImpliedProb : book.impliedProb,
     fairImpliedProb: Number.isFinite(book.fairImpliedProb) ? book.fairImpliedProb : outcome.fairProb
   });
 }

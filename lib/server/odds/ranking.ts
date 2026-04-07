@@ -112,7 +112,7 @@ export function rankOpportunity(params: RankParams): OpportunityRanking {
     const metrics = buildPriceVsFairMetrics({
       marketPriceAmerican: Number.isFinite(best.marketPriceAmerican) ? Number(best.marketPriceAmerican) : best.priceAmerican,
       fairPriceAmerican: Number.isFinite(best.fairPriceAmerican) ? Number(best.fairPriceAmerican) : best.priceAmerican,
-      marketImpliedProb: Number.isFinite(best.marketImpliedProb) ? Number(best.marketImpliedProb) : best.impliedProbNoVig,
+      marketImpliedProb: Number.isFinite(best.marketImpliedProb) ? Number(best.marketImpliedProb) : best.impliedProb,
       fairImpliedProb: Number.isFinite(best.fairImpliedProb) ? Number(best.fairImpliedProb) : best.impliedProbNoVig
     });
     const actionableValueScore = computeActionableValueScore({

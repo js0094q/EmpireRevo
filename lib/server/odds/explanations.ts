@@ -20,7 +20,7 @@ export function buildOpportunityExplanation(params: ExplanationParams): string {
     const metrics = buildPriceVsFairMetrics({
       marketPriceAmerican: Number.isFinite(bestBook.marketPriceAmerican) ? Number(bestBook.marketPriceAmerican) : bestBook.priceAmerican,
       fairPriceAmerican: Number.isFinite(bestBook.fairPriceAmerican) ? Number(bestBook.fairPriceAmerican) : bestBook.priceAmerican,
-      marketImpliedProb: Number.isFinite(bestBook.marketImpliedProb) ? Number(bestBook.marketImpliedProb) : bestBook.impliedProbNoVig,
+      marketImpliedProb: Number.isFinite(bestBook.marketImpliedProb) ? Number(bestBook.marketImpliedProb) : bestBook.impliedProb,
       fairImpliedProb: Number.isFinite(bestBook.fairImpliedProb) ? Number(bestBook.fairImpliedProb) : bestBook.impliedProbNoVig
     });
     const strength = classifyOpportunityStrength({

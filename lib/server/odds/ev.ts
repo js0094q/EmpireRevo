@@ -1,4 +1,4 @@
-import { americanToDecimal } from "@/lib/server/odds/fairMath";
+import { americanToDecimalOrNull } from "@/lib/server/odds/fairMath";
 
 function clampFairProbability(probability: number): number {
   if (!Number.isFinite(probability)) return Number.NaN;
@@ -15,7 +15,9 @@ function clampFairProbability(probability: number): number {
  */
 export function calculateEvPercent(fairProbability: number, americanOdds: number): number {
   const fair = clampFairProbability(fairProbability);
-  const decimal = americanToDecimal(americanOdds);
-  if (!Number.isFinite(fair) || decimal <= 0) return 0;
+  // EV math is computed from stake-included decimal price so the result is the
+  // exact $1 return expectation described in the updated formula set.
+  const decimal = americanToDecimalOrNull(americanOdds);
+  if (!Number.isFinite(fair) || decimal === null || decimal <= 0) return 0;
   return (fair * decimal - 1) * 100;
 }

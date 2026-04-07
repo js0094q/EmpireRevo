@@ -64,23 +64,74 @@ export function BoardShell({ board, league }: BoardShellProps) {
     return sorted;
   }, [deferredSearch, rows, sortBy]);
 
+  const summary = useMemo(() => {
+    const positiveRows = rows.filter((row) => row.valuePer100 > 0).length;
+    const liveRows = rows.filter((row) => row.isLive).length;
+    const strongestValue = rows.reduce((max, row) => Math.max(max, row.valuePer100), Number.NEGATIVE_INFINITY);
+
+    return {
+      matchups: rows.length,
+      positiveRows,
+      liveRows,
+      booksTracked: board.books.length,
+      strongestValue: Number.isFinite(strongestValue) ? strongestValue : 0
+    };
+  }, [board.books.length, rows]);
+
   return (
     <AppContainer>
       <div className={styles.page}>
         <section className={styles.simpleHeader}>
-          <div className={styles.brandBlock}>
-            <BrandMark className={styles.heroBrandMark} />
-            <div>
-              <h1 className={styles.heroTitle}>EmpirePicks Board</h1>
-              <p className={styles.heroSubhead}>Compare the best offered line against weighted fair odds, then size by value per $100.</p>
+          <div className={styles.headerTop}>
+            <div className={styles.brandBlock}>
+              <BrandMark className={styles.heroBrandMark} />
+              <div>
+                <h1 className={styles.heroTitle}>EmpirePicks Live Board</h1>
+                <p className={styles.heroSubhead}>Line shopping against weighted fair odds, tuned for fast scanning instead of badge spam.</p>
+              </div>
+            </div>
+            <div className={styles.headerMeta}>
+              <span className={styles.marketTag}>{board.market === "h2h" ? "Moneyline" : board.market === "spreads" ? "Spread" : "Total"}</span>
+              <span className={styles.updatedStamp}>{board.lastUpdatedLabel}</span>
             </div>
           </div>
+
+          <div className={styles.summaryStrip}>
+            <div className={styles.summaryItem}>
+              <span className={styles.summaryLabel}>Matchups</span>
+              <strong className={styles.summaryValue}>{summary.matchups}</strong>
+            </div>
+            <div className={styles.summaryItem}>
+              <span className={styles.summaryLabel}>Positive Value</span>
+              <strong className={styles.summaryValue}>{summary.positiveRows}</strong>
+            </div>
+            <div className={styles.summaryItem}>
+              <span className={styles.summaryLabel}>Live Now</span>
+              <strong className={styles.summaryValue}>{summary.liveRows}</strong>
+            </div>
+            <div className={styles.summaryItem}>
+              <span className={styles.summaryLabel}>Strongest Value</span>
+              <strong className={styles.summaryValue}>
+                {summary.strongestValue > 0 ? "+" : ""}
+                {summary.strongestValue.toFixed(2)}
+              </strong>
+            </div>
+            <div className={styles.summaryItem}>
+              <span className={styles.summaryLabel}>Books Tracked</span>
+              <strong className={styles.summaryValue}>{summary.booksTracked}</strong>
+            </div>
+          </div>
+
+          <p className={styles.headerNote}>
+            Scan the board in this order: best listed price, model fair line, probability gap, then value per $100. Confidence and book count tell you how much market support is behind the number.
+          </p>
+
           <div className={styles.controlRow}>
             <LeagueSelector value={league} onChange={(value) => replaceParam("league", value)} />
             <MarketTabs value={board.market} onChange={(value) => replaceParam("market", value)} marketAvailability={board.marketAvailability} />
             <SearchControl value={search} onChange={setSearch} className={styles.search} />
             <label className={styles.sortLabel}>
-              Sort
+              Sort Board
               <select
                 value={sortBy}
                 onChange={(event) => {
@@ -99,16 +150,18 @@ export function BoardShell({ board, league }: BoardShellProps) {
           </div>
           <div className={styles.glossaryRow}>
             <p>
-              <strong>Fair Odds:</strong> Consensus no-vig price from weighted books.
+              <strong>Best Price</strong>
+              Highest payout currently on the board for the exact side and line.
             </p>
             <p>
-              <strong>Best Price:</strong> Highest payout currently offered for the same side and line.
+              <strong>Fair Line</strong>
+              No-vig consensus price aggregated across weighted books in the same market group.
             </p>
             <p>
-              <strong>Value:</strong> Estimated profit per $100 stake if fair odds are correct.
+              <strong>Probability Gap</strong>
+              Model fair probability minus the break-even rate implied by the offered price.
             </p>
           </div>
-          <p className={styles.primerExample}>Example: best +110 vs fair +102 projects +3.4 per $100. EV can be suppressed when coverage is thin.</p>
         </section>
 
         {filteredRows.length ? (

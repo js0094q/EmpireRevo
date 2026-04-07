@@ -231,7 +231,7 @@ export type FairOutcome = {
 export type FairEventBookExclusion = {
   bookKey: string;
   title: string;
-  reason: "point_mismatch" | "missing_market_or_outcomes" | "unsupported_outcome_count";
+  reason: "point_mismatch" | "missing_market_or_outcomes";
 };
 
 export type FairEvent = {
