@@ -1,14 +1,14 @@
 :root {
-  --color-bg: #07101a;
-  --color-surface: #102032;
-  --color-surface-muted: #182a3f;
-  --color-text: #f3f8ff;
-  --color-text-muted: #a9bacd;
-  --color-text-dim: #73879f;
-  --color-accent: #7ce3bf;
-  --color-positive: #7ce3bf;
-  --color-warning: #f4bf68;
-  --color-danger: #ff8d8d;
+  --color-bg: #060f18;
+  --color-surface: #0f1e2f;
+  --color-surface-muted: #15263a;
+  --color-text: #edf5ff;
+  --color-text-muted: #a7b8cb;
+  --color-text-dim: #7589a1;
+  --color-accent: #70d9b2;
+  --color-positive: #70d9b2;
+  --color-warning: #f2bc67;
+  --color-danger: #ff8f8f;
   --color-accent-soft: rgba(124, 227, 191, 0.2);
   --color-positive-soft: rgba(124, 227, 191, 0.2);
   --color-warning-soft: rgba(244, 191, 104, 0.16);
@@ -20,8 +20,8 @@
   --radius-lg: 1rem;
   --radius-xl: 1.35rem;
   --radius-pill: 999px;
-  --shadow-md: 0 18px 40px rgba(2, 6, 14, 0.34);
-  --shadow-xl: 0 30px 80px rgba(2, 6, 14, 0.46);
+  --shadow-md: 0 16px 34px rgba(2, 6, 14, 0.3);
+  --shadow-xl: 0 26px 64px rgba(2, 6, 14, 0.42);
   --font-body: "Sohne", "Avenir Next", "SF Pro Display", sans-serif;
   --font-mono: "JetBrains Mono", "SFMono-Regular", Menlo, monospace;
 }
@@ -41,9 +41,9 @@ body {
   color: var(--color-text);
   font-family: var(--font-body);
   background:
-    radial-gradient(72rem 38rem at 12% -18%, rgba(67, 123, 201, 0.2), transparent 64%),
-    radial-gradient(62rem 28rem at 96% 2%, rgba(124, 227, 191, 0.15), transparent 68%),
-    linear-gradient(180deg, #050c15 0%, #07111b 46%, #08131f 100%);
+    radial-gradient(72rem 38rem at 6% -18%, rgba(75, 132, 211, 0.17), transparent 64%),
+    radial-gradient(58rem 30rem at 95% -6%, rgba(112, 217, 178, 0.13), transparent 68%),
+    linear-gradient(180deg, #050b13 0%, #07101a 44%, #07121d 100%);
   background-color: var(--color-bg);
 }
 
@@ -116,6 +116,30 @@ a {
   justify-content: space-between;
   gap: 0.75rem;
   flex-wrap: wrap;
+}
+
+.timeline-controls button {
+  appearance: none;
+  min-height: 1.8rem;
+  border-radius: var(--radius-pill);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.02);
+  color: var(--color-text-muted);
+  padding: 0.25rem 0.62rem;
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: border-color 140ms ease, background-color 140ms ease, color 140ms ease;
+}
+
+.timeline-controls button:hover,
+.timeline-controls button:focus-visible,
+.timeline-controls button.active {
+  border-color: color-mix(in srgb, var(--color-accent) 62%, transparent);
+  background: color-mix(in srgb, var(--color-accent) 14%, transparent);
+  color: color-mix(in srgb, var(--color-accent) 90%, white 10%);
+  outline: none;
 }
 
 .detail-row {

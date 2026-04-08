@@ -2,8 +2,8 @@
 
 import { memo, useMemo, useState } from "react";
 import type { BoardDrilldownRow } from "@/lib/server/odds/types";
-import styles from "./BoardShell.module.css";
 import { ConfidencePill } from "@/components/board/ConfidencePill";
+import styles from "./BoardWorkspace.module.css";
 
 function formatAmerican(price: number): string {
   if (!Number.isFinite(price)) return "--";
@@ -16,15 +16,29 @@ function formatPercent(value: number): string {
 }
 
 function formatValue(value: number): string {
-  if (!Number.isFinite(value)) return "$0.00 / $100";
+  if (!Number.isFinite(value)) return "$0.00";
   const prefix = value > 0 ? "+" : "";
-  return `${prefix}$${value.toFixed(2)} / $100`;
+  return `${prefix}$${value.toFixed(2)}`;
 }
 
 function formatGap(value: number): string {
   if (!Number.isFinite(value)) return "--";
   const prefix = value > 0 ? "+" : "";
   return `${prefix}${value.toFixed(2)}pp`;
+}
+
+function formatStartTime(iso: string, isLive: boolean): string {
+  if (isLive) return "Live";
+  const ts = Date.parse(iso);
+  if (!Number.isFinite(ts)) return "Start time unavailable";
+
+  return new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/New_York",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit"
+  }).format(new Date(ts));
 }
 
 function valueTone(value: number): string {
@@ -40,9 +54,9 @@ function gapTone(value: number): string {
 }
 
 function positionLabel(position: "above_market" | "at_market" | "below_market"): string {
-  if (position === "above_market") return "Above Market";
-  if (position === "below_market") return "Below Market";
-  return "At Market";
+  if (position === "above_market") return "Above market";
+  if (position === "below_market") return "Below market";
+  return "At market";
 }
 
 function signalLabel(value: number): string {
@@ -59,54 +73,60 @@ type BoardRowProps = {
 
 function BoardRowComponent({ row, variant = "table" }: BoardRowProps) {
   const [expanded, setExpanded] = useState(false);
-  const toggleLabel = expanded ? "Hide Detail" : "View Detail";
+  const toggleLabel = expanded ? "Hide" : "View";
   const detailId = variant === "card" ? `mobile-detail-${row.id}` : `detail-${row.id}`;
+
   const sortedOffers = useMemo(
     () => [...row.expanded.offers].sort((a, b) => b.valuePer100 - a.valuePer100),
     [row.expanded.offers]
   );
+
   const bestOffer = useMemo(
     () => row.expanded.offers.find((offer) => offer.book === row.bestBook) ?? sortedOffers[0] ?? null,
     [row.bestBook, row.expanded.offers, sortedOffers]
   );
+
   const coverageRequired = Math.max(1, row.coverageRequiredBooks ?? row.booksInConsensus);
   const coverageBooks = row.coverageBooks ?? row.booksInConsensus;
   const coverageStatus = `${coverageBooks}/${coverageRequired} books`;
   const bestGap = bestOffer?.probabilityDiffVsMarket ?? 0;
 
-  const detailsContent = (
-    <>
-      <div className={styles.drilldownSection}>
-        <h4 className={styles.drilldownTitle}>Market Summary</h4>
-        <div className={styles.summaryGrid}>
-          <div>
-            <span>Fair Line</span>
-            <strong>{formatAmerican(row.expanded.weightedMarketFairOdds)}</strong>
-          </div>
-          <div>
-            <span>Fair Probability</span>
-            <strong>{formatPercent(row.expanded.weightedMarketFairProbability)}</strong>
-          </div>
-          <div>
-            <span>Best Book</span>
-            <strong>{row.bestBook}</strong>
-          </div>
-          <div>
-            <span>Total Weight</span>
-            <strong>{row.expanded.totalWeight.toFixed(2)}</strong>
-          </div>
+  const detailContent = (
+    <div className={styles.detailContent}>
+      <div className={styles.detailMetrics}>
+        <div className={styles.detailMetric}>
+          <span className={styles.detailMetricLabel}>Fair Line</span>
+          <strong className={styles.detailMetricValue}>{formatAmerican(row.expanded.weightedMarketFairOdds)}</strong>
+        </div>
+        <div className={styles.detailMetric}>
+          <span className={styles.detailMetricLabel}>Fair Probability</span>
+          <strong className={styles.detailMetricValue}>{formatPercent(row.expanded.weightedMarketFairProbability)}</strong>
+        </div>
+        <div className={styles.detailMetric}>
+          <span className={styles.detailMetricLabel}>Best Book</span>
+          <strong className={styles.detailMetricValue}>{row.bestBook}</strong>
+        </div>
+        <div className={styles.detailMetric}>
+          <span className={styles.detailMetricLabel}>Consensus</span>
+          <strong className={styles.detailMetricValue}>{row.booksInConsensus} books</strong>
+        </div>
+        <div className={styles.detailMetric}>
+          <span className={styles.detailMetricLabel}>Total Weight</span>
+          <strong className={styles.detailMetricValue}>{row.expanded.totalWeight.toFixed(2)}</strong>
+        </div>
+        <div className={styles.detailMetric}>
+          <span className={styles.detailMetricLabel}>Signal</span>
+          <strong className={styles.detailMetricValue}>{signalLabel(bestGap)}</strong>
         </div>
       </div>
 
-      <div className={styles.drilldownSection}>
-        <h4 className={styles.drilldownTitle}>Book Comparison</h4>
+      <div className={styles.detailTableWrap}>
         <table className={styles.detailTable}>
           <thead>
             <tr>
               <th>Book</th>
-              <th>Line</th>
               <th>Odds</th>
-              <th>No-Vig</th>
+              <th>No-vig</th>
               <th>Gap</th>
               <th>Value</th>
               <th>Position</th>
@@ -116,7 +136,6 @@ function BoardRowComponent({ row, variant = "table" }: BoardRowProps) {
             {sortedOffers.map((offer) => (
               <tr key={`${row.id}:${offer.book}`}>
                 <td>{offer.book}</td>
-                <td>{row.market.replace(/^.+\s(?=[+-]?\d|ML)/, "")}</td>
                 <td>{formatAmerican(offer.americanOdds)}</td>
                 <td>{formatPercent(offer.devigProbability)}</td>
                 <td className={gapTone(offer.probabilityDiffVsMarket)}>{formatGap(offer.probabilityDiffVsMarket)}</td>
@@ -128,12 +147,10 @@ function BoardRowComponent({ row, variant = "table" }: BoardRowProps) {
         </table>
       </div>
 
-      <div className={styles.drilldownSection}>
-        <p className={styles.explanationText}>
-          Fair odds remove vig inside each exact market group before weighted aggregation. Probability gap compares fair probability to the break-even rate of the offered price.
-        </p>
-      </div>
-    </>
+      <p className={styles.detailNote}>
+        Fair probability is derived after per-book vig removal and weighted market aggregation.
+      </p>
+    </div>
   );
 
   if (variant === "card") {
@@ -142,51 +159,49 @@ function BoardRowComponent({ row, variant = "table" }: BoardRowProps) {
         <div className={styles.mobileTop}>
           <div className={styles.eventCell}>
             <strong>{row.event}</strong>
-            <span>{row.isLive ? "Live" : new Date(row.commenceTime).toLocaleString("en-US", { timeZone: "America/New_York" })}</span>
+            <span className={styles.eventMeta}>{formatStartTime(row.commenceTime, row.isLive)}</span>
           </div>
           <span className={styles.rowStatus}>{row.isLive ? "Live" : "Upcoming"}</span>
         </div>
 
-        <div className={styles.mobilePick}>{row.market}</div>
+        <p className={styles.mobileMarket}>{row.market}</p>
 
-        <div className={styles.mobileComparison}>
-          <div>
-            <span>Best Price</span>
+        <div className={styles.mobileMetrics}>
+          <div className={styles.mobileMetric}>
+            <span>Best</span>
             <strong>
-              {formatAmerican(row.bestOdds)} <em>@ {row.bestBook}</em>
+              {formatAmerican(row.bestOdds)} @ {row.bestBook}
             </strong>
           </div>
-          <div>
-            <span>Fair Line</span>
+          <div className={styles.mobileMetric}>
+            <span>Fair</span>
             <strong>{formatAmerican(row.marketFairOdds)}</strong>
           </div>
-          <div>
-            <span>Prob Gap</span>
+          <div className={styles.mobileMetric}>
+            <span>Gap</span>
             <strong className={gapTone(bestGap)}>{formatGap(bestGap)}</strong>
           </div>
-          <div>
-            <span>Signal</span>
-            <strong>{signalLabel(bestGap)}</strong>
+          <div className={styles.mobileMetric}>
+            <span>Value</span>
+            <strong className={valueTone(row.valuePer100)}>{`${formatValue(row.valuePer100)} / $100`}</strong>
           </div>
         </div>
 
         <div className={styles.mobileMetaRow}>
-          <strong className={valueTone(row.valuePer100)}>{formatValue(row.valuePer100)}</strong>
-          {row.confidenceLabel ? <ConfidencePill label={row.confidenceLabel} /> : null}
+          {row.confidenceLabel ? <ConfidencePill label={row.confidenceLabel} /> : <span />}
           <span className={styles.coverageMeta}>{coverageStatus}</span>
+          <button
+            type="button"
+            className={styles.detailToggle}
+            onClick={() => setExpanded((value) => !value)}
+            aria-expanded={expanded}
+            aria-controls={detailId}
+          >
+            {toggleLabel}
+          </button>
         </div>
 
-        <button
-          type="button"
-          className={styles.detailToggle}
-          onClick={() => setExpanded((value) => !value)}
-          aria-expanded={expanded}
-          aria-controls={detailId}
-        >
-          {toggleLabel}
-        </button>
-
-        {expanded ? <div id={detailId}>{detailsContent}</div> : null}
+        {expanded ? <div id={detailId}>{detailContent}</div> : null}
       </article>
     );
   }
@@ -197,7 +212,7 @@ function BoardRowComponent({ row, variant = "table" }: BoardRowProps) {
         <td>
           <div className={styles.eventCell}>
             <strong>{row.event}</strong>
-            <span>{row.isLive ? "Live" : new Date(row.commenceTime).toLocaleString("en-US", { timeZone: "America/New_York" })}</span>
+            <span className={styles.eventMeta}>{formatStartTime(row.commenceTime, row.isLive)}</span>
           </div>
         </td>
         <td>
@@ -209,13 +224,13 @@ function BoardRowComponent({ row, variant = "table" }: BoardRowProps) {
         <td>
           <div className={styles.priceCluster}>
             <strong className={styles.priceValue}>{formatAmerican(row.bestOdds)}</strong>
-            <span>@ {row.bestBook}</span>
+            <span>{row.bestBook}</span>
           </div>
         </td>
         <td>
           <div className={styles.priceCluster}>
             <strong className={styles.priceValue}>{formatAmerican(row.marketFairOdds)}</strong>
-            <span>Model consensus</span>
+            <span>Model fair</span>
           </div>
         </td>
         <td>
@@ -223,7 +238,7 @@ function BoardRowComponent({ row, variant = "table" }: BoardRowProps) {
         </td>
         <td>
           <div className={styles.valueCell}>
-            <strong className={valueTone(row.valuePer100)}>{formatValue(row.valuePer100)}</strong>
+            <strong className={valueTone(row.valuePer100)}>{`${formatValue(row.valuePer100)} / $100`}</strong>
             <span>Expected return</span>
           </div>
         </td>
@@ -245,11 +260,10 @@ function BoardRowComponent({ row, variant = "table" }: BoardRowProps) {
           </button>
         </td>
       </tr>
+
       {expanded ? (
         <tr id={detailId} className={styles.detailRow}>
-          <td colSpan={6}>
-            {detailsContent}
-          </td>
+          <td colSpan={8}>{detailContent}</td>
         </tr>
       ) : null}
     </>

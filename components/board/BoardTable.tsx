@@ -1,8 +1,8 @@
 "use client";
 
 import type { BoardDrilldownRow } from "@/lib/server/odds/types";
-import styles from "./BoardShell.module.css";
 import { BoardRow } from "@/components/board/BoardRow";
+import styles from "./BoardWorkspace.module.css";
 
 type BoardTableProps = {
   rows: BoardDrilldownRow[];
@@ -16,6 +16,7 @@ export function BoardTable({ rows }: BoardTableProps) {
           <BoardRow key={`${row.id}:mobile`} row={row} variant="card" />
         ))}
       </div>
+
       <div className={styles.tableScroller}>
         <table className={styles.table}>
           <thead>
@@ -24,9 +25,9 @@ export function BoardTable({ rows }: BoardTableProps) {
               <th>Market</th>
               <th>Best Price</th>
               <th>Fair Line</th>
-              <th>Gap</th>
+              <th>Prob Gap</th>
               <th>Value ($ / $100)</th>
-              <th>Market Support</th>
+              <th>Support</th>
               <th>Detail</th>
             </tr>
           </thead>
