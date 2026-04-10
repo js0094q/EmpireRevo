@@ -54,3 +54,11 @@ test("getOddsApiBaseUrl accepts configured allowlisted hosts", () => {
   const base = getOddsApiBaseUrl();
   assert.equal(base.toString(), "https://odds.internal.example.com/");
 });
+
+test("getOddsApiBaseUrl accepts loopback http hosts for local development", () => {
+  process.env.ODDS_API_BASE = "http://127.0.0.1:4010/v4/sports";
+  delete process.env.ODDS_API_ALLOWED_HOSTS;
+
+  const base = getOddsApiBaseUrl();
+  assert.equal(base.toString(), "http://127.0.0.1:4010/");
+});

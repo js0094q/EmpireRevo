@@ -1,6 +1,15 @@
 # EmpirePicks
 
-EmpirePicks is a sportsbook odds aggregation and betting intelligence workstation focused on pro-grade line shopping with transparent fair-line math.
+EmpirePicks is a sportsbook pricing workstation for fair odds, line shopping, and protected operator diagnostics.
+
+## Public Product Surfaces
+
+- `Board`: ranked scanner for best line versus fair value
+- `Games`: event directory with cleaner orientation into detail
+- `Game Detail`: event comparison, market tabs, and real persisted history when available
+- `Internal`: protected diagnostics and evaluation tools
+
+Public rendering uses shared formatters and view models under `lib/ui`.
 
 ## Why Fair Line Matters
 
@@ -68,7 +77,7 @@ ROI is computed only when matching outcomes are persisted; missing outcomes rema
 
 ## Board Behavior
 
-The board keeps upcoming games within the selected start window, and once a game has started it remains visible as long as the live odds feed is still publishing it. That supports late-game betting without relying on a fixed two-hour post-kickoff cutoff.
+The board is now compact and table-first by default. It keeps upcoming games within the selected start window, and once a game has started it remains visible as long as the live odds feed is still publishing it.
 
 ## Pinned-Book Actionability
 
@@ -145,6 +154,16 @@ npm run test:visual
 
 ## Documentation
 
+- [Repo Audit](./docs/repo-audit.md)
+- [Product Principles](./docs/product-principles.md)
+- [UI System](./docs/ui-system.md)
+- [Board Spec](./docs/board-spec.md)
+- [Game Detail Spec](./docs/game-detail-spec.md)
+- [Internal Surfaces](./docs/internal-surfaces.md)
+- [API Contracts](./docs/api-contracts.md)
+- [Production Hardening](./docs/production-hardening.md)
+- [Refactor Map](./docs/refactor-plan.md)
+- [Final QA Checklist](./docs/final-qa-checklist.md)
 - [Odds Math](./docs/odds-math.md)
 - [Calibration Framework](./docs/calibration-framework.md)
 - [Validation and Instrumentation](./docs/validation-and-instrumentation.md)

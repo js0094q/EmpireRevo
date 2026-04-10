@@ -1,5 +1,22 @@
 # EmpirePicks System Architecture
 
+## Current UI Architecture
+
+Public rendering now runs through:
+
+- `lib/ui/formatters/display.ts`
+- `lib/ui/view-models/boardViewModel.ts`
+- `lib/ui/view-models/gameDetailViewModel.ts`
+- `lib/ui/view-models/internalDiagnosticsViewModel.ts`
+
+Public routes are intentionally split:
+
+- `/` for `Board`
+- `/games` for `Games`
+- `/game/[eventId]` for event detail
+
+Protected operator rendering remains under `/internal/*`.
+
 ## Purpose
 
 EmpirePicks is a quantitative sportsbook analytics platform designed to:

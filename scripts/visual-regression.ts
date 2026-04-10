@@ -227,7 +227,8 @@ function startNextServer(params: {
       ...process.env,
       NEXT_TELEMETRY_DISABLED: "1",
       ODDS_API_KEY: "visual-regression-key",
-      ODDS_API_BASE: params.mockBaseUrl
+      ODDS_API_BASE: params.mockBaseUrl,
+      EMPIRE_INTERNAL_API_KEY: "visual-internal-key"
     },
     stdio: "pipe"
   });
@@ -292,8 +293,20 @@ async function run(): Promise<void> {
       path: "/?league=nba&market=h2h&model=weighted&window=today"
     },
     {
+      name: "games",
+      path: "/games?league=nba&market=h2h&model=weighted"
+    },
+    {
       name: "game",
       path: `/game/${encodeURIComponent(gameEventId)}?league=nba&market=h2h&model=weighted`
+    },
+    {
+      name: "empty",
+      path: "/?league=mlb&market=h2h&model=weighted"
+    },
+    {
+      name: "internal",
+      path: "/internal/engine"
     }
   ];
 
@@ -340,6 +353,16 @@ async function run(): Promise<void> {
         const page = await context.newPage();
 
         for (const scenario of scenarios) {
+          if (scenario.name === "internal") {
+            await context.addCookies([
+              {
+                name: "empire_internal_session",
+                value: "visual-internal-key",
+                domain: "127.0.0.1",
+                path: "/"
+              }
+            ]);
+          }
           const key = `${scenario.name}-${viewport.name}`;
           const currentPath = path.join(CURRENT_DIR, `${key}.png`);
           const baselinePath = path.join(BASELINE_DIR, `${key}.png`);

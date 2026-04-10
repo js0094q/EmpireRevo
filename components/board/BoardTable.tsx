@@ -1,43 +1,30 @@
-"use client";
-
-import type { BoardDrilldownRow } from "@/lib/server/odds/types";
+import type { BoardRowViewModel } from "@/lib/ui/view-models/boardViewModel";
 import { BoardRow } from "@/components/board/BoardRow";
-import styles from "./BoardWorkspace.module.css";
+import styles from "./workstation.module.css";
 
-type BoardTableProps = {
-  rows: BoardDrilldownRow[];
-};
-
-export function BoardTable({ rows }: BoardTableProps) {
+export function BoardTable({ rows }: { rows: BoardRowViewModel[] }) {
   return (
-    <section className={styles.tableWrap}>
-      <div className={styles.mobileCards}>
-        {rows.map((row) => (
-          <BoardRow key={`${row.id}:mobile`} row={row} variant="card" />
-        ))}
-      </div>
-
-      <div className={styles.tableScroller}>
-        <table className={styles.table}>
-          <thead>
-            <tr>
-              <th>Event</th>
-              <th>Market</th>
-              <th>Best Price</th>
-              <th>Fair Line</th>
-              <th>Prob Gap</th>
-              <th>Value ($ / $100)</th>
-              <th>Support</th>
-              <th>Detail</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((row) => (
-              <BoardRow key={row.id} row={row} />
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </section>
+    <div className={styles.tableWrap}>
+      <table className={styles.table}>
+        <thead>
+          <tr>
+            <th>Event</th>
+            <th>Market</th>
+            <th>Best</th>
+            <th>Book</th>
+            <th>Fair</th>
+            <th>Edge</th>
+            <th>Confidence</th>
+            <th>Books</th>
+            <th>Updated</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row) => (
+            <BoardRow key={row.id} row={row} />
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 }

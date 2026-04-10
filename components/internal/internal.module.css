@@ -1,0 +1,65 @@
+.surface {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.header {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.title {
+  margin: 0;
+  font-size: 1.3rem;
+}
+
+.subtitle {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.84rem;
+}
+
+.summaryGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.65rem;
+}
+
+.summaryItem {
+  display: grid;
+  gap: 0.18rem;
+}
+
+.summaryLabel {
+  color: var(--text-muted);
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.summaryHint {
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+}
+
+.section {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.sectionTitle {
+  margin: 0;
+  font-size: 0.94rem;
+}
+
+@media (max-width: 900px) {
+  .summaryGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .summaryGrid {
+    grid-template-columns: 1fr;
+  }
+}

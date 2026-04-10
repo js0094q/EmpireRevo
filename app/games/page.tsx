@@ -1,5 +1,5 @@
-import { ErrorState } from "@/components/board/ErrorState";
-import { BoardShell } from "@/components/board/BoardShell";
+import { ErrorState } from "@/components/primitives/ErrorState";
+import { GamesView } from "@/components/games/GamesView";
 import { fetchFairBoardPageData, hasOddsKey } from "@/lib/server/odds/pageData";
 import { sportKeyToLeague } from "@/lib/server/odds/client";
 import { redirect } from "next/navigation";
@@ -10,8 +10,8 @@ function ConfigRequired() {
   return (
     <ErrorState
       title="Configuration Required"
-      message="ODDS_API_KEY is missing on the server. Add it to .env.local and Vercel environment variables."
-      hint="No client-side requests are attempted until server configuration is present."
+      message="ODDS_API_KEY is missing on the server."
+      detail="Add it to .env.local and the deployment environment before loading the games surface."
     />
   );
 }
@@ -21,6 +21,7 @@ type SearchParams = {
   sportKey?: string;
   market?: string;
   model?: string;
+  minBooks?: string;
 };
 
 export default async function GamesPage({ searchParams }: { searchParams?: Promise<SearchParams> }) {
@@ -36,12 +37,14 @@ export default async function GamesPage({ searchParams }: { searchParams?: Promi
     params.model === "sharp" || params.model === "equal" || params.model === "weighted"
       ? (params.model as "sharp" | "equal" | "weighted")
       : "weighted";
+  const minBooks = Math.max(2, Math.min(6, Number(params.minBooks || "4") || 4));
   const windowHours = 168;
 
   const result = await fetchFairBoardPageData({
     league,
     market,
     model,
+    minBooks,
     windowHours,
     historyWindowHours: 72
   })
@@ -68,7 +71,7 @@ export default async function GamesPage({ searchParams }: { searchParams?: Promi
       hint = "Switch leagues or market.";
     }
 
-    return <ErrorState title={title} message={message} hint={hint} />;
+    return <ErrorState title={title} message={message} detail={hint} />;
   }
 
   const pageData = result.board;
@@ -77,7 +80,7 @@ export default async function GamesPage({ searchParams }: { searchParams?: Promi
       <ErrorState
         title="Games board unavailable"
         message="Unexpected error while loading the game board."
-        hint="Missing board payload."
+        detail="Missing board payload."
       />
     );
   }
@@ -87,19 +90,20 @@ export default async function GamesPage({ searchParams }: { searchParams?: Promi
     nextParams.set("league", league);
     nextParams.set("market", pageData.resolvedMarket);
     if (model !== "weighted") nextParams.set("model", model);
+    if (minBooks !== 4) nextParams.set("minBooks", `${minBooks}`);
     redirect(`/games?${nextParams.toString()}`);
   }
 
   const board = pageData.board;
-  if (!(board.boardRows?.length ?? 0)) {
+  if (!(board.events?.length ?? 0)) {
     return (
       <ErrorState
-        title="No live lines available"
-        message="Try another league or check back when more books are posting."
-        hint="EmpirePicks only shows markets with live comparable prices."
+        title="No qualifying markets for current filters."
+        message="Try another league, market, or book threshold."
+        detail="EmpirePicks only shows markets with live comparable prices."
       />
     );
   }
 
-  return <BoardShell board={board} league={league} />;
+  return <GamesView board={board} league={league} model={model} />;
 }

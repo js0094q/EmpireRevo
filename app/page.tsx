@@ -1,18 +1,18 @@
-import { ErrorState } from "@/components/board/ErrorState";
-import { BoardShell } from "@/components/board/BoardShell";
+import { ErrorState } from "@/components/primitives/ErrorState";
+import { BoardView } from "@/components/board/BoardView";
 import { fetchFairBoardPageData, hasOddsKey } from "@/lib/server/odds/pageData";
 import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
 function ConfigRequired() {
-  return <ErrorState title="Configuration Required" message="ODDS_API_KEY is missing on the server. Add it to .env.local and Vercel environment variables." hint="No client-side requests are attempted until server configuration is present." />;
+  return <ErrorState title="Configuration required" message="ODDS_API_KEY is missing on the server." detail="Add it to .env.local and the deployment environment before loading the board." />;
 }
 
 export default async function Page({
   searchParams
 }: {
-  searchParams?: Promise<{ league?: string; market?: string; model?: string }>;
+  searchParams?: Promise<{ league?: string; market?: string; model?: string; minBooks?: string }>;
 }) {
   if (!hasOddsKey()) {
     return <ConfigRequired />;
@@ -22,12 +22,14 @@ export default async function Page({
   const league = params.league || "nba";
   const market = params.market === "spreads" || params.market === "totals" ? params.market : "h2h";
   const model = params.model === "sharp" || params.model === "equal" || params.model === "weighted" ? (params.model as "sharp" | "equal" | "weighted") : "weighted";
+  const minBooks = Math.max(2, Math.min(6, Number(params.minBooks || "4") || 4));
   const windowHours = 168;
 
   const result = await fetchFairBoardPageData({
     league,
     market,
     model,
+    minBooks,
     windowHours,
     historyWindowHours: 72
   })
@@ -54,16 +56,16 @@ export default async function Page({
       hint = "Try another league or market.";
     }
 
-    return <ErrorState title={title} message={message} hint={hint} />;
+    return <ErrorState title={title} message={message} detail={hint} />;
   }
 
   const pageData = result.board;
   if (!pageData) {
     return (
       <ErrorState
-        title="Live odds unavailable"
-        message="Unexpected error while building the fair board."
-        hint="Missing board payload."
+        title="Odds unavailable"
+        message="Unexpected error while building the board."
+        detail="Missing board payload."
       />
     );
   }
@@ -73,19 +75,20 @@ export default async function Page({
     nextParams.set("league", league);
     nextParams.set("market", pageData.resolvedMarket);
     if (model !== "weighted") nextParams.set("model", model);
+    if (minBooks !== 4) nextParams.set("minBooks", `${minBooks}`);
     redirect(`/?${nextParams.toString()}`);
   }
 
   const board = pageData.board;
-  if (!(board.boardRows?.length ?? 0)) {
+  if (!(board.events?.length ?? 0)) {
     return (
       <ErrorState
-        title="No live lines available"
-        message="Try switching leagues or checking back when more books are posting."
-        hint="EmpirePicks only shows markets with live comparable prices."
+        title="No qualifying markets for current filters."
+        message="Try another league, market, or book threshold."
+        detail="EmpirePicks only shows markets with live comparable prices."
       />
     );
   }
 
-  return <BoardShell board={board} league={league} />;
+  return <BoardView board={board} league={league} model={model} mode="board" />;
 }

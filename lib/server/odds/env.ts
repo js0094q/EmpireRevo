@@ -18,6 +18,7 @@ export function getOddsApiKey(): string {
 const DEFAULT_ODDS_API_BASE = "https://api.the-odds-api.com";
 const DEFAULT_ALLOWED_ODDS_HOSTS = new Set(["api.the-odds-api.com"]);
 const HOSTNAME_PATTERN = /^[a-z0-9.-]+$/;
+const LOCAL_DEV_HOSTS = new Set(["127.0.0.1", "localhost"]);
 
 function normalizeHost(value: string): string {
   return value.trim().toLowerCase();
@@ -45,20 +46,23 @@ export function getOddsApiBaseUrl(): URL {
 
   try {
     const configured = new URL(raw);
-    if (configured.protocol !== "https:") return fallback;
-    if (configured.username || configured.password) return fallback;
-    if (configured.port && configured.port !== "443") return fallback;
-
     const host = normalizeHost(configured.hostname);
     if (!validHost(host)) return fallback;
+    const isLocalDevHost = LOCAL_DEV_HOSTS.has(host);
+
+    if (!isLocalDevHost && configured.protocol !== "https:") return fallback;
+    if (configured.username || configured.password) return fallback;
+    if (!isLocalDevHost && configured.port && configured.port !== "443") return fallback;
 
     const allowedHosts = parseAllowedOddsHosts();
-    if (!allowedHosts.has(host)) {
+    if (!isLocalDevHost && !allowedHosts.has(host)) {
       return fallback;
     }
 
     configured.hostname = host;
-    configured.port = "";
+    if (!isLocalDevHost) {
+      configured.port = "";
+    }
     configured.pathname = "";
     configured.search = "";
     configured.hash = "";

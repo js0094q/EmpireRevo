@@ -1,0 +1,229 @@
+.button {
+  appearance: none;
+  border: 1px solid var(--surface-border);
+  background: var(--surface-raised);
+  color: var(--text-primary);
+  border-radius: 0.55rem;
+  min-height: 2.25rem;
+  padding: 0.45rem 0.75rem;
+  font: inherit;
+  font-size: 0.84rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: border-color 120ms ease, background-color 120ms ease, color 120ms ease;
+}
+
+.button:hover,
+.button:focus-visible {
+  border-color: var(--accent-border);
+  background: var(--surface-hover);
+  outline: none;
+}
+
+.buttonPrimary {
+  background: var(--accent-solid);
+  border-color: var(--accent-solid);
+  color: #081019;
+}
+
+.buttonPrimary:hover,
+.buttonPrimary:focus-visible {
+  background: var(--accent-strong);
+  border-color: var(--accent-strong);
+}
+
+.buttonGhost {
+  background: transparent;
+}
+
+.field,
+.select {
+  width: 100%;
+  min-height: 2.3rem;
+  border: 1px solid var(--surface-border);
+  border-radius: 0.55rem;
+  background: var(--surface-base);
+  color: var(--text-primary);
+  padding: 0.45rem 0.65rem;
+  font: inherit;
+  font-size: 0.86rem;
+}
+
+.field::placeholder {
+  color: var(--text-muted);
+}
+
+.field:focus-visible,
+.select:focus-visible {
+  outline: none;
+  border-color: var(--accent-border);
+}
+
+.tabs {
+  display: inline-flex;
+  gap: 0.25rem;
+  padding: 0.2rem;
+  border: 1px solid var(--surface-border);
+  border-radius: 0.7rem;
+  background: var(--surface-base);
+  overflow: auto;
+}
+
+.tab {
+  appearance: none;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-secondary);
+  border-radius: 0.5rem;
+  padding: 0.4rem 0.65rem;
+  font: inherit;
+  font-size: 0.76rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.tabActive {
+  background: var(--surface-raised);
+  border-color: var(--surface-border);
+  color: var(--text-primary);
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.45rem;
+  padding: 0.1rem 0.42rem;
+  border: 1px solid var(--surface-border);
+  border-radius: 999px;
+  background: var(--surface-base);
+  color: var(--text-secondary);
+  font-size: 0.7rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.badgePositive {
+  color: var(--positive-text);
+  border-color: var(--positive-border);
+  background: var(--positive-soft);
+}
+
+.badgeWarning {
+  color: var(--warning-text);
+  border-color: var(--warning-border);
+  background: var(--warning-soft);
+}
+
+.badgeDanger {
+  color: var(--danger-text);
+  border-color: var(--danger-border);
+  background: var(--danger-soft);
+}
+
+.badgeAccent {
+  color: var(--accent-text);
+  border-color: var(--accent-border);
+  background: var(--accent-soft);
+}
+
+.badgeNeutral {
+  color: var(--text-secondary);
+}
+
+.panel {
+  border: 1px solid var(--surface-border);
+  border-radius: 0.8rem;
+  background: var(--surface-panel);
+}
+
+.panelPadding {
+  padding: 0.9rem;
+}
+
+.tableWrap {
+  overflow: auto;
+  border: 1px solid var(--surface-border);
+  border-radius: 0.8rem;
+  background: var(--surface-base);
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 860px;
+}
+
+.table th,
+.table td {
+  padding: 0.68rem 0.75rem;
+  border-bottom: 1px solid var(--surface-border-muted);
+  text-align: left;
+  vertical-align: top;
+}
+
+.table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: #10161f;
+  color: var(--text-muted);
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.table tr:hover td {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.mono {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+  font-family: var(--font-mono);
+}
+
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  border-radius: 0.4rem;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.08), transparent);
+  animation: shimmer 1.2s infinite;
+}
+
+@keyframes shimmer {
+  to {
+    transform: translateX(100%);
+  }
+}
+
+.state {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.stateTitle {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.stateMessage {
+  margin: 0;
+  color: var(--text-secondary);
+}
+
+.stateActions {
+  display: flex;
+  gap: 0.5rem;
+}

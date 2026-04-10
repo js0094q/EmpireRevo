@@ -1,0 +1,270 @@
+.surface {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.titleBlock {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.title {
+  margin: 0;
+  font-size: 1.3rem;
+  line-height: 1.1;
+}
+
+.subtitle,
+.metaText,
+.cellMeta,
+.toolbarLabel,
+.booksMeta,
+.eventMeta {
+  color: var(--text-secondary);
+}
+
+.subtitle,
+.metaText,
+.cellMeta,
+.booksMeta,
+.eventMeta {
+  margin: 0;
+  font-size: 0.82rem;
+  line-height: 1.4;
+}
+
+.toolbar {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.toolbarTop {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 0.65rem;
+}
+
+.toolbarBottom {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.65rem;
+}
+
+.toolbarField {
+  display: grid;
+  gap: 0.3rem;
+}
+
+.toolbarFieldWide {
+  grid-column: span 2;
+}
+
+.toolbarLabel {
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.toggleRow {
+  display: flex;
+  gap: 0.45rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.preferences {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.preferencesGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.bookChecks {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.45rem;
+}
+
+.checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  color: var(--text-secondary);
+  font-size: 0.82rem;
+}
+
+.summaryLine {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.tableWrap {
+  border: 1px solid var(--surface-border);
+  border-radius: 0.8rem;
+  overflow: auto;
+  background: var(--surface-panel);
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 1060px;
+}
+
+.table th,
+.table td {
+  padding: 0.72rem 0.75rem;
+  border-bottom: 1px solid var(--surface-border-muted);
+  vertical-align: top;
+}
+
+.table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: #10161f;
+  color: var(--text-muted);
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-align: left;
+}
+
+.row:hover td {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.rowLink {
+  color: inherit;
+}
+
+.eventCell,
+.marketCell,
+.lineCell,
+.statusCell {
+  display: grid;
+  gap: 0.18rem;
+}
+
+.eventName {
+  font-weight: 600;
+}
+
+.numeric {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+}
+
+.edgePositive {
+  color: var(--positive-text);
+}
+
+.edgeNeutral {
+  color: var(--text-primary);
+}
+
+.edgeWarning {
+  color: var(--warning-text);
+}
+
+.mutedBadgeRow {
+  display: flex;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+
+.gamesList {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.gamesGroup {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.gamesGroupTitle {
+  margin: 0;
+  font-size: 0.86rem;
+  color: var(--text-secondary);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.gameCard {
+  border: 1px solid var(--surface-border);
+  border-radius: 0.8rem;
+  background: var(--surface-panel);
+  padding: 0.85rem;
+  display: grid;
+  gap: 0.6rem;
+}
+
+.gameCardTop,
+.gameCardBottom {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.8rem;
+}
+
+.gameCardMetrics {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.gameMetric {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.gameMetricLabel {
+  color: var(--text-muted);
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+@media (max-width: 1080px) {
+  .toolbarTop,
+  .toolbarBottom,
+  .preferencesGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .bookChecks {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  .header,
+  .summaryLine,
+  .gameCardTop,
+  .gameCardBottom {
+    flex-direction: column;
+  }
+
+  .toolbarTop,
+  .toolbarBottom,
+  .preferencesGrid,
+  .bookChecks {
+    grid-template-columns: 1fr;
+  }
+}
