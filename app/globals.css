@@ -1,20 +1,20 @@
 :root {
-  --bg: #0b1018;
-  --bg-elevated: #10161f;
-  --surface-base: #10161f;
-  --surface-panel: #131a24;
-  --surface-raised: #181f2b;
-  --surface-hover: #1b2431;
-  --surface-border: rgba(179, 191, 208, 0.16);
-  --surface-border-muted: rgba(179, 191, 208, 0.08);
+  --bg: #090d12;
+  --bg-elevated: #0d1218;
+  --surface-base: #0e141b;
+  --surface-panel: #111821;
+  --surface-raised: #151d27;
+  --surface-hover: #192331;
+  --surface-border: rgba(178, 191, 209, 0.18);
+  --surface-border-muted: rgba(178, 191, 209, 0.09);
   --text-primary: #edf1f7;
   --text-secondary: #9eabbe;
   --text-muted: #738296;
-  --accent-solid: #4f8cff;
-  --accent-strong: #6b9cff;
-  --accent-soft: rgba(79, 140, 255, 0.12);
-  --accent-border: rgba(79, 140, 255, 0.45);
-  --accent-text: #9dbdff;
+  --accent-solid: #3f8cff;
+  --accent-strong: #66a3ff;
+  --accent-soft: rgba(63, 140, 255, 0.12);
+  --accent-border: rgba(63, 140, 255, 0.5);
+  --accent-text: #98bcff;
   --positive-soft: rgba(51, 166, 123, 0.14);
   --positive-border: rgba(51, 166, 123, 0.42);
   --positive-text: #77d1a8;
@@ -40,7 +40,7 @@ body {
 }
 
 body {
-  background: linear-gradient(180deg, #0a0f16 0%, #0c121b 100%);
+  background: var(--bg);
   color: var(--text-primary);
   font-family: var(--font-body);
 }

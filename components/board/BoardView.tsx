@@ -52,6 +52,7 @@ export function BoardView({
   const initialMinBooks = Number(searchParams?.get("minBooks") || "4");
   const [search, setSearch] = useState(searchParams?.get("search") || "");
   const [sort, setSort] = useState<BoardSortValue>((searchParams?.get("sort") as BoardSortValue) || "score");
+  const [bookKey, setBookKey] = useState(searchParams?.get("book") || "all");
   const [edgeThresholdPct, setEdgeThresholdPct] = useState(Number(searchParams?.get("edgeThresholdPct") || "0"));
   const [includeStale, setIncludeStale] = useState(searchParams?.get("stale") === "1");
   const [pinnedOnly, setPinnedOnly] = useState(searchParams?.get("pinned") === "1");
@@ -109,6 +110,7 @@ export function BoardView({
         filters: {
           search: deferredSearch,
           sort,
+          bookKey,
           edgeThresholdPct,
           minBooks,
           pinnedOnly,
@@ -116,7 +118,7 @@ export function BoardView({
           pinnedBooks: new Set(pinnedBooks)
         }
       }),
-    [board, deferredSearch, edgeThresholdPct, includeStale, league, minBooks, mode, model, pinnedBooks, pinnedOnly, sort]
+    [board, bookKey, deferredSearch, edgeThresholdPct, includeStale, league, minBooks, mode, model, pinnedBooks, pinnedOnly, sort]
   );
 
   return (
@@ -140,6 +142,7 @@ export function BoardView({
           market: board.market,
           model,
           minBooks,
+          bookKey,
           search,
           sort,
           edgeThresholdPct,
@@ -165,6 +168,10 @@ export function BoardView({
           if (next.sort !== undefined) {
             setSort(next.sort);
             updateParams({ sort: next.sort });
+          }
+          if (next.bookKey !== undefined) {
+            setBookKey(next.bookKey);
+            updateParams({ book: next.bookKey === "all" ? null : next.bookKey });
           }
           if (next.edgeThresholdPct !== undefined) {
             setEdgeThresholdPct(next.edgeThresholdPct);

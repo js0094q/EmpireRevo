@@ -15,7 +15,10 @@ export function BookComparisonTable({ rows }: { rows: GameDetailViewModel["compa
             { key: "book", header: "Book", render: (row) => row.book },
             { key: "role", header: "Role", render: (row) => row.role },
             { key: "price", header: "Price", render: (row) => row.price },
+            { key: "fair", header: "Fair", render: (row) => row.fair },
             { key: "line", header: "Line", render: (row) => row.line },
+            { key: "probabilityGap", header: "Prob Gap", render: (row) => row.probabilityGap },
+            { key: "ev", header: "EV", render: (row) => row.ev },
             { key: "freshness", header: "Freshness", render: (row) => row.freshness },
             { key: "notes", header: "Notes", render: (row) => row.notes }
           ]}

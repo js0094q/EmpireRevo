@@ -128,4 +128,7 @@ test("buildGameDetailViewModel separates internal notes from public notes", () =
   assert.equal(publicView.internalNotes, null);
   assert.ok(internalView.internalNotes?.some((note) => note.label === "History Event"));
   assert.equal(publicView.comparisonRows[0]?.book, "Pinnacle");
+  assert.ok(publicView.summary.some((item) => item.label === "Prob gap"));
+  assert.ok(publicView.summary.some((item) => item.label === "EV"));
+  assert.ok(!publicView.summary.some((item) => item.label === "Edge"));
 });

@@ -161,6 +161,17 @@ test("sortEvents sorts by opportunity score", () => {
   assert.deepEqual(sorted.map((event) => event.id), ["b", "a"]);
 });
 
+test("sortEvents supports workstation sort keys for EV, book, and coverage", () => {
+  const lowEv = mockEvent("low-ev", { ev: 0.4, contributingBookCount: 2 });
+  lowEv.outcomes[0].books[0].title = "Zulu";
+  const highEv = mockEvent("high-ev", { ev: 3.2, contributingBookCount: 4 });
+  highEv.outcomes[0].books[0].title = "Alpha";
+
+  assert.deepEqual(sortEvents([lowEv, highEv], "ev").map((event) => event.id), ["high-ev", "low-ev"]);
+  assert.deepEqual(sortEvents([lowEv, highEv], "book").map((event) => event.id), ["high-ev", "low-ev"]);
+  assert.deepEqual(sortEvents([lowEv, highEv], "coverage").map((event) => event.id), ["high-ev", "low-ev"]);
+});
+
 test("sortEvents score ranking demotes thin longshot artifacts", () => {
   const longshot = mockEvent("longshot", { edge: 2.4 });
   longshot.opportunityScore = 92;

@@ -13,7 +13,7 @@ import {
 import { toEventRouteId } from "@/lib/server/odds/eventRoute";
 
 export type BoardMode = "board" | "games";
-export type BoardSortKey = "score" | "edge" | "confidence" | "best" | "soonest" | "timing";
+export type BoardSortKey = "score" | "edge" | "ev" | "confidence" | "best" | "book" | "coverage" | "soonest" | "timing";
 export type BoardWindowKey = "all";
 export type BoardSideKey = "all" | "favored" | "underdogs";
 export type BoardNavigationContext = {
@@ -26,11 +26,14 @@ export type BoardNavigationContext = {
 };
 
 export const SORT_OPTIONS: Array<{ value: BoardSortKey; label: string }> = [
-  { value: "score", label: "Top Opportunities" },
-  { value: "edge", label: "Largest Probability Gap" },
-  { value: "confidence", label: "Most Stable Market" },
+  { value: "score", label: "Decision Score" },
+  { value: "edge", label: "Probability Gap" },
+  { value: "ev", label: "EV" },
+  { value: "confidence", label: "Confidence" },
   { value: "best", label: "Highest Listed Odds" },
-  { value: "soonest", label: "Starting Soon" },
+  { value: "book", label: "Book" },
+  { value: "coverage", label: "Coverage" },
+  { value: "soonest", label: "Start Time" },
   { value: "timing", label: "Closing Soon" }
 ];
 

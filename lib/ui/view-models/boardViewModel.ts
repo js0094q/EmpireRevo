@@ -1,5 +1,6 @@
 import { buildPickSummary, formatOffer } from "@/components/board/board-helpers";
 import { filterEvents, pinnedEventMetrics, sortEvents, type SortKey } from "@/components/board/selectors";
+import type { PriceValueDirection } from "@/lib/odds/priceValue";
 import type { FairBoardResponse, FairEvent, FairOutcomeBook } from "@/lib/server/odds/types";
 import { toEventRouteId } from "@/lib/server/odds/eventRoute";
 import {
@@ -9,15 +10,17 @@ import {
   formatLeagueLabel,
   formatLongStartTime,
   formatMarketLabel,
+  formatSignedNumber,
   formatUpdatedLabel
 } from "@/lib/ui/formatters/display";
 
 export type BoardSurfaceIntent = "board" | "games";
-export type BoardSortValue = Extract<SortKey, "score" | "edge" | "confidence" | "soonest" | "timing" | "pinned_score">;
+export type BoardSortValue = Extract<SortKey, "score" | "edge" | "ev" | "confidence" | "soonest" | "timing" | "book" | "coverage" | "pinned_score">;
 
 export type BoardViewFilters = {
   search: string;
   sort: BoardSortValue;
+  bookKey: string;
   edgeThresholdPct: number;
   minBooks: number;
   pinnedOnly: boolean;
@@ -35,14 +38,23 @@ export type BoardRowViewModel = {
   marketMeta: string;
   bestPrice: string;
   bestBook: string;
+  bestBookKey: string | null;
   bestPinnedPrice: string | null;
   fairPrice: string;
-  edge: string;
-  edgeValue: number;
+  priceSignal: string;
+  priceSignalMeta: string;
+  priceSignalTone: "positive" | "warning" | "neutral" | "danger";
+  probabilityGap: string;
+  probabilityGapValue: number;
+  ev: string;
+  evValue: number | null;
+  evMeta: string | null;
   confidence: string;
   confidenceBucket: "high" | "medium" | "low";
   books: string;
   booksValue: number;
+  coverage: string;
+  coverageMeta: string;
   updated: string;
   isLive: boolean;
   isActionable: boolean;
@@ -97,6 +109,47 @@ function suppressionReason(event: FairEvent, bestBook: FairOutcomeBook | null): 
   return null;
 }
 
+function priceSignal(direction: PriceValueDirection): {
+  label: string;
+  tone: BoardRowViewModel["priceSignalTone"];
+} {
+  if (direction === "better_than_fair") return { label: "Better payout", tone: "positive" };
+  if (direction === "worse_than_fair") return { label: "Worse payout", tone: "danger" };
+  return { label: "Near fair", tone: "neutral" };
+}
+
+function priceSignalMeta(pick: ReturnType<typeof buildPickSummary>): string {
+  if (pick.priceValueDirection === "worse_than_fair") return "Model lean only";
+  if (pick.priceValueDirection === "near_fair") return "No price gap";
+  if (pick.opportunityStrength === "longshot_thin") return "Thin longshot";
+  if (pick.opportunityStrength === "strong") return "Actionable";
+  return "Watch signal";
+}
+
+function formatEv(book: FairOutcomeBook | null): { value: string; numeric: number | null; meta: string | null } {
+  if (!book) return { value: "—", numeric: null, meta: null };
+  if (book.evReliability === "suppressed") return { value: "—", numeric: null, meta: "Suppressed" };
+  const numeric = Number.isFinite(book.evPct) ? book.evPct : null;
+  return {
+    value: formatSignedNumber(numeric, 2, "%"),
+    numeric,
+    meta: book.evReliability === "qualified" || !book.evQualified ? "Qualified" : null
+  };
+}
+
+function coverageLabel(event: FairEvent): { value: string; meta: string } {
+  if (event.totalBookCount > event.contributingBookCount && event.totalBookCount > 0) {
+    return {
+      value: `${event.contributingBookCount}/${event.totalBookCount}`,
+      meta: "partial"
+    };
+  }
+  return {
+    value: formatBookCount(event.contributingBookCount),
+    meta: event.marketPressureLabel || event.timingLabel
+  };
+}
+
 function findPinnedPrice(event: FairEvent, pinnedBooks: Set<string>): string | null {
   if (!pinnedBooks.size) return null;
   const pick = buildPickSummary(event);
@@ -128,6 +181,14 @@ function buildBoardRow(event: FairEvent, board: FairBoardResponse, league: strin
   const pick = buildPickSummary(event);
   const bestBook = pick.book;
   const stale = eventIsStale(event);
+  const signal = priceSignal(pick.priceValueDirection);
+  const probabilityGapValue = Number.isFinite(pick.probabilityGapPct)
+    ? pick.probabilityGapPct
+    : Number.isFinite(bestBook?.edgePct)
+      ? Number(bestBook?.edgePct)
+      : 0;
+  const ev = formatEv(bestBook);
+  const coverage = coverageLabel(event);
   const eventHref = new URLSearchParams({
     league,
     market: event.market,
@@ -145,14 +206,23 @@ function buildBoardRow(event: FairEvent, board: FairBoardResponse, league: strin
     marketMeta: marketMeta(event),
     bestPrice: bestBook ? formatOffer(event.market, bestBook) : formatAmericanOdds(pick.outcome.bestPrice),
     bestBook: bestBook?.title || pick.outcome.bestBook,
+    bestBookKey: bestBook?.bookKey || null,
     bestPinnedPrice: findPinnedPrice(event, pinnedBooks),
     fairPrice: formatOffer(event.market, pick.outcome),
-    edge: `${pick.book?.edgePct && pick.book.edgePct > 0 ? "+" : ""}${(pick.book?.edgePct ?? 0).toFixed(2)}%`,
-    edgeValue: pick.book?.edgePct ?? 0,
+    priceSignal: signal.label,
+    priceSignalMeta: priceSignalMeta(pick),
+    priceSignalTone: signal.tone,
+    probabilityGap: formatSignedNumber(probabilityGapValue, 2, "pp"),
+    probabilityGapValue,
+    ev: ev.value,
+    evValue: ev.numeric,
+    evMeta: ev.meta,
     confidence: formatConfidenceLabel(event.confidenceLabel),
     confidenceBucket: confidenceBucket(event.confidenceLabel),
     books: formatBookCount(event.contributingBookCount),
     booksValue: event.contributingBookCount,
+    coverage: coverage.value,
+    coverageMeta: coverage.meta,
     updated: formatUpdatedLabel(bestBook?.lastUpdate || board.updatedAt),
     isLive: Date.parse(event.commenceTime) <= Date.now(),
     isActionable: pick.hasRecommendation && bestBook?.evReliability !== "suppressed",
@@ -189,6 +259,10 @@ export function buildBoardViewModel(params: {
     pinnedBooks: params.filters.pinnedBooks
   });
 
+  if (params.filters.bookKey && params.filters.bookKey !== "all") {
+    events = events.filter((event) => buildPickSummary(event).book?.bookKey === params.filters.bookKey);
+  }
+
   if (!params.filters.includeStale) {
     events = events.filter((event) => !eventIsStale(event));
   }
@@ -206,8 +280,8 @@ export function buildBoardViewModel(params: {
     title: params.mode === "board" ? "Board" : "Games",
     subtitle:
       params.mode === "board"
-        ? "Best line vs fair price."
-        : "Browse live and upcoming events with direct paths into market detail.",
+        ? "Best price, fair odds, probability gap, EV, coverage, and stale flags."
+        : "Event directory with direct paths into market detail.",
     updatedLabel: formatUpdatedLabel(params.board.updatedAt, params.board.lastUpdatedLabel),
     resultLabel: `${rows.length} ${params.mode === "board" ? (rows.length === 1 ? "market" : "markets") : rows.length === 1 ? "event" : "events"}`,
     coverageLabel: `${params.board.books.length} ${params.board.books.length === 1 ? "book" : "books"}`,

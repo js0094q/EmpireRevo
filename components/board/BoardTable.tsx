@@ -10,12 +10,15 @@ export function BoardTable({ rows, compactMode }: { rows: BoardRowViewModel[]; c
           <tr>
             <th scope="col">Event</th>
             <th scope="col">Market</th>
-            <th scope="col">Best</th>
+            <th scope="col">Best price</th>
             <th scope="col">Book</th>
-            <th scope="col">Fair</th>
-            <th scope="col">Edge</th>
+            <th scope="col">Fair odds</th>
+            <th scope="col">Price vs fair</th>
+            <th scope="col">Prob gap</th>
+            <th scope="col">EV</th>
             <th scope="col">Confidence</th>
-            <th scope="col">Books</th>
+            <th scope="col">Coverage</th>
+            <th scope="col">Start</th>
             <th scope="col">Updated</th>
           </tr>
         </thead>

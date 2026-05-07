@@ -16,7 +16,7 @@ export function SiteHeader() {
           <BrandMark compact />
           <span className={layoutStyles.brandText}>
             <span className={layoutStyles.brandName}>EmpirePicks</span>
-            <span className={layoutStyles.brandTag}>Fair price workstation</span>
+            <span className={layoutStyles.brandTag}>Betting analytics workstation</span>
           </span>
         </Link>
 

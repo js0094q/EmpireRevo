@@ -36,6 +36,28 @@ function eventHasVisibleBook(event: FairEvent, visibleBookKeys: Set<string>): bo
   return event.outcomes.some((outcome) => outcome.books.some((book) => visibleBookKeys.has(book.bookKey)));
 }
 
+function eventMatchesQuery(event: FairEvent, query: string): boolean {
+  if (!query) return true;
+  const market = event.market === "h2h" ? "moneyline" : event.market === "spreads" ? "spread" : "total";
+  const haystack = [
+    event.awayTeam,
+    event.homeTeam,
+    event.sportKey,
+    market,
+    event.marketPressureLabel,
+    event.timingLabel,
+    ...event.outcomes.flatMap((outcome) => [
+      outcome.name,
+      outcome.bestBook,
+      ...outcome.books.flatMap((book) => [book.title, book.bookKey])
+    ])
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+  return haystack.includes(query);
+}
+
 function eventMaxVisibleEdge(event: FairEvent, visibleBookKeys: Set<string>): number {
   let maxAbs = 0;
   for (const outcome of event.outcomes) {
@@ -199,7 +221,7 @@ export function filterEvents(events: FairEvent[], options: EventFilterOptions): 
   let filtered = events.filter((event) => eventHasVisibleBook(event, options.visibleBookKeys));
 
   if (query) {
-    filtered = filtered.filter((event) => `${event.awayTeam} ${event.homeTeam}`.toLowerCase().includes(query));
+    filtered = filtered.filter((event) => eventMatchesQuery(event, query));
   }
 
   filtered = filtered.filter((event) => {
@@ -303,6 +325,32 @@ export function sortEvents(
 
   if (sortBy === "confidence") {
     return [...events].sort((a, b) => b.confidenceScore - a.confidenceScore || b.opportunityScore - a.opportunityScore);
+  }
+
+  if (sortBy === "ev") {
+    return [...events].sort((a, b) => {
+      const aBook = buildPickSummary(a).book;
+      const bBook = buildPickSummary(b).book;
+      const aEv = aBook?.evReliability === "suppressed" ? Number.NEGATIVE_INFINITY : aBook?.evPct ?? Number.NEGATIVE_INFINITY;
+      const bEv = bBook?.evReliability === "suppressed" ? Number.NEGATIVE_INFINITY : bBook?.evPct ?? Number.NEGATIVE_INFINITY;
+      return bEv - aEv || eventDecisionScore(b) - eventDecisionScore(a);
+    });
+  }
+
+  if (sortBy === "book") {
+    return [...events].sort((a, b) => {
+      const aBook = buildPickSummary(a).book?.title || "";
+      const bBook = buildPickSummary(b).book?.title || "";
+      return aBook.localeCompare(bBook) || eventDecisionScore(b) - eventDecisionScore(a);
+    });
+  }
+
+  if (sortBy === "coverage") {
+    return [...events].sort((a, b) => {
+      const aRatio = a.totalBookCount > 0 ? a.contributingBookCount / a.totalBookCount : a.contributingBookCount;
+      const bRatio = b.totalBookCount > 0 ? b.contributingBookCount / b.totalBookCount : b.contributingBookCount;
+      return bRatio - aRatio || b.contributingBookCount - a.contributingBookCount || eventDecisionScore(b) - eventDecisionScore(a);
+    });
   }
 
   if (sortBy === "stale") {

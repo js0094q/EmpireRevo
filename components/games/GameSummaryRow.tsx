@@ -33,8 +33,12 @@ export function GameSummaryRow({ row }: { row: BoardRowViewModel }) {
           <strong>{row.fairPrice}</strong>
         </div>
         <div className={styles.gameMetric}>
-          <span className={styles.gameMetricLabel}>Edge</span>
-          <strong>{row.edge}</strong>
+          <span className={styles.gameMetricLabel}>Prob gap</span>
+          <strong>{row.probabilityGap}</strong>
+        </div>
+        <div className={styles.gameMetric}>
+          <span className={styles.gameMetricLabel}>EV</span>
+          <strong>{row.ev}</strong>
         </div>
         <div className={styles.gameMetric}>
           <span className={styles.gameMetricLabel}>Confidence</span>

@@ -14,6 +14,7 @@ type FilterValue = {
   market: "h2h" | "spreads" | "totals";
   model: "sharp" | "equal" | "weighted";
   minBooks: number;
+  bookKey: string;
   search: string;
   sort: BoardSortValue;
   edgeThresholdPct: number;
@@ -37,8 +38,8 @@ export function BoardFilters({
   preferencesLabel: string;
 }) {
   const [showPreferences, setShowPreferences] = useState(false);
-  const staleLabel = value.includeStale ? "Stale on" : "Stale off";
-  const pinnedLabel = value.pinnedOnly ? "Pinned" : "All";
+  const staleLabel = value.includeStale ? "Stale included" : "Fresh only";
+  const pinnedLabel = value.pinnedOnly ? "Pinned only" : "All books";
   const densityLabel = value.compactMode ? "Compact" : "Comfort";
 
   return (
@@ -75,6 +76,17 @@ export function BoardFilters({
           </Select>
         </label>
         <label className={styles.toolbarField}>
+          <span className={styles.toolbarLabel}>Best Book</span>
+          <Select value={value.bookKey} onChange={(event) => onChange({ bookKey: event.target.value })}>
+            <option value="all">All books</option>
+            {books.map((book) => (
+              <option key={book.key} value={book.key}>
+                {book.title}
+              </option>
+            ))}
+          </Select>
+        </label>
+        <label className={styles.toolbarField}>
           <span className={styles.toolbarLabel}>Min</span>
           <Select value={`${value.minBooks}`} onChange={(event) => onChange({ minBooks: Number(event.target.value) })}>
             {[2, 3, 4, 5, 6].map((count) => (
@@ -91,20 +103,23 @@ export function BoardFilters({
         <label className={styles.toolbarField}>
           <span className={styles.toolbarLabel}>Sort</span>
           <Select value={value.sort} onChange={(event) => onChange({ sort: event.target.value as BoardSortValue })}>
-            <option value="score">Rank</option>
-            <option value="edge">Edge</option>
+            <option value="score">Decision score</option>
+            <option value="edge">Prob gap</option>
+            <option value="ev">EV</option>
             <option value="confidence">Confidence</option>
-            <option value="soonest">Start Time</option>
+            <option value="book">Book</option>
+            <option value="coverage">Coverage</option>
+            <option value="soonest">Start time</option>
             <option value="timing">Timing</option>
-            <option value="pinned_score">Pinned Score</option>
+            <option value="pinned_score">Pinned score</option>
           </Select>
         </label>
         <label className={styles.toolbarField}>
-          <span className={styles.toolbarLabel}>Edge Floor</span>
+          <span className={styles.toolbarLabel}>Gap Floor</span>
           <Select value={`${value.edgeThresholdPct}`} onChange={(event) => onChange({ edgeThresholdPct: Number(event.target.value) })}>
             {[0, 0.5, 1, 1.5, 2].map((threshold) => (
               <option key={threshold} value={threshold}>
-                {threshold.toFixed(1)}%
+                {threshold.toFixed(1)}pp
               </option>
             ))}
           </Select>

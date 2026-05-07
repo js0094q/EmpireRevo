@@ -2,7 +2,6 @@
 
 import { useMemo } from "react";
 import type { FairBoardResponse } from "@/lib/server/odds/types";
-import { Panel } from "@/components/primitives/Panel";
 import { EmptyState } from "@/components/primitives/EmptyState";
 import { GamesList } from "@/components/games/GamesList";
 import { buildBoardViewModel, buildGamesGroups } from "@/lib/ui/view-models/boardViewModel";
@@ -27,6 +26,7 @@ export function GamesView({
         filters: {
           search: "",
           sort: "soonest",
+          bookKey: "all",
           edgeThresholdPct: 0,
           minBooks: 4,
           pinnedOnly: false,
@@ -48,12 +48,10 @@ export function GamesView({
         <p className={styles.metaText}>{viewModel.updatedLabel}</p>
       </div>
 
-      <Panel>
-        <div className={styles.summaryLine}>
-          <strong>{viewModel.rows.length} events</strong>
-          <span className={styles.metaText}>Grouped by start window</span>
-        </div>
-      </Panel>
+      <div className={styles.summaryRail}>
+        <strong>{viewModel.rows.length} events</strong>
+        <span className={styles.metaText}>Grouped by start window</span>
+      </div>
 
       {groups.length ? <GamesList groups={groups} /> : <EmptyState title={viewModel.emptyTitle} message={viewModel.emptyMessage} />}
     </div>

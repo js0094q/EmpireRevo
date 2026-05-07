@@ -9,10 +9,11 @@ import type { BoardRowViewModel } from "@/lib/ui/view-models/boardViewModel";
 import styles from "./workstation.module.css";
 
 export function BoardRow({ row }: { row: BoardRowViewModel }) {
-  const edgeTone = row.edgeValue >= 1 ? "positive" : row.edgeValue > 0 ? "warning" : "neutral";
+  const probabilityGapTone = row.probabilityGapValue >= 1 ? "positive" : row.probabilityGapValue > 0 ? "warning" : row.probabilityGapValue < 0 ? "danger" : "neutral";
+  const evTone = row.evValue === null ? "neutral" : row.evValue >= 1 ? "positive" : row.evValue > 0 ? "warning" : row.evValue < 0 ? "danger" : "neutral";
 
   return (
-    <tr className={styles.row}>
+    <tr className={[styles.row, row.isActionable ? styles.rowActionable : "", row.isStale ? styles.rowStale : ""].join(" ")}>
       <td>
         <div className={styles.eventCell}>
           <Link href={row.href} className={styles.rowLink}>
@@ -37,7 +38,21 @@ export function BoardRow({ row }: { row: BoardRowViewModel }) {
         <FairCell fairPrice={row.fairPrice} />
       </td>
       <td>
-        <EdgeCell value={row.edge} tone={edgeTone} />
+        <div className={styles.statusCell}>
+          <span className={[styles.priceSignal, row.priceSignalTone === "positive" ? styles.signalPositive : "", row.priceSignalTone === "warning" ? styles.signalWarning : "", row.priceSignalTone === "danger" ? styles.signalDanger : ""].join(" ")}>
+            {row.priceSignal}
+          </span>
+          <span className={styles.booksMeta}>{row.priceSignalMeta}</span>
+        </div>
+      </td>
+      <td>
+        <EdgeCell value={row.probabilityGap} tone={probabilityGapTone} />
+      </td>
+      <td>
+        <div className={styles.statusCell}>
+          <EdgeCell value={row.ev} tone={evTone} />
+          {row.evMeta ? <span className={styles.booksMeta}>{row.evMeta}</span> : null}
+        </div>
       </td>
       <td>
         <div className={styles.statusCell}>
@@ -46,7 +61,10 @@ export function BoardRow({ row }: { row: BoardRowViewModel }) {
         </div>
       </td>
       <td>
-        <BooksCell value={row.books} meta={row.marketStatus} />
+        <BooksCell value={row.coverage} meta={row.coverageMeta} />
+      </td>
+      <td>
+        <span className={styles.startText}>{row.startTime}</span>
       </td>
       <td>
         <div className={styles.statusCell}>

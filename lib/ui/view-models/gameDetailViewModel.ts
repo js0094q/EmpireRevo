@@ -4,7 +4,6 @@ import {
   formatBookCount,
   formatLongStartTime,
   formatMarketLabel,
-  formatPercent,
   formatPoint,
   formatSignedPercent,
   formatUpdatedLabel
@@ -21,7 +20,10 @@ export type GameBookRowViewModel = {
   book: string;
   role: string;
   price: string;
+  fair: string;
   line: string;
+  probabilityGap: string;
+  ev: string;
   freshness: string;
   notes: string;
   isBest: boolean;
@@ -52,7 +54,7 @@ export type GameDetailViewModel = {
 };
 
 function formatRole(isBest: boolean, isSharp: boolean): string {
-  if (isBest) return "Best";
+  if (isBest) return "Best price";
   if (isSharp) return "Sharp";
   return "Market";
 }
@@ -71,18 +73,22 @@ function confidenceTone(label: string): "positive" | "warning" | "danger" | "neu
 
 export function buildGameDetailViewModel(data: GameDetailPageData, options?: { includeInternal?: boolean }): GameDetailViewModel {
   const pressure = data.pressureSignals[0] ?? null;
-  const edgeTone: "positive" | "neutral" = (data.featuredBook?.edgePct ?? 0) > 0 ? "positive" : "neutral";
+  const probabilityGapTone: "positive" | "neutral" = (data.featuredBook?.edgePct ?? 0) > 0 ? "positive" : "neutral";
+  const evValue = data.featuredBook?.evReliability === "suppressed" ? null : data.featuredBook?.evPct;
+  const evTone: "positive" | "warning" | "danger" | "neutral" =
+    evValue === null || evValue === undefined ? "neutral" : evValue >= 1 ? "positive" : evValue > 0 ? "warning" : evValue < 0 ? "danger" : "neutral";
   const summary = [
-    { label: "Best", value: data.featuredBook ? formatAmericanOdds(data.featuredBook.priceAmerican) : "—" },
+    { label: "Best price", value: data.featuredBook ? formatAmericanOdds(data.featuredBook.priceAmerican) : "—" },
     { label: "Book", value: data.featuredBook?.title || "—" },
-    { label: "Fair", value: formatAmericanOdds(data.featuredOutcome.fairAmerican) },
-    { label: "Edge", value: formatSignedPercent(data.featuredBook?.edgePct, 2), tone: edgeTone },
+    { label: "Fair odds", value: formatAmericanOdds(data.featuredOutcome.fairAmerican) },
+    { label: "Prob gap", value: formatSignedPercent(data.featuredBook?.edgePct, 2), tone: probabilityGapTone },
+    { label: "EV", value: evValue === null || evValue === undefined ? "—" : formatSignedPercent(evValue, 2), tone: evTone },
     {
       label: "Confidence",
       value: data.event.confidenceLabel,
       tone: confidenceTone(data.event.confidenceLabel)
     },
-    { label: "Books", value: formatBookCount(data.event.contributingBookCount) },
+    { label: "Coverage", value: formatBookCount(data.event.contributingBookCount) },
     { label: "Updated", value: formatUpdatedLabel(data.featuredBook?.lastUpdate) }
   ];
 
@@ -105,7 +111,7 @@ export function buildGameDetailViewModel(data: GameDetailPageData, options?: { i
     data.methodologyCopy
   ];
   if (data.featuredBook?.evReliability === "suppressed") {
-    modelNotes.push("Displayed edge is suppressed by defensibility rules.");
+    modelNotes.push("Displayed EV is suppressed by defensibility rules.");
   }
 
   return {
@@ -125,11 +131,15 @@ export function buildGameDetailViewModel(data: GameDetailPageData, options?: { i
       book: book.title,
       role: formatRole(book.isBestPrice, book.isSharpBook || book.tier === "sharp"),
       price: formatAmericanOdds(book.priceAmerican),
+      fair: formatAmericanOdds(book.fairPriceAmerican ?? data.featuredOutcome.fairAmerican),
       line: formatLine(data.event.market, book.point),
+      probabilityGap: formatSignedPercent(book.edgePct, 2),
+      ev: book.evReliability === "suppressed" ? "—" : formatSignedPercent(book.evPct, 2),
       freshness: formatUpdatedLabel(book.lastUpdate),
       notes: [
         book.staleActionable ? "Stale" : "",
-        Number.isFinite(book.evPct) ? `EV ${formatSignedPercent(book.evPct, 2)}` : ""
+        book.priceValueDirection === "better_than_fair" ? "Better payout" : "",
+        book.priceValueDirection === "worse_than_fair" ? "Worse payout" : ""
       ]
         .filter(Boolean)
         .join(" · ") || "—",

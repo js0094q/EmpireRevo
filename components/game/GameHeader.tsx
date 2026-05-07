@@ -21,7 +21,7 @@ export function GameHeader({
         <h1 className={styles.title}>{title}</h1>
         <p className={styles.subtitle}>{subtitle}</p>
       </div>
-      <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+      <div className={styles.headerActions}>
         <Badge tone={status === "Live" ? "accent" : "neutral"}>{status}</Badge>
         <Badge tone={marketHealth === "Limited" ? "warning" : "positive"}>{marketHealth}</Badge>
         <Link href={backHref}>Back to board</Link>

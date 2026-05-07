@@ -128,6 +128,7 @@ test("buildBoardViewModel shapes actionable row with pinned book pricing", () =>
     filters: {
       search: "",
       sort: "score",
+      bookKey: "all",
       edgeThresholdPct: 0,
       minBooks: 4,
       pinnedOnly: false,
@@ -141,7 +142,30 @@ test("buildBoardViewModel shapes actionable row with pinned book pricing", () =>
   assert.equal(viewModel.coverageLabel, "1 book");
   assert.equal(viewModel.rows[0]?.bestBook, "FanDuel");
   assert.equal(viewModel.rows[0]?.bestPinnedPrice, "+120");
+  assert.equal(viewModel.rows[0]?.priceSignal, "Better payout");
+  assert.equal(viewModel.rows[0]?.probabilityGap, "+3.00pp");
+  assert.equal(viewModel.rows[0]?.ev, "+2.10%");
+  assert.equal(viewModel.rows[0]?.coverage, "4 books");
   assert.equal(viewModel.rows[0]?.isActionable, true);
+
+  const filteredByBestBook = buildBoardViewModel({
+    board,
+    league: "nba",
+    model: "weighted",
+    mode: "board",
+    filters: {
+      search: "",
+      sort: "score",
+      bookKey: "fanduel",
+      edgeThresholdPct: 0,
+      minBooks: 4,
+      pinnedOnly: false,
+      includeStale: true,
+      pinnedBooks: new Set(["fanduel"])
+    }
+  });
+
+  assert.equal(filteredByBestBook.rows.length, 1);
 });
 
 test("buildBoardViewModel excludes stale rows when includeStale is false", () => {
@@ -181,6 +205,7 @@ test("buildBoardViewModel excludes stale rows when includeStale is false", () =>
     filters: {
       search: "",
       sort: "score",
+      bookKey: "all",
       edgeThresholdPct: 0,
       minBooks: 4,
       pinnedOnly: false,
