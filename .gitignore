@@ -5,6 +5,7 @@ out/
 
 # Environment and secrets
 .env
+.redis.local
 .env.*
 !.env.example
 !.env.sample
