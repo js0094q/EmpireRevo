@@ -137,6 +137,8 @@ test("buildBoardViewModel shapes actionable row with pinned book pricing", () =>
   });
 
   assert.equal(viewModel.rows.length, 1);
+  assert.equal(viewModel.resultLabel, "1 market");
+  assert.equal(viewModel.coverageLabel, "1 book");
   assert.equal(viewModel.rows[0]?.bestBook, "FanDuel");
   assert.equal(viewModel.rows[0]?.bestPinnedPrice, "+120");
   assert.equal(viewModel.rows[0]?.isActionable, true);

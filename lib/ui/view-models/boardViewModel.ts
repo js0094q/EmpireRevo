@@ -56,6 +56,8 @@ export type BoardViewModel = {
   title: string;
   subtitle: string;
   updatedLabel: string;
+  resultLabel: string;
+  coverageLabel: string;
   rows: BoardRowViewModel[];
   books: Array<{ key: string; title: string; tier: string }>;
   emptyTitle: string;
@@ -204,9 +206,11 @@ export function buildBoardViewModel(params: {
     title: params.mode === "board" ? "Board" : "Games",
     subtitle:
       params.mode === "board"
-        ? "Scan ranked markets by best line against fair value."
+        ? "Best line vs fair price."
         : "Browse live and upcoming events with direct paths into market detail.",
     updatedLabel: formatUpdatedLabel(params.board.updatedAt, params.board.lastUpdatedLabel),
+    resultLabel: `${rows.length} ${params.mode === "board" ? (rows.length === 1 ? "market" : "markets") : rows.length === 1 ? "event" : "events"}`,
+    coverageLabel: `${params.board.books.length} ${params.board.books.length === 1 ? "book" : "books"}`,
     rows,
     books: params.board.books,
     emptyTitle: "No qualifying markets for current filters.",

@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { Badge } from "@/components/primitives/Badge";
 import { BestLineCell } from "@/components/board/BestLineCell";
 import { BooksCell } from "@/components/board/BooksCell";
 import { ConfidenceBadge } from "@/components/board/ConfidenceBadge";
@@ -29,9 +28,11 @@ export function BoardRow({ row }: { row: BoardRowViewModel }) {
         </div>
       </td>
       <td>
-        <BestLineCell bestPrice={row.bestPrice} book={row.bestBook} pinnedPrice={row.bestPinnedPrice} />
+        <BestLineCell bestPrice={row.bestPrice} pinnedPrice={row.bestPinnedPrice} />
       </td>
-      <td>{row.bestBook}</td>
+      <td>
+        <span className={styles.bookText}>{row.bestBook}</span>
+      </td>
       <td>
         <FairCell fairPrice={row.fairPrice} />
       </td>
@@ -50,10 +51,6 @@ export function BoardRow({ row }: { row: BoardRowViewModel }) {
       <td>
         <div className={styles.statusCell}>
           <FreshnessCell updated={row.updated} isStale={row.isStale} />
-          <div className={styles.mutedBadgeRow}>
-            {row.isActionable ? <Badge tone="positive">Actionable</Badge> : null}
-            {row.staleLabel ? <Badge tone="warning">{row.staleLabel}</Badge> : null}
-          </div>
         </div>
       </td>
     </tr>

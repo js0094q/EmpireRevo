@@ -1,24 +1,26 @@
 .surface {
   display: grid;
-  gap: 0.9rem;
+  gap: 0.65rem;
 }
 
 .header {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 1rem;
+  gap: 1.25rem;
+  padding: 0.1rem 0 0.25rem;
 }
 
 .titleBlock {
   display: grid;
-  gap: 0.2rem;
+  gap: 0.16rem;
 }
 
 .title {
   margin: 0;
-  font-size: 1.3rem;
+  font-size: 1.12rem;
   line-height: 1.1;
+  letter-spacing: 0;
 }
 
 .subtitle,
@@ -40,68 +42,151 @@
   line-height: 1.4;
 }
 
+.subtitle {
+  max-width: 26rem;
+}
+
+.headerStats {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: 0.73rem;
+  line-height: 1.4;
+  text-align: right;
+}
+
+.headerStats span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.headerStats span + span::before {
+  content: "";
+  width: 0.22rem;
+  height: 0.22rem;
+  border-radius: 999px;
+  background: var(--surface-border);
+}
+
 .toolbar {
   display: grid;
-  gap: 0.75rem;
+  gap: 0.55rem;
+  border: 1px solid var(--surface-border);
+  border-radius: 0.55rem;
+  background: var(--surface-base);
+  padding: 0.55rem;
 }
 
-.toolbarTop {
+.controlGrid {
   display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
-  gap: 0.65rem;
+  grid-template-columns:
+    minmax(5.5rem, 0.65fr)
+    minmax(12rem, 1.15fr)
+    minmax(7rem, 0.8fr)
+    minmax(4.75rem, 0.45fr)
+    minmax(13rem, 1.4fr)
+    minmax(7rem, 0.75fr)
+    minmax(6.5rem, 0.7fr)
+    minmax(8.25rem, 0.95fr)
+    minmax(6.5rem, 0.65fr)
+    minmax(9rem, 0.85fr);
+  gap: 0.48rem;
+  align-items: end;
 }
 
-.toolbarBottom {
-  display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 0.65rem;
+.searchField {
+  min-width: 12rem;
 }
 
 .toolbarField {
   display: grid;
-  gap: 0.3rem;
+  gap: 0.24rem;
+  min-width: 0;
 }
 
-.toolbarFieldWide {
-  grid-column: span 2;
+.toolbarField select,
+.toolbarField input {
+  min-height: 2rem;
+  border-radius: 0.45rem;
+  padding-block: 0.34rem;
+  font-size: 0.8rem;
+}
+
+.marketField :global([role="tablist"]) {
+  width: 100%;
+  min-height: 2rem;
+  border-radius: 0.5rem;
+  padding: 0.14rem;
+}
+
+.marketField :global([role="tab"]) {
+  min-height: 1.68rem;
+  padding: 0.25rem 0.46rem;
+  border-radius: 0.38rem;
+  font-size: 0.65rem;
+  letter-spacing: 0.05em;
 }
 
 .toolbarLabel {
-  font-size: 0.68rem;
-  letter-spacing: 0.08em;
+  font-size: 0.62rem;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
 }
 
 .toggleRow {
   display: flex;
-  gap: 0.45rem;
+  gap: 0.35rem;
   align-items: center;
   flex-wrap: wrap;
 }
 
+.controlButton {
+  min-height: 2rem;
+  border-radius: 0.45rem;
+  padding: 0.36rem 0.58rem;
+  font-size: 0.78rem;
+  white-space: nowrap;
+}
+
+.preferenceBadge {
+  max-width: 8.2rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.preferencesPanel {
+  border-top: 1px solid var(--surface-border-muted);
+  padding-top: 0.55rem;
+}
+
 .preferences {
   display: grid;
-  gap: 0.75rem;
+  gap: 0.55rem;
 }
 
 .preferencesGrid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 0.75rem;
+  gap: 0.55rem;
 }
 
 .bookChecks {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0.45rem;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.35rem 0.6rem;
 }
 
 .checkbox {
   display: inline-flex;
   align-items: center;
-  gap: 0.45rem;
+  gap: 0.38rem;
   color: var(--text-secondary);
-  font-size: 0.82rem;
+  font-size: 0.78rem;
 }
 
 .summaryLine {
@@ -114,34 +199,45 @@
 
 .tableWrap {
   border: 1px solid var(--surface-border);
-  border-radius: 0.8rem;
+  border-radius: 0.55rem;
   overflow: auto;
-  background: var(--surface-panel);
+  background: var(--surface-base);
 }
 
 .table {
   width: 100%;
   border-collapse: collapse;
-  min-width: 1060px;
+  min-width: 1120px;
 }
 
 .table th,
 .table td {
-  padding: 0.72rem 0.75rem;
   border-bottom: 1px solid var(--surface-border-muted);
-  vertical-align: top;
+  vertical-align: middle;
+}
+
+.tableComfortable th,
+.tableComfortable td {
+  padding: 0.68rem 0.7rem;
+}
+
+.tableCompact th,
+.tableCompact td {
+  padding: 0.48rem 0.62rem;
 }
 
 .table th {
   position: sticky;
   top: 0;
   z-index: 1;
-  background: #10161f;
+  background: #0f151e;
   color: var(--text-muted);
-  font-size: 0.7rem;
-  letter-spacing: 0.08em;
+  font-size: 0.66rem;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
   text-align: left;
+  font-weight: 700;
+  white-space: nowrap;
 }
 
 .row:hover td {
@@ -162,12 +258,18 @@
 
 .eventName {
   font-weight: 600;
+  line-height: 1.25;
 }
 
 .numeric {
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum" 1;
+}
+
+.bookText {
+  color: var(--text-primary);
+  font-size: 0.84rem;
 }
 
 .edgePositive {
@@ -180,12 +282,6 @@
 
 .edgeWarning {
   color: var(--warning-text);
-}
-
-.mutedBadgeRow {
-  display: flex;
-  gap: 0.35rem;
-  flex-wrap: wrap;
 }
 
 .gamesList {
@@ -242,10 +338,14 @@
 }
 
 @media (max-width: 1080px) {
-  .toolbarTop,
-  .toolbarBottom,
+  .controlGrid,
   .preferencesGrid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .marketField,
+  .searchField {
+    grid-column: 1 / -1;
   }
 
   .bookChecks {
@@ -254,17 +354,34 @@
 }
 
 @media (max-width: 720px) {
-  .header,
+  .header {
+    flex-direction: column;
+    gap: 0.45rem;
+  }
+
+  .headerStats {
+    justify-content: flex-start;
+    text-align: left;
+  }
+
   .summaryLine,
   .gameCardTop,
   .gameCardBottom {
     flex-direction: column;
   }
 
-  .toolbarTop,
-  .toolbarBottom,
+  .controlGrid,
   .preferencesGrid,
   .bookChecks {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .marketField,
+  .searchField {
+    grid-column: 1 / -1;
+  }
+
+  .table {
+    min-width: 1060px;
   }
 }

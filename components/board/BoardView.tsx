@@ -3,7 +3,6 @@
 import { startTransition, useDeferredValue, useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { EmptyState } from "@/components/primitives/EmptyState";
-import { Panel } from "@/components/primitives/Panel";
 import { BoardTable } from "@/components/board/BoardTable";
 import { BoardToolbar } from "@/components/board/BoardToolbar";
 import type { FairBoardResponse } from "@/lib/server/odds/types";
@@ -127,7 +126,12 @@ export function BoardView({
           <h1 className={styles.title}>{viewModel.title}</h1>
           <p className={styles.subtitle}>{viewModel.subtitle}</p>
         </div>
-        <p className={styles.metaText}>{viewModel.updatedLabel}</p>
+        <div className={styles.headerStats} aria-label="Board status">
+          <span>{viewModel.resultLabel}</span>
+          <span>{viewModel.coverageLabel}</span>
+          <span>{viewModel.updatedLabel}</span>
+          <span>{compactMode ? "Compact" : "Comfortable"}</span>
+        </div>
       </div>
 
       <BoardToolbar
@@ -193,15 +197,8 @@ export function BoardView({
         }
       />
 
-      <Panel>
-        <div className={styles.summaryLine}>
-          <strong>{viewModel.rows.length} markets</strong>
-          <span className={styles.metaText}>{compactMode ? "Compact mode" : "Comfortable mode"}</span>
-        </div>
-      </Panel>
-
       {viewModel.rows.length ? (
-        <BoardTable rows={viewModel.rows} />
+        <BoardTable rows={viewModel.rows} compactMode={compactMode} />
       ) : (
         <EmptyState title={viewModel.emptyTitle} message={viewModel.emptyMessage} />
       )}
