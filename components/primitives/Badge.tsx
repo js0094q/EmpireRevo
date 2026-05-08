@@ -5,14 +5,17 @@ import { cn } from "@/lib/ui/cn";
 export function Badge({
   children,
   tone = "neutral",
-  className
+  className,
+  title
 }: {
   children: ReactNode;
   tone?: "neutral" | "positive" | "warning" | "danger" | "accent";
   className?: string;
+  title?: string;
 }) {
   return (
     <span
+      title={title}
       className={cn(
         styles.badge,
         tone === "positive" && styles.badgePositive,

@@ -18,6 +18,8 @@ Primary scanning surface for actionable market dislocations.
 - Book
 - Fair
 - Edge
+- EV
+- Signal
 - Confidence
 - Books
 - Updated

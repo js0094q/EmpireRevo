@@ -1,4 +1,4 @@
-export type EvPresentationTone = "positive" | "neutral" | "caution";
+export type EvPresentationTone = "positive" | "neutral";
 
 export type EvPresentation = {
   label: string;
@@ -43,13 +43,13 @@ export function getEvPresentation(ev: number): EvPresentation {
 
   if (ev > -2) {
     return {
-      label: "Below market price",
-      tone: "caution"
+      label: "Below market",
+      tone: "neutral"
     };
   }
 
   return {
-    label: "Consensus stronger elsewhere",
-    tone: "caution"
+    label: "Below consensus",
+    tone: "neutral"
   };
 }

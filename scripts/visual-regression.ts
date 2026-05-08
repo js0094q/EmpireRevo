@@ -997,7 +997,7 @@ async function run(): Promise<void> {
       name: "stale",
       path: "/?league=ncaab&market=h2h&model=weighted&stale=1",
       expectedText: "Stale on",
-      expectedBodyText: "STALE MARKET"
+      expectedBodyText: "Stale"
     },
     {
       name: "internal",

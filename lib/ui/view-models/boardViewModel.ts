@@ -1,4 +1,4 @@
-import { buildPickSummary, formatOffer } from "@/components/board/board-helpers";
+import { buildPickSummary } from "@/components/board/board-helpers";
 import { filterEvents, pinnedEventMetrics, sortEvents, type SortKey } from "@/components/board/selectors";
 import type { PriceValueDirection } from "@/lib/odds/priceValue";
 import type { FairBoardResponse, FairEvent, FairOutcomeBook } from "@/lib/server/odds/types";
@@ -38,10 +38,12 @@ export type BoardRowViewModel = {
   market: string;
   marketMeta: string;
   bestPrice: string;
+  bestPriceMeta: string | null;
   bestBook: string;
   bestBookKey: string | null;
   bestPinnedPrice: string | null;
   fairPrice: string;
+  fairPriceMeta: string | null;
   priceSignal: string;
   priceSignalMeta: string;
   priceSignalTone: "positive" | "warning" | "neutral" | "danger";
@@ -52,6 +54,7 @@ export type BoardRowViewModel = {
   evMeta: string | null;
   evTone: "positive" | "warning" | "neutral";
   confidence: string;
+  confidenceDetail: string | null;
   confidenceBucket: "high" | "medium" | "low";
   books: string;
   booksValue: number;
@@ -89,6 +92,22 @@ function confidenceBucket(label?: FairEvent["confidenceLabel"]): "high" | "mediu
   return "low";
 }
 
+function displayConfidenceLabel(label?: FairEvent["confidenceLabel"]): string {
+  if (label === "High Confidence") return "High";
+  if (label === "Moderate Confidence") return "Medium";
+  if (label === "Limited Sharp Coverage") return "Sharp: Low";
+  if (label === "Thin Market") return "Thin market";
+  if (label === "Stale Market") return "Stale";
+  return formatConfidenceLabel(label);
+}
+
+function confidenceDetail(label?: FairEvent["confidenceLabel"]): string | null {
+  if (label === "Limited Sharp Coverage") return "Low sharp participation in the current consensus.";
+  if (label === "Thin Market") return "Market quality is below the usual threshold.";
+  if (label === "Stale Market") return "Odds feed freshness is degraded for this market.";
+  return null;
+}
+
 function eventIsStale(event: FairEvent): boolean {
   if (event.confidenceLabel === "Stale Market") return true;
   if (event.staleStrength >= 0.55) return true;
@@ -105,9 +124,9 @@ function staleLabel(event: FairEvent): string | null {
 }
 
 function suppressionReason(event: FairEvent, bestBook: FairOutcomeBook | null): string | null {
-  if (bestBook?.evReliability === "suppressed") return "Suppressed";
-  if (event.confidenceLabel === "Thin Market") return "Thin";
-  if (event.confidenceLabel === "Limited Sharp Coverage") return "Limited sharp participation";
+  if (bestBook?.evReliability === "suppressed") return "No actionable edge";
+  if (event.confidenceLabel === "Thin Market") return "Market quality low";
+  if (event.confidenceLabel === "Limited Sharp Coverage") return "Low sharp participation";
   return null;
 }
 
@@ -115,22 +134,22 @@ function priceSignal(direction: PriceValueDirection): {
   label: string;
   tone: BoardRowViewModel["priceSignalTone"];
 } {
-  if (direction === "better_than_fair") return { label: "Above consensus price", tone: "positive" };
-  if (direction === "worse_than_fair") return { label: "Below market price", tone: "warning" };
-  return { label: "Efficiently priced", tone: "neutral" };
+  if (direction === "better_than_fair") return { label: "Above consensus", tone: "positive" };
+  if (direction === "worse_than_fair") return { label: "Below market", tone: "neutral" };
+  return { label: "Market aligned", tone: "neutral" };
 }
 
 function priceSignalMeta(pick: ReturnType<typeof buildPickSummary>): string {
-  if (pick.priceValueDirection === "worse_than_fair") return "Consensus lean";
-  if (pick.priceValueDirection === "near_fair") return "Market aligned";
+  if (pick.priceValueDirection === "worse_than_fair") return "Paying below fair";
+  if (pick.priceValueDirection === "near_fair") return "No price gap";
   if (pick.opportunityStrength === "longshot_thin") return "Thin longshot";
   if (pick.opportunityStrength === "strong") return "Market advantage";
-  return "Watch signal";
+  return "Watch";
 }
 
 function formatEv(book: FairOutcomeBook | null): { value: string; numeric: number | null; meta: string | null } {
   if (!book) return { value: "—", numeric: null, meta: null };
-  if (book.evReliability === "suppressed") return { value: "—", numeric: null, meta: "Suppressed" };
+  if (book.evReliability === "suppressed") return { value: "—", numeric: null, meta: "No actionable edge" };
   const numeric = Number.isFinite(book.evPct) ? book.evPct : null;
   const presentation = numeric === null ? null : getEvPresentation(numeric);
   return {
@@ -160,7 +179,7 @@ function findPinnedPrice(event: FairEvent, pinnedBooks: Set<string>): string | n
   if (!bookKey || !pinnedBooks.has(bookKey)) return null;
   const book = pick.outcome.books.find((entry) => entry.bookKey === bookKey) ?? null;
   if (!book) return null;
-  return formatOffer(event.market, book);
+  return formatAmericanOdds(book.priceAmerican);
 }
 
 function marketLabel(event: FairEvent): string {
@@ -192,7 +211,7 @@ function buildBoardRow(event: FairEvent, board: FairBoardResponse, league: strin
       ? Number(bestBook?.edgePct)
       : 0;
   const ev = formatEv(bestBook);
-  const evTone = evPresentation ? (evPresentation.tone === "caution" ? "warning" : evPresentation.tone) : "neutral";
+  const evTone = evPresentation?.tone ?? "neutral";
   const coverage = coverageLabel(event);
   const eventHref = new URLSearchParams({
     league,
@@ -209,11 +228,13 @@ function buildBoardRow(event: FairEvent, board: FairBoardResponse, league: strin
     startTime: formatLongStartTime(event.commenceTime),
     market: marketLabel(event),
     marketMeta: marketMeta(event),
-    bestPrice: bestBook ? formatOffer(event.market, bestBook) : formatAmericanOdds(pick.outcome.bestPrice),
+    bestPrice: bestBook ? formatAmericanOdds(bestBook.priceAmerican) : formatAmericanOdds(pick.outcome.bestPrice),
+    bestPriceMeta: bestBook ? "Book odds" : null,
     bestBook: bestBook?.title || pick.outcome.bestBook,
     bestBookKey: bestBook?.bookKey || null,
     bestPinnedPrice: findPinnedPrice(event, pinnedBooks),
-    fairPrice: formatOffer(event.market, pick.outcome),
+    fairPrice: formatAmericanOdds(pick.outcome.fairAmerican),
+    fairPriceMeta: "Consensus fair",
     priceSignal: signal.label,
     priceSignalMeta: priceSignalMeta(pick),
     priceSignalTone: signal.tone,
@@ -223,7 +244,8 @@ function buildBoardRow(event: FairEvent, board: FairBoardResponse, league: strin
     evValue: ev.numeric,
     evMeta: ev.meta,
     evTone,
-    confidence: formatConfidenceLabel(event.confidenceLabel),
+    confidence: displayConfidenceLabel(event.confidenceLabel),
+    confidenceDetail: confidenceDetail(event.confidenceLabel),
     confidenceBucket: confidenceBucket(event.confidenceLabel),
     books: formatBookCount(event.contributingBookCount),
     booksValue: event.contributingBookCount,
@@ -286,7 +308,7 @@ export function buildBoardViewModel(params: {
     title: params.mode === "board" ? "Board" : "Games",
     subtitle:
       params.mode === "board"
-        ? "Best price, fair odds, probability gap, EV, coverage, and stale flags."
+        ? "Best price, fair odds, market gap, confidence, and book coverage."
         : "Event directory with direct paths into market detail.",
     updatedLabel: formatUpdatedLabel(params.board.updatedAt, params.board.lastUpdatedLabel),
     resultLabel: `${rows.length} ${params.mode === "board" ? (rows.length === 1 ? "market" : "markets") : rows.length === 1 ? "event" : "events"}`,

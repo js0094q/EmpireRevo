@@ -1,8 +1,21 @@
 import { Badge } from "@/components/primitives/Badge";
-import type { FairEvent } from "@/lib/server/odds/types";
-import { confidenceTone } from "@/components/board/board-helpers";
+import styles from "./workstation.module.css";
 
-export function ConfidenceBadge({ label }: { label: string }) {
-  const tone = confidenceTone(label as FairEvent["confidenceLabel"]);
-  return <Badge tone={tone}>{label}</Badge>;
+export function ConfidenceBadge({
+  label,
+  bucket,
+  isStale,
+  detail
+}: {
+  label: string;
+  bucket: "high" | "medium" | "low";
+  isStale: boolean;
+  detail?: string | null;
+}) {
+  const tone = isStale ? "warning" : bucket === "high" ? "positive" : "neutral";
+  return (
+    <Badge tone={tone} className={styles.confidenceBadge} title={detail || undefined}>
+      {label}
+    </Badge>
+  );
 }

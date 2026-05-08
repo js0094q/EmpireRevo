@@ -142,7 +142,7 @@ test("buildBoardViewModel shapes actionable row with pinned book pricing", () =>
   assert.equal(viewModel.coverageLabel, "1 book");
   assert.equal(viewModel.rows[0]?.bestBook, "FanDuel");
   assert.equal(viewModel.rows[0]?.bestPinnedPrice, "+120");
-  assert.equal(viewModel.rows[0]?.priceSignal, "Above consensus price");
+  assert.equal(viewModel.rows[0]?.priceSignal, "Above consensus");
   assert.equal(viewModel.rows[0]?.probabilityGap, "+3.00pp");
   assert.equal(viewModel.rows[0]?.ev, "+2.10%");
   assert.equal(viewModel.rows[0]?.evMeta, "Positive edge");
@@ -219,7 +219,7 @@ test("buildBoardViewModel excludes stale rows when includeStale is false", () =>
   assert.equal(hidden.rows.length, 0);
 });
 
-test("buildBoardViewModel maps caution EV states to warning tone", () => {
+test("buildBoardViewModel keeps below-market EV states neutral", () => {
   const board = {
     ok: true,
     league: "nba",
@@ -277,7 +277,7 @@ test("buildBoardViewModel maps caution EV states to warning tone", () => {
   });
 
   assert.equal(viewModel.rows.length, 1);
-  assert.equal(viewModel.rows[0]?.evTone, "warning");
-  assert.equal(viewModel.rows[0]?.evMeta, "Below market price");
-  assert.equal(viewModel.rows[0]?.priceSignal, "Below market price");
+  assert.equal(viewModel.rows[0]?.evTone, "neutral");
+  assert.equal(viewModel.rows[0]?.evMeta, "Below market");
+  assert.equal(viewModel.rows[0]?.priceSignal, "Below market");
 });

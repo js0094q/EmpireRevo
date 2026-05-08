@@ -6,7 +6,7 @@
 - Blue interaction accent
 - Green for favorable states
 - Amber for stale or caution states
-- Red for negative or risk states
+- Red only for broken, disconnected, invalid, or unavailable states
 - Thin borders, low shadow, compact spacing
 - Tabular numerics for odds, percentages, and timestamps
 
@@ -25,6 +25,6 @@
 
 ## Copy rules
 
-- Use labels like `Best`, `Fair`, `Edge`, `Books`, `Updated`, `Stale`, `Suppressed`.
+- Use labels like `Best`, `Fair`, `Edge`, `Books`, `Updated`, `Stale`, `No actionable edge`, `Sharp: Low`.
 - Avoid methodology prose in primary public UI.
 - Use `—` for intentional nulls.

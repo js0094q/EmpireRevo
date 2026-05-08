@@ -69,9 +69,18 @@ function confidenceTone(label: string): "positive" | "warning" | "danger" | "neu
   if (label === "High Confidence") return "positive";
   if (label === "Moderate Confidence") return "neutral";
   if (label === "Stale Market") return "warning";
-  if (label === "Limited Sharp Coverage") return "warning";
-  if (label === "Thin Market") return "danger";
+  if (label === "Limited Sharp Coverage") return "neutral";
+  if (label === "Thin Market") return "neutral";
   return "neutral";
+}
+
+function confidenceLabel(label: string): string {
+  if (label === "High Confidence") return "High";
+  if (label === "Moderate Confidence") return "Medium";
+  if (label === "Limited Sharp Coverage") return "Sharp: Low";
+  if (label === "Thin Market") return "Thin market";
+  if (label === "Stale Market") return "Stale";
+  return label;
 }
 
 export function buildGameDetailViewModel(data: GameDetailPageData, options?: { includeInternal?: boolean }): GameDetailViewModel {
@@ -79,12 +88,12 @@ export function buildGameDetailViewModel(data: GameDetailPageData, options?: { i
   const probabilityGapTone: "positive" | "neutral" = (data.featuredBook?.edgePct ?? 0) > 0 ? "positive" : "neutral";
   const evValue = data.featuredBook?.evReliability === "suppressed" ? null : data.featuredBook?.evPct;
   const evPresentation = evValue === null || evValue === undefined ? null : getEvPresentation(evValue);
-  const evTone: "positive" | "warning" | "neutral" = evPresentation ? (evPresentation.tone === "caution" ? "warning" : evPresentation.tone) : "neutral";
+  const evTone: "positive" | "warning" | "neutral" = evPresentation?.tone ?? "neutral";
   const summary = [
     { label: "Best price", value: data.featuredBook ? formatAmericanOdds(data.featuredBook.priceAmerican) : "—" },
     { label: "Book", value: data.featuredBook?.title || "—" },
     { label: "Fair odds", value: formatAmericanOdds(data.featuredOutcome.fairAmerican) },
-    { label: "Prob gap", value: formatSignedPercent(data.featuredBook?.edgePct, 2), tone: probabilityGapTone },
+    { label: "Gap", value: formatSignedPercent(data.featuredBook?.edgePct, 2), tone: probabilityGapTone },
     {
       label: "EV",
       value: evValue === null || evValue === undefined ? "—" : formatSignedPercent(evValue, 2),
@@ -92,7 +101,7 @@ export function buildGameDetailViewModel(data: GameDetailPageData, options?: { i
     },
     {
       label: "Confidence",
-      value: data.event.confidenceLabel,
+      value: confidenceLabel(data.event.confidenceLabel),
       tone: confidenceTone(data.event.confidenceLabel)
     },
     { label: "Coverage", value: formatBookCount(data.event.contributingBookCount) },
@@ -118,7 +127,7 @@ export function buildGameDetailViewModel(data: GameDetailPageData, options?: { i
     data.methodologyCopy
   ];
   if (data.featuredBook?.evReliability === "suppressed") {
-    modelNotes.push("Displayed EV is suppressed by defensibility rules.");
+    modelNotes.push("No actionable edge is displayed because market quality is below threshold.");
   }
 
   return {
@@ -146,8 +155,8 @@ export function buildGameDetailViewModel(data: GameDetailPageData, options?: { i
       freshness: formatUpdatedLabel(book.lastUpdate),
       notes: [
         book.staleActionable ? "Stale" : "",
-        book.priceValueDirection === "better_than_fair" ? "Above consensus price" : "",
-        book.priceValueDirection === "worse_than_fair" ? "Below market price" : ""
+        book.priceValueDirection === "better_than_fair" ? "Above consensus" : "",
+        book.priceValueDirection === "worse_than_fair" ? "Below market" : ""
       ]
         .filter(Boolean)
         .join(" · ") || "—",

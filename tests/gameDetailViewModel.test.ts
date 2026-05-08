@@ -129,13 +129,13 @@ test("buildGameDetailViewModel separates internal notes from public notes", () =
   assert.equal(publicView.internalNotes, null);
   assert.ok(internalView.internalNotes?.some((note) => note.label === "History Event"));
   assert.equal(publicView.comparisonRows[0]?.book, "Pinnacle");
-  assert.ok(publicView.summary.some((item) => item.label === "Prob gap"));
+  assert.ok(publicView.summary.some((item) => item.label === "Gap"));
   assert.ok(publicView.summary.some((item) => item.label === "EV"));
   assert.ok(!publicView.summary.some((item) => item.label === "Edge"));
-  assert.equal(publicView.comparisonRows[0]?.notes, "Below market price");
+  assert.equal(publicView.comparisonRows[0]?.notes, "Below market");
 });
 
-test("buildGameDetailViewModel uses warning tone for caution EV states", () => {
+test("buildGameDetailViewModel keeps below-market EV states neutral", () => {
   const publicView = buildGameDetailViewModel({
     league: "nba",
     model: "weighted",
@@ -172,6 +172,6 @@ test("buildGameDetailViewModel uses warning tone for caution EV states", () => {
   } as GameDetailPageData);
 
   const evMetric = publicView.summary.find((item) => item.label === "EV");
-  assert.equal(evMetric?.tone, "warning");
-  assert.equal(publicView.comparisonRows[0]?.notes, "Below market price");
+  assert.equal(evMetric?.tone, "neutral");
+  assert.equal(publicView.comparisonRows[0]?.notes, "Below market");
 });

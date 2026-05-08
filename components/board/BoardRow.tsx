@@ -12,11 +12,7 @@ export function BoardRow({ row }: { row: BoardRowViewModel }) {
   const probabilityGapTone =
     row.probabilityGapValue >= 1
       ? "positive"
-      : row.probabilityGapValue >= 0.2
-        ? "warning"
-        : row.probabilityGapValue >= -0.5
-          ? "neutral"
-          : "warning";
+      : "neutral";
 
   return (
     <tr className={[styles.row, row.isActionable ? styles.rowActionable : "", row.isStale ? styles.rowStale : ""].join(" ")}>
@@ -35,21 +31,13 @@ export function BoardRow({ row }: { row: BoardRowViewModel }) {
         </div>
       </td>
       <td>
-        <BestLineCell bestPrice={row.bestPrice} pinnedPrice={row.bestPinnedPrice} />
+        <BestLineCell bestPrice={row.bestPrice} meta={row.bestPriceMeta} pinnedPrice={row.bestPinnedPrice} />
       </td>
       <td>
         <span className={styles.bookText}>{row.bestBook}</span>
       </td>
       <td>
-        <FairCell fairPrice={row.fairPrice} />
-      </td>
-      <td>
-        <div className={styles.statusCell}>
-          <span className={[styles.priceSignal, row.priceSignalTone === "positive" ? styles.signalPositive : "", row.priceSignalTone === "warning" ? styles.signalWarning : "", row.priceSignalTone === "danger" ? styles.signalDanger : ""].join(" ")}>
-            {row.priceSignal}
-          </span>
-          <span className={styles.booksMeta}>{row.priceSignalMeta}</span>
-        </div>
+        <FairCell fairPrice={row.fairPrice} meta={row.fairPriceMeta} />
       </td>
       <td>
         <EdgeCell value={row.probabilityGap} tone={probabilityGapTone} />
@@ -62,8 +50,15 @@ export function BoardRow({ row }: { row: BoardRowViewModel }) {
       </td>
       <td>
         <div className={styles.statusCell}>
-          <ConfidenceBadge label={row.confidence} />
-          {row.suppressionReason ? <span className={styles.booksMeta}>{row.suppressionReason}</span> : null}
+          <span className={[styles.priceSignal, row.priceSignalTone === "positive" ? styles.signalPositive : "", row.priceSignalTone === "warning" ? styles.signalWarning : "", row.priceSignalTone === "danger" ? styles.signalDanger : ""].join(" ")}>
+            {row.priceSignal}
+          </span>
+          <span className={styles.booksMeta}>{row.priceSignalMeta}</span>
+        </div>
+      </td>
+      <td>
+        <div className={styles.statusCell}>
+          <ConfidenceBadge label={row.confidence} bucket={row.confidenceBucket} isStale={row.isStale} detail={row.confidenceDetail || row.suppressionReason} />
         </div>
       </td>
       <td>

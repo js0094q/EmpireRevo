@@ -299,10 +299,10 @@ export function formatOffer(
 
 export function confidenceTone(label: FairEvent["confidenceLabel"]): "positive" | "warning" | "neutral" {
   if (label === "High Confidence") return "positive";
-  if (label === "Moderate Confidence") return "warning";
+  if (label === "Moderate Confidence") return "neutral";
   if (label === "Stale Market") return "warning";
-  if (label === "Limited Sharp Coverage") return "warning";
-  if (label === "Thin Market") return "danger";
+  if (label === "Limited Sharp Coverage") return "neutral";
+  if (label === "Thin Market") return "neutral";
   return "neutral";
 }
 

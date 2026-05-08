@@ -45,134 +45,169 @@ export function BoardFilters({
   return (
     <div className={styles.toolbar} aria-label="Board controls">
       <div className={styles.controlGrid}>
-        <label className={styles.toolbarField}>
-          <span className={styles.toolbarLabel}>League</span>
-          <Select value={value.league} onChange={(event) => onChange({ league: event.target.value })}>
-            <option value="nba">NBA</option>
-            <option value="nfl">NFL</option>
-            <option value="nhl">NHL</option>
-            <option value="ncaab">NCAAB</option>
-            <option value="mlb">MLB</option>
-          </Select>
-        </label>
-        <div className={`${styles.toolbarField} ${styles.marketField}`}>
-          <span className={styles.toolbarLabel}>Market</span>
-          <Tabs
-            value={value.market}
-            options={[
-              { value: "h2h", label: "Moneyline" },
-              { value: "spreads", label: "Spread" },
-              { value: "totals", label: "Total" }
-            ]}
-            onChange={(market) => onChange({ market: market as FilterValue["market"] })}
-          />
-        </div>
-        <label className={styles.toolbarField}>
-          <span className={styles.toolbarLabel}>Model</span>
-          <Select value={value.model} onChange={(event) => onChange({ model: event.target.value as FilterValue["model"] })}>
-            <option value="weighted">Weighted</option>
-            <option value="sharp">Sharp</option>
-            <option value="equal">Equal</option>
-          </Select>
-        </label>
-        <label className={styles.toolbarField}>
-          <span className={styles.toolbarLabel}>Best Book</span>
-          <Select value={value.bookKey} onChange={(event) => onChange({ bookKey: event.target.value })}>
-            <option value="all">All books</option>
-            {books.map((book) => (
-              <option key={book.key} value={book.key}>
-                {book.title}
-              </option>
-            ))}
-          </Select>
-        </label>
-        <label className={styles.toolbarField}>
-          <span className={styles.toolbarLabel}>Min</span>
-          <Select value={`${value.minBooks}`} onChange={(event) => onChange({ minBooks: Number(event.target.value) })}>
-            {[2, 3, 4, 5, 6].map((count) => (
-              <option key={count} value={count}>
-                {count}
-              </option>
-            ))}
-          </Select>
-        </label>
-        <label className={`${styles.toolbarField} ${styles.searchField}`}>
+        <label className={`${styles.toolbarField} ${styles.searchField} ${styles.searchPrimary}`}>
           <span className={styles.toolbarLabel}>Search</span>
           <Input value={value.search} onChange={(event) => onChange({ search: event.target.value })} placeholder="Team, market, book" />
         </label>
-        <label className={styles.toolbarField}>
-          <span className={styles.toolbarLabel}>Sort</span>
-          <Select value={value.sort} onChange={(event) => onChange({ sort: event.target.value as BoardSortValue })}>
-            <option value="score">Decision score</option>
-            <option value="edge">Prob gap</option>
-            <option value="ev">EV</option>
-            <option value="confidence">Confidence</option>
-            <option value="book">Book</option>
-            <option value="coverage">Coverage</option>
-            <option value="soonest">Start time</option>
-            <option value="timing">Timing</option>
-            <option value="pinned_score">Pinned score</option>
-          </Select>
-        </label>
-        <label className={styles.toolbarField}>
-          <span className={styles.toolbarLabel}>Gap Floor</span>
-          <Select value={`${value.edgeThresholdPct}`} onChange={(event) => onChange({ edgeThresholdPct: Number(event.target.value) })}>
-            {[0, 0.5, 1, 1.5, 2].map((threshold) => (
-              <option key={threshold} value={threshold}>
-                {threshold.toFixed(1)}pp
-              </option>
-            ))}
-          </Select>
-        </label>
-        <div className={styles.toolbarField}>
-          <span className={styles.toolbarLabel}>State</span>
-          <div className={styles.toggleRow}>
-            <Button
-              type="button"
-              className={styles.controlButton}
-              aria-pressed={value.includeStale}
-              onClick={() => onChange({ includeStale: !value.includeStale })}
-              variant={value.includeStale ? "primary" : "default"}
-            >
-              {staleLabel}
-            </Button>
-            <Button
-              type="button"
-              className={styles.controlButton}
-              aria-pressed={value.pinnedOnly}
-              onClick={() => onChange({ pinnedOnly: !value.pinnedOnly })}
-              variant={value.pinnedOnly ? "primary" : "default"}
-            >
-              {pinnedLabel}
-            </Button>
+
+        <div className={`${styles.filterGroup} ${styles.marketScopeGroup}`}>
+          <span className={styles.filterGroupLabel}>Market Scope</span>
+          <div className={styles.filterFields}>
+            <label className={styles.toolbarField}>
+              <span className={styles.toolbarLabel}>League</span>
+              <Select value={value.league} onChange={(event) => onChange({ league: event.target.value })}>
+                <option value="nba">NBA</option>
+                <option value="nfl">NFL</option>
+                <option value="nhl">NHL</option>
+                <option value="ncaab">NCAAB</option>
+                <option value="mlb">MLB</option>
+              </Select>
+            </label>
+            <div className={`${styles.toolbarField} ${styles.marketField}`}>
+              <span className={styles.toolbarLabel}>Market</span>
+              <Tabs
+                value={value.market}
+                options={[
+                  { value: "h2h", label: "Moneyline" },
+                  { value: "spreads", label: "Spread" },
+                  { value: "totals", label: "Total" }
+                ]}
+                onChange={(market) => onChange({ market: market as FilterValue["market"] })}
+              />
+            </div>
           </div>
         </div>
-        <div className={styles.toolbarField}>
-          <span className={styles.toolbarLabel}>Density</span>
-          <div className={styles.toggleRow}>
-            <Button
-              type="button"
-              className={styles.controlButton}
-              aria-pressed={value.compactMode}
-              onClick={() => onChange({ compactMode: !value.compactMode })}
-              variant={value.compactMode ? "primary" : "default"}
-            >
-              {densityLabel}
-            </Button>
+
+        <div className={styles.filterGroup}>
+          <span className={styles.filterGroupLabel}>Model Controls</span>
+          <div className={styles.filterFields}>
+            <label className={styles.toolbarField}>
+              <span className={styles.toolbarLabel}>Model</span>
+              <Select value={value.model} onChange={(event) => onChange({ model: event.target.value as FilterValue["model"] })}>
+                <option value="weighted">Weighted</option>
+                <option value="sharp">Sharp</option>
+                <option value="equal">Equal</option>
+              </Select>
+            </label>
+            <label className={styles.toolbarField}>
+              <span className={styles.toolbarLabel}>Min Books</span>
+              <Select value={`${value.minBooks}`} onChange={(event) => onChange({ minBooks: Number(event.target.value) })}>
+                {[2, 3, 4, 5, 6].map((count) => (
+                  <option key={count} value={count}>
+                    {count}
+                  </option>
+                ))}
+              </Select>
+            </label>
           </div>
         </div>
-        <div className={styles.toolbarField}>
-          <span className={styles.toolbarLabel}>Books</span>
-          <div className={styles.toggleRow}>
-            <Button
-              type="button"
-              className={styles.controlButton}
-              aria-expanded={showPreferences}
-              onClick={() => setShowPreferences((current) => !current)}
-            >
-              {showPreferences ? "Hide" : "Pin"}
-            </Button>
-            <Badge tone="accent" className={styles.preferenceBadge}>{preferencesLabel}</Badge>
+
+        <div className={styles.filterGroup}>
+          <span className={styles.filterGroupLabel}>Quality Controls</span>
+          <div className={styles.filterFields}>
+            <label className={styles.toolbarField}>
+              <span className={styles.toolbarLabel}>Gap Floor</span>
+              <Select value={`${value.edgeThresholdPct}`} onChange={(event) => onChange({ edgeThresholdPct: Number(event.target.value) })}>
+                {[0, 0.5, 1, 1.5, 2].map((threshold) => (
+                  <option key={threshold} value={threshold}>
+                    {threshold.toFixed(1)}pp
+                  </option>
+                ))}
+              </Select>
+            </label>
+            <div className={styles.toolbarField}>
+              <span className={styles.toolbarLabel}>State</span>
+              <div className={styles.toggleRow}>
+                <Button
+                  type="button"
+                  className={styles.controlButton}
+                  aria-pressed={value.includeStale}
+                  onClick={() => onChange({ includeStale: !value.includeStale })}
+                  variant={value.includeStale ? "primary" : "default"}
+                >
+                  {staleLabel}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className={styles.filterGroup}>
+          <span className={styles.filterGroupLabel}>Book Controls</span>
+          <div className={styles.filterFields}>
+            <label className={styles.toolbarField}>
+              <span className={styles.toolbarLabel}>Book</span>
+              <Select value={value.bookKey} onChange={(event) => onChange({ bookKey: event.target.value })}>
+                <option value="all">All books</option>
+                {books.map((book) => (
+                  <option key={book.key} value={book.key}>
+                    {book.title}
+                  </option>
+                ))}
+              </Select>
+            </label>
+            <div className={styles.toolbarField}>
+              <span className={styles.toolbarLabel}>Pinned</span>
+              <div className={styles.toggleRow}>
+                <Button
+                  type="button"
+                  className={styles.controlButton}
+                  aria-pressed={value.pinnedOnly}
+                  onClick={() => onChange({ pinnedOnly: !value.pinnedOnly })}
+                  variant={value.pinnedOnly ? "primary" : "default"}
+                >
+                  {pinnedLabel}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className={styles.filterGroup}>
+          <span className={styles.filterGroupLabel}>Display</span>
+          <div className={styles.filterFields}>
+            <label className={styles.toolbarField}>
+              <span className={styles.toolbarLabel}>Sort</span>
+              <Select value={value.sort} onChange={(event) => onChange({ sort: event.target.value as BoardSortValue })}>
+                <option value="score">Decision score</option>
+                <option value="edge">Gap</option>
+                <option value="ev">EV</option>
+                <option value="confidence">Confidence</option>
+                <option value="book">Book</option>
+                <option value="coverage">Coverage</option>
+                <option value="soonest">Start time</option>
+                <option value="timing">Timing</option>
+                <option value="pinned_score">Pinned score</option>
+              </Select>
+            </label>
+            <div className={styles.toolbarField}>
+              <span className={styles.toolbarLabel}>Density</span>
+              <div className={styles.toggleRow}>
+                <Button
+                  type="button"
+                  className={styles.controlButton}
+                  aria-pressed={value.compactMode}
+                  onClick={() => onChange({ compactMode: !value.compactMode })}
+                  variant={value.compactMode ? "primary" : "default"}
+                >
+                  {densityLabel}
+                </Button>
+              </div>
+            </div>
+            <div className={styles.toolbarField}>
+              <span className={styles.toolbarLabel}>Books</span>
+              <div className={styles.toggleRow}>
+                <Button
+                  type="button"
+                  className={styles.controlButton}
+                  aria-expanded={showPreferences}
+                  onClick={() => setShowPreferences((current) => !current)}
+                >
+                  {showPreferences ? "Hide" : "Pin"}
+                </Button>
+                <Badge tone="accent" className={styles.preferenceBadge}>{preferencesLabel}</Badge>
+              </div>
+            </div>
           </div>
         </div>
       </div>
