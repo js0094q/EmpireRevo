@@ -1,0 +1,2752 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light">
+    <title>LineDesk | US Odds Comparison and Fair Price Analysis</title>
+    <style>
+      :root {
+        --bg: #f7f8fa;
+        --surface: #ffffff;
+        --surface-subtle: #f1f4f7;
+        --surface-strong: #e8edf3;
+        --text: #101317;
+        --muted: #5e6875;
+        --faint: #7b8490;
+        --border: #d8dee7;
+        --border-strong: #bcc6d3;
+        --accent: #047857;
+        --accent-strong: #035f46;
+        --accent-soft: #e5f6ef;
+        --warning: #b45309;
+        --warning-soft: #fff4db;
+        --danger: #b42318;
+        --danger-soft: #ffe8e5;
+        --shadow: 0 16px 40px rgba(20, 28, 38, 0.08);
+        --radius-lg: 18px;
+        --radius-md: 14px;
+        --radius-sm: 10px;
+        --header-height: 70px;
+        --tab-height: 48px;
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      [hidden] {
+        display: none !important;
+      }
+
+      html {
+        scroll-behavior: smooth;
+      }
+
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font-size: 15px;
+        line-height: 1.45;
+      }
+
+      button,
+      input,
+      select {
+        font: inherit;
+      }
+
+      button {
+        cursor: pointer;
+      }
+
+      button:disabled,
+      input:disabled,
+      select:disabled {
+        cursor: not-allowed;
+        opacity: 0.6;
+      }
+
+      a {
+        color: inherit;
+      }
+
+      .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
+      }
+
+      .app-shell {
+        min-height: 100vh;
+      }
+
+      .topbar {
+        position: sticky;
+        top: 0;
+        z-index: 40;
+        display: grid;
+        grid-template-columns: minmax(120px, 0.8fr) minmax(380px, 2fr) minmax(210px, 0.9fr);
+        gap: 16px;
+        align-items: center;
+        min-height: var(--header-height);
+        padding: 12px clamp(16px, 2.6vw, 32px);
+        background: rgba(247, 248, 250, 0.92);
+        border-bottom: 1px solid var(--border);
+        backdrop-filter: blur(18px);
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        min-width: 0;
+        font-weight: 800;
+        letter-spacing: 0;
+      }
+
+      .brand-mark {
+        display: grid;
+        width: 34px;
+        height: 34px;
+        place-items: center;
+        border-radius: 11px;
+        background: #111827;
+        color: #fff;
+        font-size: 15px;
+      }
+
+      .brand small {
+        display: block;
+        color: var(--muted);
+        font-size: 11px;
+        font-weight: 650;
+        line-height: 1;
+      }
+
+      .toolbar {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        min-width: 0;
+      }
+
+      .actions {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 8px;
+        min-width: 0;
+      }
+
+      .control,
+      .chip,
+      .icon-button,
+      .tab-button,
+      .segmented button,
+      .primary-button,
+      .ghost-button {
+        min-height: 38px;
+        border: 1px solid var(--border);
+        border-radius: 999px;
+        background: var(--surface);
+        color: var(--text);
+        font-size: 13px;
+        font-weight: 700;
+        transition: background 150ms ease, border-color 150ms ease, color 150ms ease, box-shadow 150ms ease, transform 150ms ease;
+      }
+
+      .control:focus-visible,
+      .chip:focus-visible,
+      .icon-button:focus-visible,
+      .tab-button:focus-visible,
+      .segmented button:focus-visible,
+      .primary-button:focus-visible,
+      .ghost-button:focus-visible,
+      input:focus-visible,
+      select:focus-visible {
+        outline: 3px solid rgba(4, 120, 87, 0.22);
+        outline-offset: 2px;
+      }
+
+      .control {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        max-width: 100%;
+        padding: 0 14px;
+        white-space: nowrap;
+      }
+
+      .control select,
+      .field select {
+        border: 0;
+        background: transparent;
+        color: inherit;
+        font-weight: 750;
+        outline: 0;
+      }
+
+      .field select {
+        width: 100%;
+      }
+
+      .chip,
+      .icon-button,
+      .primary-button,
+      .ghost-button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        padding: 0 14px;
+        white-space: nowrap;
+      }
+
+      .icon-button {
+        width: 38px;
+        padding: 0;
+      }
+
+      .primary-button {
+        background: var(--accent);
+        border-color: var(--accent);
+        color: #fff;
+      }
+
+      .ghost-button {
+        background: transparent;
+      }
+
+      .chip:hover,
+      .icon-button:hover,
+      .ghost-button:hover,
+      .control:hover,
+      .segmented button:hover {
+        border-color: var(--border-strong);
+        box-shadow: 0 6px 16px rgba(16, 19, 23, 0.06);
+      }
+
+      .primary-button:hover {
+        background: var(--accent-strong);
+        border-color: var(--accent-strong);
+      }
+
+      .chip.is-active,
+      .segmented button.is-active,
+      .tab-button.is-active {
+        background: var(--accent-soft);
+        border-color: rgba(4, 120, 87, 0.38);
+        color: var(--accent-strong);
+      }
+
+      .search {
+        position: relative;
+        display: flex;
+        align-items: center;
+      }
+
+      .search svg {
+        position: absolute;
+        left: 12px;
+        width: 16px;
+        height: 16px;
+        color: var(--faint);
+      }
+
+      .search input {
+        width: min(220px, 22vw);
+        min-height: 38px;
+        padding: 0 12px 0 36px;
+        border: 1px solid var(--border);
+        border-radius: 999px;
+        background: var(--surface);
+        color: var(--text);
+        font-size: 13px;
+        font-weight: 650;
+      }
+
+      .primary-tabs {
+        position: sticky;
+        top: var(--header-height);
+        z-index: 35;
+        display: flex;
+        min-height: var(--tab-height);
+        gap: 8px;
+        align-items: center;
+        padding: 8px clamp(16px, 2.6vw, 32px);
+        overflow-x: auto;
+        background: rgba(247, 248, 250, 0.94);
+        border-bottom: 1px solid var(--border);
+        backdrop-filter: blur(18px);
+      }
+
+      .tab-button {
+        padding: 0 16px;
+      }
+
+      .container {
+        width: min(1440px, 100%);
+        margin: 0 auto;
+        padding: 18px clamp(14px, 2.6vw, 32px) 88px;
+      }
+
+      .status-strip {
+        display: grid;
+        grid-template-columns: minmax(0, 1.4fr) minmax(300px, 0.8fr);
+        gap: 12px;
+        align-items: stretch;
+        margin-bottom: 14px;
+      }
+
+      .notice,
+      .quota-panel {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 12px 14px;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-md);
+        background: var(--surface);
+        color: var(--muted);
+        font-size: 13px;
+        font-weight: 650;
+      }
+
+      .notice strong,
+      .quota-panel strong {
+        color: var(--text);
+      }
+
+      .quota-panel {
+        justify-content: flex-start;
+      }
+
+      .quota-dot {
+        width: 10px;
+        height: 10px;
+        flex: 0 0 auto;
+        border-radius: 50%;
+        background: var(--accent);
+      }
+
+      .quota-dot.warn {
+        background: var(--warning);
+      }
+
+      .quota-dot.error {
+        background: var(--danger);
+      }
+
+      .view {
+        display: none;
+      }
+
+      .view.is-active {
+        display: block;
+      }
+
+      .layout-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 360px;
+        gap: 16px;
+        align-items: start;
+      }
+
+      .panel {
+        border: 1px solid var(--border);
+        border-radius: var(--radius-lg);
+        background: var(--surface);
+        box-shadow: var(--shadow);
+      }
+
+      .panel-header,
+      .section-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 16px 16px 10px;
+      }
+
+      .panel-header h2,
+      .section-header h2,
+      .learn-card h3 {
+        margin: 0;
+        font-size: 16px;
+        line-height: 1.2;
+        letter-spacing: 0;
+      }
+
+      .section-header p,
+      .panel-header p {
+        margin: 4px 0 0;
+        color: var(--muted);
+        font-size: 13px;
+        font-weight: 600;
+      }
+
+      .filters {
+        position: sticky;
+        top: calc(var(--header-height) + var(--tab-height) + 10px);
+        z-index: 20;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        align-items: center;
+        padding: 12px;
+        margin-bottom: 14px;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-lg);
+        background: rgba(255, 255, 255, 0.94);
+        box-shadow: 0 12px 28px rgba(16, 19, 23, 0.06);
+        backdrop-filter: blur(16px);
+      }
+
+      .segmented {
+        display: inline-flex;
+        gap: 4px;
+        padding: 4px;
+        border: 1px solid var(--border);
+        border-radius: 999px;
+        background: var(--surface-subtle);
+      }
+
+      .segmented button {
+        min-height: 30px;
+        padding: 0 12px;
+        border-color: transparent;
+        background: transparent;
+        box-shadow: none;
+      }
+
+      .field {
+        display: flex;
+        min-height: 38px;
+        align-items: center;
+        gap: 8px;
+        padding: 0 12px;
+        border: 1px solid var(--border);
+        border-radius: 999px;
+        background: var(--surface);
+        color: var(--muted);
+        font-size: 13px;
+        font-weight: 700;
+      }
+
+      .field input[type="date"],
+      .field input[type="number"] {
+        border: 0;
+        background: transparent;
+        color: var(--text);
+        outline: 0;
+        font-size: 13px;
+        font-weight: 700;
+      }
+
+      .toggle {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        min-height: 38px;
+        padding: 0 12px;
+        border: 1px solid var(--border);
+        border-radius: 999px;
+        background: var(--surface);
+        color: var(--text);
+        font-size: 13px;
+        font-weight: 700;
+        white-space: nowrap;
+      }
+
+      .toggle input {
+        width: 16px;
+        height: 16px;
+        accent-color: var(--accent);
+      }
+
+      .game-list,
+      .props-list,
+      .insights-grid,
+      .learn-grid {
+        display: grid;
+        gap: 12px;
+      }
+
+      .game-card,
+      .prop-row,
+      .insight-card,
+      .learn-card,
+      .compliance-card {
+        border: 1px solid var(--border);
+        border-radius: var(--radius-lg);
+        background: var(--surface);
+        box-shadow: 0 10px 24px rgba(16, 19, 23, 0.05);
+      }
+
+      .game-card {
+        overflow: hidden;
+      }
+
+      .game-main {
+        display: grid;
+        grid-template-columns: minmax(220px, 1.15fr) minmax(0, 1.8fr) minmax(170px, 0.55fr);
+        gap: 14px;
+        align-items: center;
+        width: 100%;
+        padding: 14px;
+        border: 0;
+        background: transparent;
+        text-align: left;
+      }
+
+      .event-cell {
+        min-width: 0;
+      }
+
+      .league-line {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        align-items: center;
+        margin-bottom: 7px;
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 750;
+        text-transform: uppercase;
+      }
+
+      .teams {
+        display: grid;
+        gap: 3px;
+        font-size: 17px;
+        font-weight: 820;
+        line-height: 1.15;
+      }
+
+      .teams span {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .status-pill,
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        width: fit-content;
+        min-height: 24px;
+        padding: 0 9px;
+        border: 1px solid var(--border);
+        border-radius: 999px;
+        background: var(--surface-subtle);
+        color: var(--muted);
+        font-size: 11px;
+        font-weight: 820;
+        white-space: nowrap;
+      }
+
+      .status-pill.live,
+      .badge.good {
+        border-color: rgba(4, 120, 87, 0.28);
+        background: var(--accent-soft);
+        color: var(--accent-strong);
+      }
+
+      .status-pill.final,
+      .badge.bad {
+        border-color: rgba(180, 35, 24, 0.2);
+        background: var(--danger-soft);
+        color: var(--danger);
+      }
+
+      .badge.warn {
+        border-color: rgba(180, 83, 9, 0.22);
+        background: var(--warning-soft);
+        color: var(--warning);
+      }
+
+      .odds-strip {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 8px;
+      }
+
+      .odds-box {
+        min-width: 0;
+        padding: 10px;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-md);
+        background: var(--surface-subtle);
+      }
+
+      .odds-box.best {
+        border-color: rgba(4, 120, 87, 0.42);
+        background: var(--accent-soft);
+      }
+
+      .odds-label {
+        display: flex;
+        justify-content: space-between;
+        gap: 6px;
+        color: var(--muted);
+        font-size: 11px;
+        font-weight: 820;
+        text-transform: uppercase;
+      }
+
+      .odds-number {
+        margin-top: 4px;
+        font-variant-numeric: tabular-nums;
+        font-size: 20px;
+        font-weight: 860;
+        letter-spacing: 0;
+      }
+
+      .book-name,
+      .subtle {
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 700;
+      }
+
+      .value-cell {
+        display: grid;
+        justify-items: end;
+        gap: 8px;
+      }
+
+      .value-metric {
+        font-variant-numeric: tabular-nums;
+        font-size: 22px;
+        font-weight: 880;
+        color: var(--accent-strong);
+      }
+
+      .metric-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 8px;
+        padding: 0 14px 14px;
+      }
+
+      .metric {
+        padding: 10px;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-md);
+        background: var(--surface);
+      }
+
+      .metric dt {
+        margin: 0 0 4px;
+        color: var(--muted);
+        font-size: 11px;
+        font-weight: 820;
+        text-transform: uppercase;
+      }
+
+      .metric dd {
+        margin: 0;
+        font-variant-numeric: tabular-nums;
+        font-size: 16px;
+        font-weight: 820;
+      }
+
+      .expanded {
+        display: none;
+        padding: 0 14px 14px;
+      }
+
+      .game-card.is-expanded .expanded {
+        display: block;
+      }
+
+      .comparison-wrap {
+        overflow-x: auto;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-md);
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+
+      th,
+      td {
+        padding: 10px;
+        border-bottom: 1px solid var(--border);
+        text-align: left;
+        vertical-align: middle;
+      }
+
+      th {
+        position: sticky;
+        top: 0;
+        z-index: 1;
+        background: var(--surface-subtle);
+        color: var(--muted);
+        font-size: 11px;
+        font-weight: 850;
+        text-transform: uppercase;
+      }
+
+      td {
+        font-size: 13px;
+        font-weight: 700;
+      }
+
+      tr:last-child td {
+        border-bottom: 0;
+      }
+
+      .num {
+        text-align: right;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .positive {
+        color: var(--accent-strong);
+      }
+
+      .negative {
+        color: var(--danger);
+      }
+
+      .side-panel {
+        position: sticky;
+        top: calc(var(--header-height) + var(--tab-height) + 18px);
+        display: grid;
+        gap: 12px;
+      }
+
+      .summary-list {
+        display: grid;
+        gap: 10px;
+        padding: 0 16px 16px;
+      }
+
+      .summary-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 14px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid var(--border);
+        color: var(--muted);
+        font-size: 13px;
+        font-weight: 700;
+      }
+
+      .summary-row:last-child {
+        padding-bottom: 0;
+        border-bottom: 0;
+      }
+
+      .summary-row strong {
+        color: var(--text);
+        font-variant-numeric: tabular-nums;
+      }
+
+      .prop-toolbar {
+        display: grid;
+        grid-template-columns: minmax(210px, 1fr) minmax(210px, 1fr) minmax(220px, 1fr);
+        gap: 10px;
+        padding: 12px;
+      }
+
+      .prop-row {
+        display: grid;
+        grid-template-columns: minmax(220px, 1fr) repeat(3, minmax(140px, 0.45fr));
+        gap: 12px;
+        align-items: center;
+        padding: 12px;
+      }
+
+      .prop-player {
+        display: grid;
+        gap: 3px;
+        min-width: 0;
+      }
+
+      .prop-player strong {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .insights-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .insight-card {
+        min-height: 240px;
+        overflow: hidden;
+      }
+
+      .rank-list {
+        display: grid;
+        gap: 0;
+        padding: 0 14px 14px;
+      }
+
+      .rank-row {
+        display: grid;
+        grid-template-columns: 26px minmax(0, 1fr) auto;
+        gap: 10px;
+        align-items: center;
+        padding: 10px 0;
+        border-bottom: 1px solid var(--border);
+      }
+
+      .rank-row:last-child {
+        border-bottom: 0;
+      }
+
+      .rank-num {
+        display: grid;
+        width: 24px;
+        height: 24px;
+        place-items: center;
+        border-radius: 8px;
+        background: var(--surface-subtle);
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 850;
+      }
+
+      .sparkline {
+        width: 100%;
+        height: 54px;
+        margin-top: 8px;
+      }
+
+      .learn-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+
+      .learn-card,
+      .compliance-card {
+        padding: 18px;
+      }
+
+      .learn-card p,
+      .compliance-card p,
+      .learn-card li,
+      .compliance-card li {
+        color: var(--muted);
+        font-size: 14px;
+        font-weight: 600;
+      }
+
+      .formula {
+        display: block;
+        margin: 12px 0;
+        padding: 12px;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-md);
+        background: var(--surface-subtle);
+        color: var(--text);
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+        font-size: 12px;
+        line-height: 1.55;
+        white-space: pre-wrap;
+      }
+
+      .settings-popover {
+        position: fixed;
+        top: 76px;
+        right: 22px;
+        z-index: 60;
+        display: none;
+        width: min(360px, calc(100vw - 28px));
+        padding: 14px;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-lg);
+        background: var(--surface);
+        box-shadow: var(--shadow);
+      }
+
+      .settings-popover.is-open {
+        display: block;
+      }
+
+      .settings-grid {
+        display: grid;
+        gap: 10px;
+      }
+
+      .bottom-sheet {
+        position: fixed;
+        inset: auto 0 0;
+        z-index: 70;
+        display: none;
+        max-height: min(84vh, 720px);
+        border-radius: 22px 22px 0 0;
+        background: var(--surface);
+        box-shadow: 0 -18px 44px rgba(16, 19, 23, 0.18);
+        overflow: hidden;
+      }
+
+      .bottom-sheet.is-open {
+        display: block;
+      }
+
+      .sheet-backdrop {
+        position: fixed;
+        inset: 0;
+        z-index: 65;
+        display: none;
+        background: rgba(16, 19, 23, 0.34);
+      }
+
+      .sheet-backdrop.is-open {
+        display: block;
+      }
+
+      .sheet-handle {
+        width: 42px;
+        height: 5px;
+        margin: 10px auto 6px;
+        border-radius: 999px;
+        background: var(--border-strong);
+      }
+
+      .sheet-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 4px 16px 12px;
+        border-bottom: 1px solid var(--border);
+      }
+
+      .sheet-body {
+        max-height: calc(84vh - 66px);
+        padding: 14px 16px 24px;
+        overflow: auto;
+      }
+
+      .sport-groups {
+        display: grid;
+        gap: 16px;
+      }
+
+      .sport-group h3 {
+        margin: 0 0 8px;
+        color: var(--muted);
+        font-size: 12px;
+        text-transform: uppercase;
+      }
+
+      .sport-buttons {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .empty-state,
+      .skeleton-block {
+        display: grid;
+        place-items: center;
+        min-height: 220px;
+        padding: 24px;
+        border: 1px dashed var(--border-strong);
+        border-radius: var(--radius-lg);
+        background: var(--surface);
+        color: var(--muted);
+        text-align: center;
+        font-weight: 700;
+      }
+
+      .skeleton-block {
+        position: relative;
+        overflow: hidden;
+        color: transparent;
+      }
+
+      .skeleton-block::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        transform: translateX(-100%);
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.82), transparent);
+        animation: shimmer 1.1s linear infinite;
+      }
+
+      .tooltip {
+        border-bottom: 1px dotted currentColor;
+        cursor: help;
+      }
+
+      footer {
+        padding: 24px clamp(16px, 2.6vw, 32px) 36px;
+        border-top: 1px solid var(--border);
+        background: var(--surface);
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 650;
+      }
+
+      footer .footer-inner {
+        display: flex;
+        width: min(1440px, 100%);
+        margin: 0 auto;
+        gap: 16px;
+        align-items: center;
+        justify-content: space-between;
+      }
+
+      @keyframes shimmer {
+        100% {
+          transform: translateX(100%);
+        }
+      }
+
+      @media (max-width: 1080px) {
+        .topbar {
+          grid-template-columns: 1fr auto;
+        }
+
+        .toolbar {
+          grid-column: 1 / -1;
+          justify-content: flex-start;
+          order: 3;
+          overflow-x: auto;
+        }
+
+        .actions {
+          justify-content: flex-end;
+        }
+
+        .layout-grid,
+        .status-strip,
+        .insights-grid,
+        .learn-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .side-panel {
+          position: static;
+        }
+
+        .game-main {
+          grid-template-columns: 1fr;
+        }
+
+        .value-cell {
+          justify-items: start;
+        }
+      }
+
+      @media (max-width: 760px) {
+        :root {
+          --header-height: 122px;
+        }
+
+        body {
+          font-size: 14px;
+        }
+
+        .topbar {
+          gap: 10px;
+          padding: 10px 12px;
+        }
+
+        .brand small,
+        .desktop-only {
+          display: none;
+        }
+
+        .search input {
+          width: 44vw;
+        }
+
+        .primary-tabs {
+          padding: 7px 12px;
+        }
+
+        .container {
+          padding: 12px 12px 86px;
+        }
+
+        .filters {
+          top: calc(var(--header-height) + var(--tab-height));
+          gap: 8px;
+          padding: 10px;
+          overflow-x: auto;
+          flex-wrap: nowrap;
+        }
+
+        .filters > * {
+          flex: 0 0 auto;
+        }
+
+        .odds-strip,
+        .metric-grid,
+        .prop-toolbar,
+        .prop-row {
+          grid-template-columns: 1fr;
+        }
+
+        .game-main {
+          padding: 12px;
+        }
+
+        .teams {
+          font-size: 16px;
+        }
+
+        .odds-number {
+          font-size: 18px;
+        }
+
+        .panel-header,
+        .section-header {
+          align-items: flex-start;
+          flex-direction: column;
+        }
+
+        footer .footer-inner {
+          align-items: flex-start;
+          flex-direction: column;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar" role="banner">
+        <div class="brand" aria-label="LineDesk">
+          <span class="brand-mark">LD</span>
+          <span>LineDesk <small>Fair odds workstation</small></span>
+        </div>
+
+        <div class="toolbar" aria-label="Primary filters">
+          <button class="control" id="sportSheetButton" type="button" aria-haspopup="dialog">
+            <span id="selectedSportLabel">Loading sports</span>
+            <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10l5 5 5-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+          </button>
+          <div class="segmented" aria-label="Date range">
+            <button type="button" class="is-active" data-range="today">Today</button>
+            <button type="button" data-range="weekend">Weekend</button>
+            <button type="button" data-range="custom">Custom</button>
+          </div>
+          <label class="field custom-range-field" hidden>
+            From
+            <input id="customFrom" type="date">
+          </label>
+          <label class="field custom-range-field" hidden>
+            To
+            <input id="customTo" type="date">
+          </label>
+        </div>
+
+        <div class="actions">
+          <label class="search">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m21 21-4.3-4.3M10.8 18a7.2 7.2 0 1 1 0-14.4 7.2 7.2 0 0 1 0 14.4Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path></svg>
+            <span class="sr-only">Search teams and players</span>
+            <input id="searchInput" type="search" placeholder="Search">
+          </label>
+          <button class="icon-button" id="settingsButton" type="button" aria-label="Settings" aria-haspopup="menu">
+            <svg width="17" height="17" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15.5A3.5 3.5 0 1 0 12 8a3.5 3.5 0 0 0 0 7.5Z" fill="none" stroke="currentColor" stroke-width="2"></path><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 0 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6v.3a2 2 0 0 1-4 0V21a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1A2 2 0 0 1 4.2 17l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.6-1H2.7a2 2 0 0 1 0-4H3a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9l-.1-.1A2 2 0 0 1 7 4.2l.1.1a1.7 1.7 0 0 0 1.9.3 1.7 1.7 0 0 0 1-1.6v-.3a2 2 0 0 1 4 0V3a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1A2 2 0 0 1 19.8 7l-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.6 1h.3a2 2 0 0 1 0 4H21a1.7 1.7 0 0 0-1.6 1Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"></path></svg>
+          </button>
+        </div>
+      </header>
+
+      <nav class="primary-tabs" aria-label="Main">
+        <button class="tab-button is-active" type="button" data-view="games">Games</button>
+        <button class="tab-button" type="button" data-view="props">Props</button>
+        <button class="tab-button" type="button" data-view="insights">Insights</button>
+        <button class="tab-button" type="button" data-view="learn">Learn</button>
+        <button class="tab-button" type="button" data-view="responsible">Responsible Gambling</button>
+      </nav>
+
+      <main class="container" id="main">
+        <div class="status-strip" aria-live="polite">
+          <div class="notice">
+            <span><strong>Not a sportsbook.</strong> Lines are informational and may change before a bet is placed.</span>
+            <button class="ghost-button" type="button" data-view-jump="responsible">Disclosures</button>
+          </div>
+          <div class="quota-panel" id="quotaPanel">
+            <span class="quota-dot" id="quotaDot"></span>
+            <span id="quotaText">Ready. Add an Odds API key in the config block to fetch live data.</span>
+          </div>
+        </div>
+
+        <section class="view is-active" id="gamesView" aria-labelledby="gamesTitle">
+          <div class="filters" aria-label="Game filters">
+            <div class="segmented" aria-label="Market">
+              <button type="button" class="is-active" data-market="h2h">Moneyline</button>
+              <button type="button" data-market="spreads">Spread</button>
+              <button type="button" data-market="totals">Total</button>
+            </div>
+            <label class="field">
+              Book
+              <select id="bookFilter">
+                <option value="all">All books</option>
+              </select>
+            </label>
+            <label class="toggle"><input id="majorOnlyToggle" type="checkbox" checked> Major only</label>
+            <label class="toggle"><input id="noVigToggle" type="checkbox" checked> No-vig</label>
+            <label class="field">
+              Sort
+              <select id="sortSelect">
+                <option value="time">Start time</option>
+                <option value="edge">Best Edge</option>
+                <option value="consensus">Highest Consensus</option>
+                <option value="move">Biggest Line Move</option>
+              </select>
+            </label>
+            <button class="ghost-button" type="button" id="refreshButton">Refresh</button>
+          </div>
+
+          <div class="layout-grid">
+            <div>
+              <div class="section-header">
+                <div>
+                  <h1 id="gamesTitle">Games</h1>
+                  <p id="gamesSubtitle">Best line, fair probability, book lean, and line-shopping context.</p>
+                </div>
+                <span class="badge" id="gameCountBadge">0 games</span>
+              </div>
+              <div class="game-list" id="gameList">
+                <div class="skeleton-block">Loading games</div>
+              </div>
+            </div>
+
+            <aside class="side-panel" aria-label="Slate summary">
+              <section class="panel">
+                <div class="panel-header">
+                  <div>
+                    <h2>Slate Snapshot</h2>
+                    <p>Current selected sport and range.</p>
+                  </div>
+                </div>
+                <dl class="summary-list" id="slateSummary"></dl>
+              </section>
+
+              <section class="panel">
+                <div class="panel-header">
+                  <div>
+                    <h2>Formula Cards</h2>
+                    <p>Transparent calculations used in the UI.</p>
+                  </div>
+                </div>
+                <div class="summary-list">
+                  <div class="summary-row"><span>Implied probability</span><strong class="tooltip" title="Negative odds: |odds| / (|odds| + 100). Positive odds: 100 / (odds + 100).">Formula</strong></div>
+                  <div class="summary-row"><span>No-vig probability</span><strong class="tooltip" title="Normalize each outcome's implied probability by the sum of all outcome probabilities in the market.">Normalize</strong></div>
+                  <div class="summary-row"><span>Hold estimate</span><strong class="tooltip" title="Market hold = sum of implied probabilities minus 1.">Sum - 1</strong></div>
+                </div>
+              </section>
+            </aside>
+          </div>
+        </section>
+
+        <section class="view" id="propsView" aria-labelledby="propsTitle">
+          <div class="panel">
+            <div class="section-header">
+              <div>
+                <h1 id="propsTitle">Props</h1>
+                <p>Pick a game, load available event markets, then compare player prop prices across US books.</p>
+              </div>
+              <button class="ghost-button" type="button" id="loadPropsButton">Load Markets</button>
+            </div>
+            <div class="prop-toolbar">
+              <label class="field">
+                Game
+                <select id="propGameSelect"></select>
+              </label>
+              <label class="field">
+                Category
+                <select id="propMarketSelect"></select>
+              </label>
+              <label class="field">
+                Search
+                <input id="propSearchInput" type="search" placeholder="Player or prop">
+              </label>
+            </div>
+          </div>
+          <div class="props-list" id="propsList">
+            <div class="empty-state">Choose a game and load available prop markets.</div>
+          </div>
+        </section>
+
+        <section class="view" id="insightsView" aria-labelledby="insightsTitle">
+          <div class="section-header">
+            <div>
+              <h1 id="insightsTitle">Insights</h1>
+              <p>Line-shopping value, consensus pressure, disagreement, and session movement.</p>
+            </div>
+            <label class="toggle"><input id="beginnerToggle" type="checkbox"> Beginner mode</label>
+          </div>
+          <div class="insights-grid">
+            <section class="insight-card">
+              <div class="panel-header"><div><h2>Best Lines Finder</h2><p>Largest best-vs-worst price gaps in the selected slate.</p></div></div>
+              <div class="rank-list" id="bestLinesList"></div>
+            </section>
+            <section class="insight-card">
+              <div class="panel-header"><div><h2>Consensus & Disagreement</h2><p>Book lean plus dispersion across book probabilities.</p></div></div>
+              <div class="rank-list" id="consensusList"></div>
+            </section>
+            <section class="insight-card">
+              <div class="panel-header"><div><h2>Movement Watch</h2><p>Session-derived movement from refresh snapshots.</p></div></div>
+              <div class="rank-list" id="movementList"></div>
+            </section>
+            <section class="insight-card">
+              <div class="panel-header"><div><h2>How to Read the Board</h2><p>Compact guidance for newer bettors.</p></div></div>
+              <div class="summary-list">
+                <div class="summary-row"><span>Best line</span><strong>Highest payout available</strong></div>
+                <div class="summary-row"><span>Fair odds</span><strong>Book consensus after vig</strong></div>
+                <div class="summary-row"><span>Edge</span><strong>Price gap, not a guarantee</strong></div>
+                <div class="summary-row"><span>Consensus</span><strong>Shown only when enough books agree</strong></div>
+              </div>
+            </section>
+          </div>
+        </section>
+
+        <section class="view" id="learnView" aria-labelledby="learnTitle">
+          <div class="section-header">
+            <div>
+              <h1 id="learnTitle">Learn</h1>
+              <p>Short, visual explanations. No picks, certainty claims, or hype.</p>
+            </div>
+          </div>
+          <div class="learn-grid">
+            <article class="learn-card">
+              <h3>What is implied probability?</h3>
+              <p>It translates American odds into the break-even win rate implied by the price.</p>
+              <code class="formula">Negative: p = |odds| / (|odds| + 100)
+Positive: p = 100 / (odds + 100)</code>
+            </article>
+            <article class="learn-card">
+              <h3>What is vig / hold?</h3>
+              <p>Books price both sides above 100% combined probability. The excess is the estimated hold.</p>
+              <code class="formula">hold = sum(implied probabilities) - 1</code>
+            </article>
+            <article class="learn-card">
+              <h3>Why best line matters</h3>
+              <p>Two books can imply different break-even rates for the same side. Better price lowers the hurdle.</p>
+              <code class="formula">edge estimate = fair no-vig probability - market implied probability</code>
+            </article>
+          </div>
+        </section>
+
+        <section class="view" id="responsibleView" aria-labelledby="responsibleTitle">
+          <div class="section-header">
+            <div>
+              <h1 id="responsibleTitle">Responsible Gambling</h1>
+              <p>Compliance and safer-use disclosures are part of the product surface.</p>
+            </div>
+          </div>
+          <div class="learn-grid">
+            <article class="compliance-card">
+              <h3>Informational Only</h3>
+              <p>LineDesk is not a sportsbook. We do not accept bets, process wagers, or provide certain outcomes.</p>
+            </article>
+            <article class="compliance-card">
+              <h3>Age and Location</h3>
+              <p>Must be 21+ or 18+ where applicable. State laws vary; check local regulations before using any sportsbook.</p>
+            </article>
+            <article class="compliance-card">
+              <h3>Need Help?</h3>
+              <p>If you have a gambling problem, call or text 1-800-GAMBLER. Lines may change and all data is for informational purposes only.</p>
+            </article>
+          </div>
+        </section>
+      </main>
+
+      <footer>
+        <div class="footer-inner">
+          <span>LineDesk compares sportsbook prices and fair-price signals. It does not accept bets.</span>
+          <span>21+ or 18+ where applicable. Call 1-800-GAMBLER for help.</span>
+        </div>
+      </footer>
+    </div>
+
+    <div class="settings-popover" id="settingsPopover" role="menu" aria-label="Settings">
+      <div class="settings-grid">
+        <label class="field">
+          Odds
+          <select id="oddsFormatSelect">
+            <option value="american">American</option>
+            <option value="decimal">Decimal</option>
+            <option value="probability">Probability</option>
+          </select>
+        </label>
+        <label class="toggle"><input id="showInactiveToggle" type="checkbox"> Show inactive sports</label>
+        <label class="toggle"><input id="compactModeToggle" type="checkbox"> Compact rows</label>
+        <label class="field">
+          Your win %
+          <input id="userWinInput" type="number" min="1" max="99" step="0.1" placeholder="Optional">
+        </label>
+      </div>
+    </div>
+
+    <div class="sheet-backdrop" id="sheetBackdrop"></div>
+    <section class="bottom-sheet" id="sportSheet" role="dialog" aria-modal="true" aria-labelledby="sportSheetTitle">
+      <div class="sheet-handle"></div>
+      <div class="sheet-header">
+        <div>
+          <h2 id="sportSheetTitle">Select sport</h2>
+          <p class="subtle">Active API sports are shown by default.</p>
+        </div>
+        <button class="icon-button" type="button" data-close-sheet aria-label="Close sport selector">
+          <svg width="17" height="17" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path></svg>
+        </button>
+      </div>
+      <div class="sheet-body">
+        <label class="search" style="width:100%; margin-bottom:14px;">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m21 21-4.3-4.3M10.8 18a7.2 7.2 0 1 1 0-14.4 7.2 7.2 0 0 1 0 14.4Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path></svg>
+          <span class="sr-only">Search sports</span>
+          <input id="sportSearchInput" type="search" placeholder="Search sports" style="width:100%;">
+        </label>
+        <div class="sport-groups" id="sportGroups"></div>
+      </div>
+    </section>
+
+    <section class="bottom-sheet" id="detailSheet" role="dialog" aria-modal="true" aria-labelledby="detailSheetTitle">
+      <div class="sheet-handle"></div>
+      <div class="sheet-header">
+        <div>
+          <h2 id="detailSheetTitle">Game detail</h2>
+          <p class="subtle" id="detailSheetSubtitle">Odds comparison</p>
+        </div>
+        <button class="icon-button" type="button" data-close-sheet aria-label="Close game detail">
+          <svg width="17" height="17" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path></svg>
+        </button>
+      </div>
+      <div class="sheet-body" id="detailSheetBody"></div>
+    </section>
+
+    <script type="module">
+      const CONFIG = {
+        ODDS_API_KEY: "YOUR_ODDS_API_KEY",
+        API_BASE: "https://api.the-odds-api.com/v4",
+        defaultRegion: "us",
+        defaultMarkets: ["h2h", "spreads", "totals"],
+        defaultOddsFormat: "american",
+        bookLimit: 18,
+        oddsCacheMs: 90_000,
+        scoresCacheMs: 120_000,
+        sportsCacheMs: 86_400_000,
+        requestRetries: 3,
+        consensusMinBooks: 6,
+        consensusThreshold: 0.65,
+        highConfidenceDispersion: 0.055,
+        mediumConfidenceDispersion: 0.105,
+        majorBooks: new Set([
+          "draftkings",
+          "fanduel",
+          "betmgm",
+          "caesars",
+          "espnbet",
+          "fanatics",
+          "betrivers",
+          "pointsbetus",
+          "betonlineag",
+          "circasports",
+          "ballybet",
+          "hardrockbet"
+        ])
+      };
+
+      const PROP_NAME_MAP = new Map([
+        ["player_pass_yds", "Passing Yards"],
+        ["player_pass_tds", "Passing TDs"],
+        ["player_pass_attempts", "Pass Attempts"],
+        ["player_rush_yds", "Rushing Yards"],
+        ["player_receptions", "Receptions"],
+        ["player_reception_yds", "Receiving Yards"],
+        ["player_anytime_td", "Anytime TD"],
+        ["player_points", "Points"],
+        ["player_rebounds", "Rebounds"],
+        ["player_assists", "Assists"],
+        ["player_threes", "Made Threes"],
+        ["player_blocks", "Blocks"],
+        ["player_steals", "Steals"],
+        ["batter_hits", "Batter Hits"],
+        ["batter_home_runs", "Home Runs"],
+        ["pitcher_strikeouts", "Pitcher Strikeouts"],
+        ["player_shots_on_goal", "Shots on Goal"],
+        ["player_goals", "Goals"]
+      ]);
+
+      const state = {
+        sports: [],
+        sportKey: "",
+        range: "today",
+        customFrom: "",
+        customTo: "",
+        market: "h2h",
+        selectedView: "games",
+        showInactive: false,
+        majorOnly: true,
+        noVig: true,
+        compact: false,
+        oddsFormat: "american",
+        sort: "time",
+        bookFilter: "all",
+        search: "",
+        propSearch: "",
+        selectedPropGameId: "",
+        selectedPropMarket: "",
+        activeAbort: null,
+        games: [],
+        props: [],
+        snapshots: new Map(),
+        expandedGames: new Set(),
+        requestId: 0,
+        lastLoadedAt: null,
+        lastError: ""
+      };
+
+      const memoryCache = new Map();
+      const inflight = new Map();
+
+      const $ = (selector, root = document) => root.querySelector(selector);
+      const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
+
+      const els = {
+        selectedSportLabel: $("#selectedSportLabel"),
+        sportGroups: $("#sportGroups"),
+        sportSearchInput: $("#sportSearchInput"),
+        sportSheet: $("#sportSheet"),
+        detailSheet: $("#detailSheet"),
+        detailSheetTitle: $("#detailSheetTitle"),
+        detailSheetSubtitle: $("#detailSheetSubtitle"),
+        detailSheetBody: $("#detailSheetBody"),
+        sheetBackdrop: $("#sheetBackdrop"),
+        settingsPopover: $("#settingsPopover"),
+        searchInput: $("#searchInput"),
+        customFrom: $("#customFrom"),
+        customTo: $("#customTo"),
+        gameList: $("#gameList"),
+        gameCountBadge: $("#gameCountBadge"),
+        slateSummary: $("#slateSummary"),
+        quotaPanel: $("#quotaPanel"),
+        quotaText: $("#quotaText"),
+        quotaDot: $("#quotaDot"),
+        bookFilter: $("#bookFilter"),
+        sortSelect: $("#sortSelect"),
+        noVigToggle: $("#noVigToggle"),
+        majorOnlyToggle: $("#majorOnlyToggle"),
+        showInactiveToggle: $("#showInactiveToggle"),
+        compactModeToggle: $("#compactModeToggle"),
+        oddsFormatSelect: $("#oddsFormatSelect"),
+        userWinInput: $("#userWinInput"),
+        propGameSelect: $("#propGameSelect"),
+        propMarketSelect: $("#propMarketSelect"),
+        propSearchInput: $("#propSearchInput"),
+        propsList: $("#propsList"),
+        bestLinesList: $("#bestLinesList"),
+        consensusList: $("#consensusList"),
+        movementList: $("#movementList"),
+        beginnerToggle: $("#beginnerToggle")
+      };
+
+      function apiKeyReady() {
+        return CONFIG.ODDS_API_KEY && CONFIG.ODDS_API_KEY !== "YOUR_ODDS_API_KEY";
+      }
+
+      function setQuota(message, tone = "ok") {
+        els.quotaText.textContent = message;
+        els.quotaDot.classList.toggle("warn", tone === "warn");
+        els.quotaDot.classList.toggle("error", tone === "error");
+      }
+
+      function withApiKey(params = {}) {
+        return new URLSearchParams({ apiKey: CONFIG.ODDS_API_KEY, ...params });
+      }
+
+      function cacheGet(key) {
+        const now = Date.now();
+        const local = memoryCache.get(key);
+        if (local && local.expiresAt > now) return local.value;
+        try {
+          const raw = localStorage.getItem(key);
+          if (!raw) return null;
+          const parsed = JSON.parse(raw);
+          if (parsed.expiresAt > now) {
+            memoryCache.set(key, parsed);
+            return parsed.value;
+          }
+        } catch {
+          localStorage.removeItem(key);
+        }
+        return null;
+      }
+
+      function cacheSet(key, value, ttlMs, persist = false) {
+        const payload = { value, expiresAt: Date.now() + ttlMs };
+        memoryCache.set(key, payload);
+        if (persist) {
+          try {
+            localStorage.setItem(key, JSON.stringify(payload));
+          } catch {
+            // localStorage quota failures should not block odds rendering.
+          }
+        }
+      }
+
+      function wait(ms) {
+        return new Promise((resolve) => setTimeout(resolve, ms));
+      }
+
+      async function fetchJson(url, { signal, ttlMs = 60_000, persist = false, cacheKey = url } = {}) {
+        const cached = cacheGet(cacheKey);
+        if (cached) return cached;
+        if (inflight.has(cacheKey)) return inflight.get(cacheKey);
+
+        const job = (async () => {
+          let attempt = 0;
+          while (attempt < CONFIG.requestRetries) {
+            attempt += 1;
+            const response = await fetch(url, { signal });
+            if (response.status === 429 && attempt < CONFIG.requestRetries) {
+              setQuota("Rate limited by The Odds API. Retrying with backoff.", "warn");
+              await wait(650 * 2 ** attempt);
+              continue;
+            }
+            if (!response.ok) {
+              let message = `Request failed (${response.status})`;
+              try {
+                const body = await response.json();
+                message = body.message || message;
+              } catch {
+                // Keep public errors generic.
+              }
+              throw new Error(message);
+            }
+            const json = await response.json();
+            cacheSet(cacheKey, json, ttlMs, persist);
+            return json;
+          }
+          throw new Error("Rate limited. Please wait before refreshing.");
+        })().finally(() => inflight.delete(cacheKey));
+
+        inflight.set(cacheKey, job);
+        return job;
+      }
+
+      function startOfToday() {
+        const date = new Date();
+        date.setHours(0, 0, 0, 0);
+        return date;
+      }
+
+      function endOfToday() {
+        const date = new Date();
+        date.setHours(23, 59, 59, 999);
+        return date;
+      }
+
+      function weekendRange() {
+        const now = new Date();
+        const day = now.getDay();
+        const fridayOffset = day === 6 ? -1 : day === 0 ? -2 : day === 1 ? -3 : 5 - day;
+        const friday = new Date(now);
+        friday.setDate(now.getDate() + fridayOffset);
+        friday.setHours(0, 0, 0, 0);
+        const monday = new Date(friday);
+        monday.setDate(friday.getDate() + 3);
+        monday.setHours(23, 59, 59, 999);
+        return [friday, monday];
+      }
+
+      function currentRange() {
+        if (state.range === "weekend") return weekendRange();
+        if (state.range === "custom" && state.customFrom && state.customTo) {
+          const from = new Date(`${state.customFrom}T00:00:00`);
+          const to = new Date(`${state.customTo}T23:59:59`);
+          return [from, to];
+        }
+        return [startOfToday(), endOfToday()];
+      }
+
+      function toApiTime(date) {
+        return date.toISOString().replace(/\.\d{3}Z$/, "Z");
+      }
+
+      function formatTime(value) {
+        if (!value) return "Time TBD";
+        return new Intl.DateTimeFormat(undefined, { weekday: "short", hour: "numeric", minute: "2-digit" }).format(new Date(value));
+      }
+
+      function formatShortDate(value) {
+        return new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric" }).format(value);
+      }
+
+      function formatAge(iso) {
+        if (!iso) return "Unknown";
+        const delta = Math.max(0, Date.now() - new Date(iso).getTime());
+        const seconds = Math.round(delta / 1000);
+        if (seconds < 60) return `Updated ${seconds}s ago`;
+        const minutes = Math.round(seconds / 60);
+        if (minutes < 60) return `Updated ${minutes}m ago`;
+        return `Updated ${Math.round(minutes / 60)}h ago`;
+      }
+
+      function americanToImpliedProbability(odds) {
+        const value = Number(odds);
+        if (!Number.isFinite(value) || value === 0) return 0;
+        return value < 0 ? Math.abs(value) / (Math.abs(value) + 100) : 100 / (value + 100);
+      }
+
+      function americanToDecimal(odds) {
+        const value = Number(odds);
+        if (!Number.isFinite(value) || value === 0) return 0;
+        return value > 0 ? 1 + value / 100 : 1 + 100 / Math.abs(value);
+      }
+
+      function probabilityToAmerican(probability) {
+        const p = Math.min(0.999, Math.max(0.001, Number(probability)));
+        if (p >= 0.5) return Math.round(-(p / (1 - p)) * 100);
+        return Math.round(((1 - p) / p) * 100);
+      }
+
+      function formatOdds(odds) {
+        if (!Number.isFinite(Number(odds)) || Number(odds) === 0) return "—";
+        if (state.oddsFormat === "decimal") return americanToDecimal(odds).toFixed(2);
+        if (state.oddsFormat === "probability") return formatPct(americanToImpliedProbability(odds), 1);
+        return odds > 0 ? `+${odds}` : String(odds);
+      }
+
+      function formatPct(value, digits = 1) {
+        if (!Number.isFinite(Number(value))) return "—";
+        return `${(Number(value) * 100).toFixed(digits)}%`;
+      }
+
+      function formatEdgePct(value) {
+        if (!Number.isFinite(Number(value))) return "—";
+        const pct = Number(value) * 100;
+        return `${pct >= 0 ? "+" : ""}${pct.toFixed(1)}%`;
+      }
+
+      function escapeHtml(value) {
+        return String(value ?? "").replace(/[&<>"']/g, (char) => ({
+          "&": "&amp;",
+          "<": "&lt;",
+          ">": "&gt;",
+          '"': "&quot;",
+          "'": "&#39;"
+        })[char]);
+      }
+
+      function normalizeBookKey(key = "") {
+        return key.toLowerCase().replace(/[^a-z0-9]/g, "");
+      }
+
+      function isMajorBook(bookmaker) {
+        return CONFIG.majorBooks.has(normalizeBookKey(bookmaker.key || bookmaker.title));
+      }
+
+      function visibleBookmakers(game) {
+        let books = [...(game.bookmakers || [])];
+        if (state.majorOnly) books = books.filter(isMajorBook);
+        if (state.bookFilter !== "all") books = books.filter((book) => book.key === state.bookFilter);
+        return books.slice(0, CONFIG.bookLimit);
+      }
+
+      function marketForBook(bookmaker, marketKey = state.market) {
+        return (bookmaker.markets || []).find((market) => market.key === marketKey);
+      }
+
+      function marketOutcomeRows(game, marketKey = state.market) {
+        return visibleBookmakers(game)
+          .map((book) => ({ book, market: marketForBook(book, marketKey) }))
+          .filter((row) => row.market?.outcomes?.length);
+      }
+
+      function noVigProbabilities(outcomes) {
+        const implied = outcomes.map((outcome) => americanToImpliedProbability(outcome.price));
+        const total = implied.reduce((sum, value) => sum + value, 0);
+        if (!Number.isFinite(total) || total <= 0) {
+          const equal = outcomes.length ? 1 / outcomes.length : 0;
+          return outcomes.map(() => equal);
+        }
+        return implied.map((value) => value / total);
+      }
+
+      function holdForOutcomes(outcomes) {
+        return outcomes.reduce((sum, outcome) => sum + americanToImpliedProbability(outcome.price), 0) - 1;
+      }
+
+      function bookCompleteness(bookmaker) {
+        const count = (bookmaker.markets || []).filter((market) => CONFIG.defaultMarkets.includes(market.key)).length;
+        return 1 + Math.min(0.08, count * 0.02);
+      }
+
+      function recencyWeight(lastUpdate) {
+        if (!lastUpdate) return 1;
+        const ageMinutes = Math.max(0, (Date.now() - new Date(lastUpdate).getTime()) / 60_000);
+        return Math.max(0.82, 1.08 - ageMinutes * 0.006);
+      }
+
+      function computeConsensus(game, marketKey = "h2h") {
+        const aggregate = new Map();
+        const samples = new Map();
+        let bookCount = 0;
+
+        for (const { book, market } of marketOutcomeRows(game, marketKey)) {
+          if (market.outcomes.length < 2) continue;
+          bookCount += 1;
+          const noVig = noVigProbabilities(market.outcomes);
+          const weight = recencyWeight(book.last_update) * bookCompleteness(book);
+          market.outcomes.forEach((outcome, index) => {
+            const current = aggregate.get(outcome.name) || 0;
+            aggregate.set(outcome.name, current + noVig[index] * weight);
+            if (!samples.has(outcome.name)) samples.set(outcome.name, []);
+            samples.get(outcome.name).push(noVig[index]);
+          });
+        }
+
+        const total = [...aggregate.values()].reduce((sum, value) => sum + value, 0);
+        const normalized = [...aggregate.entries()]
+          .map(([name, value]) => ({ name, probability: total > 0 ? value / total : 0, samples: samples.get(name) || [] }))
+          .sort((a, b) => b.probability - a.probability);
+        const leader = normalized[0] || null;
+        const dispersion = leader ? standardDeviation(leader.samples) : 0;
+        const confidence = confidenceLabel(leader?.probability || 0, dispersion, bookCount);
+        const qualifies = Boolean(leader && bookCount >= CONFIG.consensusMinBooks && leader.probability >= CONFIG.consensusThreshold);
+
+        return { bookCount, leader, outcomes: normalized, dispersion, confidence, qualifies };
+      }
+
+      function confidenceLabel(probability, dispersion, bookCount) {
+        if (bookCount < CONFIG.consensusMinBooks || probability < 0.55) return "Low";
+        if (probability >= CONFIG.consensusThreshold && dispersion <= CONFIG.highConfidenceDispersion) return "High";
+        if (dispersion <= CONFIG.mediumConfidenceDispersion) return "Medium";
+        return "Low";
+      }
+
+      function standardDeviation(values) {
+        if (!values.length) return 0;
+        const mean = values.reduce((sum, value) => sum + value, 0) / values.length;
+        const variance = values.reduce((sum, value) => sum + (value - mean) ** 2, 0) / values.length;
+        return Math.sqrt(variance);
+      }
+
+      function bestOutcomeByName(game, outcomeName, marketKey = state.market) {
+        const candidates = [];
+        for (const { book, market } of marketOutcomeRows(game, marketKey)) {
+          const outcome = market.outcomes.find((item) => item.name === outcomeName);
+          if (outcome) candidates.push({ book, market, outcome });
+        }
+        return candidates.sort((a, b) => americanToDecimal(b.outcome.price) - americanToDecimal(a.outcome.price))[0] || null;
+      }
+
+      function bestAndWorstPrices(game, marketKey = state.market) {
+        const rows = [];
+        for (const { book, market } of marketOutcomeRows(game, marketKey)) {
+          for (const outcome of market.outcomes) rows.push({ game, book, market, outcome });
+        }
+        const byOutcome = new Map();
+        for (const row of rows) {
+          if (!byOutcome.has(row.outcome.name)) byOutcome.set(row.outcome.name, []);
+          byOutcome.get(row.outcome.name).push(row);
+        }
+        const comparisons = [];
+        for (const [name, list] of byOutcome.entries()) {
+          const sorted = list.sort((a, b) => americanToDecimal(b.outcome.price) - americanToDecimal(a.outcome.price));
+          const best = sorted[0];
+          const worst = sorted[sorted.length - 1];
+          if (best && worst && best.book.key !== worst.book.key) {
+            comparisons.push({
+              game,
+              name,
+              best,
+              worst,
+              differential: americanToImpliedProbability(worst.outcome.price) - americanToImpliedProbability(best.outcome.price)
+            });
+          }
+        }
+        return comparisons.sort((a, b) => b.differential - a.differential);
+      }
+
+      function gameStatus(game) {
+        if (game.completed) return { label: "Final", tone: "final" };
+        if (game.scores?.length && new Date(game.commence_time) <= new Date()) return { label: "Live", tone: "live" };
+        if (new Date(game.commence_time) <= new Date() && game.bookmakers?.length) return { label: "Live", tone: "live" };
+        return { label: "Upcoming", tone: "" };
+      }
+
+      function isEndedByScore(game, completedIds) {
+        if (completedIds.has(game.id)) return true;
+        const start = new Date(game.commence_time).getTime();
+        const farPast = start < Date.now() - 8 * 60 * 60 * 1000;
+        return farPast && !game.bookmakers?.length;
+      }
+
+      function deriveQuickOdds(game) {
+        const moneyline = game.home_team && game.away_team
+          ? [game.away_team, game.home_team].map((team) => bestOutcomeByName(game, team, "h2h"))
+          : [];
+        const spread = bestAndWorstPrices(game, "spreads")[0]?.best || null;
+        const total = bestAndWorstPrices(game, "totals")[0]?.best || null;
+        return { moneyline: moneyline.filter(Boolean), spread, total };
+      }
+
+      function computeGameMetrics(game) {
+        const comparisons = bestAndWorstPrices(game, state.market);
+        const topGap = comparisons[0]?.differential || 0;
+        const consensus = computeConsensus(game, "h2h");
+        const marketRows = marketOutcomeRows(game, state.market);
+        const holds = marketRows.map(({ market }) => holdForOutcomes(market.outcomes)).filter(Number.isFinite);
+        const avgHold = holds.length ? holds.reduce((sum, value) => sum + value, 0) / holds.length : 0;
+        const bestLine = comparisons[0]?.best || null;
+        const bestMarket = bestLine?.market;
+        let fairProb = consensus.leader?.probability || 0;
+        if (bestMarket && state.market !== "h2h") {
+          const bookProbs = [];
+          for (const { market } of marketRows) {
+            const target = market.outcomes.find((outcome) => outcome.name === bestLine.outcome.name && outcome.point === bestLine.outcome.point);
+            if (!target) continue;
+            const probs = noVigProbabilities(market.outcomes);
+            const index = market.outcomes.indexOf(target);
+            if (index >= 0) bookProbs.push(probs[index]);
+          }
+          fairProb = bookProbs.length ? bookProbs.reduce((sum, value) => sum + value, 0) / bookProbs.length : fairProb;
+        }
+        const marketImplied = bestLine ? americanToImpliedProbability(bestLine.outcome.price) : 0;
+        const edge = fairProb - marketImplied;
+        const userWinPct = Number(els.userWinInput.value);
+        const userWinProb = Number.isFinite(userWinPct) && userWinPct > 0 ? userWinPct / 100 : fairProb;
+        const ev = bestLine ? userWinProb * americanToDecimal(bestLine.outcome.price) - 1 : 0;
+        const movement = movementForGame(game);
+        return { comparisons, topGap, consensus, avgHold, fairProb, marketImplied, edge, ev, movement, bestLine };
+      }
+
+      function snapshotKey(game, marketKey = state.market) {
+        return `${game.id}:${marketKey}`;
+      }
+
+      function snapshotPriceRows(game, marketKey = state.market) {
+        return bestAndWorstPrices(game, marketKey).map((comparison) => ({
+          outcome: comparison.name,
+          price: comparison.best.outcome.price,
+          book: comparison.best.book.key,
+          point: comparison.best.outcome.point ?? null
+        }));
+      }
+
+      function recordSnapshots(games) {
+        const time = Date.now();
+        for (const game of games) {
+          for (const marketKey of CONFIG.defaultMarkets) {
+            const key = snapshotKey(game, marketKey);
+            const list = state.snapshots.get(key) || [];
+            list.push({ time, rows: snapshotPriceRows(game, marketKey) });
+            state.snapshots.set(key, list.slice(-12));
+          }
+        }
+      }
+
+      function movementForGame(game) {
+        const snapshots = state.snapshots.get(snapshotKey(game, state.market)) || [];
+        if (snapshots.length < 2) return { magnitude: 0, label: "No movement yet", points: [] };
+        const first = snapshots[0].rows[0];
+        const last = snapshots[snapshots.length - 1].rows[0];
+        if (!first || !last) return { magnitude: 0, label: "No movement yet", points: [] };
+        const magnitude = americanToImpliedProbability(last.price) - americanToImpliedProbability(first.price);
+        const label = magnitude > 0 ? "Moved toward implied probability" : magnitude < 0 ? "Moved to better payout" : "Flat";
+        const points = snapshots.map((snap) => {
+          const row = snap.rows.find((item) => item.outcome === last.outcome) || snap.rows[0];
+          return row ? americanToImpliedProbability(row.price) : 0;
+        });
+        return { magnitude, label, points };
+      }
+
+      async function loadSports() {
+        if (!apiKeyReady()) {
+          state.sports = demoSports();
+          state.sportKey = state.sportKey || state.sports[0]?.key || "";
+          setQuota("Demo mode. Replace YOUR_ODDS_API_KEY in index.html to fetch live Odds API data.", "warn");
+          renderSports();
+          return;
+        }
+        const url = `${CONFIG.API_BASE}/sports?${withApiKey()}`;
+        const sports = await fetchJson(url, { ttlMs: CONFIG.sportsCacheMs, persist: true, cacheKey: "odds:sports:v4" });
+        state.sports = sports;
+        const active = sports.find((sport) => sport.active);
+        state.sportKey = state.sportKey || active?.key || sports[0]?.key || "";
+        setQuota("Sports loaded from The Odds API.");
+        renderSports();
+      }
+
+      async function loadSlate({ force = false } = {}) {
+        const requestId = ++state.requestId;
+        if (state.activeAbort) state.activeAbort.abort();
+        state.activeAbort = new AbortController();
+        const signal = state.activeAbort.signal;
+        renderLoading();
+
+        try {
+          if (!state.sportKey) await loadSports();
+          let games;
+          if (!apiKeyReady()) {
+            games = demoGames();
+            await wait(force ? 140 : 80);
+          } else {
+            const [from, to] = currentRange();
+            const oddsParams = withApiKey({
+              regions: CONFIG.defaultRegion,
+              markets: CONFIG.defaultMarkets.join(","),
+              oddsFormat: CONFIG.defaultOddsFormat,
+              commenceTimeFrom: toApiTime(from),
+              commenceTimeTo: toApiTime(to)
+            });
+            const scoresParams = withApiKey({ daysFrom: String(state.range === "weekend" ? 3 : 1) });
+            const oddsUrl = `${CONFIG.API_BASE}/sports/${encodeURIComponent(state.sportKey)}/odds?${oddsParams}`;
+            const scoresUrl = `${CONFIG.API_BASE}/sports/${encodeURIComponent(state.sportKey)}/scores?${scoresParams}`;
+            const [odds, scores] = await Promise.all([
+              fetchJson(oddsUrl, { signal, ttlMs: CONFIG.oddsCacheMs, cacheKey: force ? `${oddsUrl}:force:${Date.now()}` : oddsUrl }),
+              fetchJson(scoresUrl, { signal, ttlMs: CONFIG.scoresCacheMs, cacheKey: scoresUrl })
+            ]);
+            const completedIds = new Set((scores || []).filter((item) => item.completed).map((item) => item.id));
+            games = (odds || []).filter((game) => !isEndedByScore(game, completedIds));
+          }
+
+          if (requestId !== state.requestId) return;
+          state.games = games;
+          state.lastLoadedAt = new Date();
+          state.lastError = "";
+          recordSnapshots(games);
+          setQuota(apiKeyReady() ? `Loaded ${games.length} events from The Odds API.` : "Demo data loaded. Live API key required for current lines.", apiKeyReady() ? "ok" : "warn");
+          renderAll();
+        } catch (error) {
+          if (error.name === "AbortError") return;
+          state.lastError = error.message || "Unable to load odds.";
+          setQuota(state.lastError, state.lastError.includes("Rate") ? "warn" : "error");
+          renderError(state.lastError);
+        }
+      }
+
+      async function loadPropMarkets() {
+        const game = state.games.find((item) => item.id === state.selectedPropGameId) || state.games[0];
+        if (!game) {
+          els.propsList.innerHTML = `<div class="empty-state">No games available for props.</div>`;
+          return;
+        }
+        state.selectedPropGameId = game.id;
+        if (!apiKeyReady()) {
+          const markets = demoPropMarkets();
+          renderPropMarkets(markets);
+          state.selectedPropMarket = state.selectedPropMarket || markets[0]?.key || "";
+          state.props = demoProps();
+          renderProps();
+          setQuota("Demo props loaded. Live player props require event endpoints and an API key.", "warn");
+          return;
+        }
+        try {
+          const marketParams = withApiKey({ regions: CONFIG.defaultRegion });
+          const marketsUrl = `${CONFIG.API_BASE}/sports/${encodeURIComponent(state.sportKey)}/events/${encodeURIComponent(game.id)}/markets?${marketParams}`;
+          const markets = await fetchJson(marketsUrl, { ttlMs: CONFIG.oddsCacheMs, cacheKey: marketsUrl });
+          renderPropMarkets(markets || []);
+          state.selectedPropMarket = state.selectedPropMarket || markets?.[0]?.key || "";
+          if (!state.selectedPropMarket) {
+            els.propsList.innerHTML = `<div class="empty-state">No player prop categories returned for this event.</div>`;
+            return;
+          }
+          await loadPropsForMarket();
+        } catch (error) {
+          setQuota(error.message || "Unable to load prop markets.", "error");
+          els.propsList.innerHTML = `<div class="empty-state">Unable to load prop markets. Try another game or wait for quota reset.</div>`;
+        }
+      }
+
+      async function loadPropsForMarket() {
+        const game = state.games.find((item) => item.id === state.selectedPropGameId);
+        if (!game || !state.selectedPropMarket) return;
+        els.propsList.innerHTML = `<div class="skeleton-block">Loading props</div>`;
+        if (!apiKeyReady()) {
+          state.props = demoProps();
+          renderProps();
+          return;
+        }
+        try {
+          const oddsParams = withApiKey({
+            regions: CONFIG.defaultRegion,
+            markets: state.selectedPropMarket,
+            oddsFormat: CONFIG.defaultOddsFormat
+          });
+          const url = `${CONFIG.API_BASE}/sports/${encodeURIComponent(state.sportKey)}/events/${encodeURIComponent(game.id)}/odds?${oddsParams}`;
+          const data = await fetchJson(url, { ttlMs: CONFIG.oddsCacheMs, cacheKey: url });
+          state.props = propRowsFromEvent(data);
+          renderProps();
+        } catch (error) {
+          setQuota(error.message || "Unable to load props.", "error");
+          els.propsList.innerHTML = `<div class="empty-state">Unable to load props for this market.</div>`;
+        }
+      }
+
+      function propRowsFromEvent(event) {
+        const grouped = new Map();
+        for (const book of event?.bookmakers || []) {
+          const market = marketForBook(book, state.selectedPropMarket);
+          if (!market) continue;
+          for (const outcome of market.outcomes || []) {
+            const key = `${outcome.description || outcome.name}:${outcome.point ?? ""}`;
+            if (!grouped.has(key)) grouped.set(key, { name: outcome.description || outcome.name, point: outcome.point, outcomes: [] });
+            grouped.get(key).outcomes.push({ book, outcome });
+          }
+        }
+        return [...grouped.values()];
+      }
+
+      function renderAll() {
+        renderGames();
+        renderSummary();
+        renderPropGameSelect();
+        renderInsights();
+      }
+
+      function renderLoading() {
+        els.gameList.innerHTML = `<div class="skeleton-block">Loading games</div>`;
+        els.gameCountBadge.textContent = "Loading";
+      }
+
+      function renderError(message) {
+        els.gameList.innerHTML = `<div class="empty-state">${escapeHtml(message)}<br><span class="subtle">Cached data will be used automatically when available.</span></div>`;
+      }
+
+      function renderSports() {
+        const query = els.sportSearchInput.value.trim().toLowerCase();
+        const visible = state.sports
+          .filter((sport) => state.showInactive || sport.active)
+          .filter((sport) => !query || `${sport.title} ${sport.group} ${sport.key}`.toLowerCase().includes(query));
+        const groups = Map.groupBy ? Map.groupBy(visible, (sport) => sport.group || "Other") : groupBy(visible, (sport) => sport.group || "Other");
+        const selected = state.sports.find((sport) => sport.key === state.sportKey);
+        els.selectedSportLabel.textContent = selected?.title || "Select sport";
+        els.sportGroups.innerHTML = [...groups.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([group, sports]) => `
+          <section class="sport-group">
+            <h3>${escapeHtml(group)}</h3>
+            <div class="sport-buttons">
+              ${sports.map((sport) => `
+                <button class="chip ${sport.key === state.sportKey ? "is-active" : ""}" type="button" data-sport-key="${escapeHtml(sport.key)}">
+                  ${escapeHtml(sport.title)}${sport.active ? "" : " · inactive"}
+                </button>
+              `).join("")}
+            </div>
+          </section>
+        `).join("") || `<div class="empty-state">No sports match that search.</div>`;
+      }
+
+      function groupBy(items, getKey) {
+        const groups = new Map();
+        for (const item of items) {
+          const key = getKey(item);
+          if (!groups.has(key)) groups.set(key, []);
+          groups.get(key).push(item);
+        }
+        return groups;
+      }
+
+      function filteredGames() {
+        const query = state.search.toLowerCase();
+        let games = state.games.filter((game) => {
+          const searchable = `${game.home_team} ${game.away_team} ${game.sport_title}`.toLowerCase();
+          return !query || searchable.includes(query);
+        });
+        games = games.map((game) => ({ game, metrics: computeGameMetrics(game) }));
+        games.sort((a, b) => {
+          if (state.sort === "edge") return b.metrics.edge - a.metrics.edge;
+          if (state.sort === "consensus") return (b.metrics.consensus.leader?.probability || 0) - (a.metrics.consensus.leader?.probability || 0);
+          if (state.sort === "move") return Math.abs(b.metrics.movement.magnitude) - Math.abs(a.metrics.movement.magnitude);
+          return new Date(a.game.commence_time) - new Date(b.game.commence_time);
+        });
+        return games;
+      }
+
+      function renderGames() {
+        const rows = filteredGames();
+        const maxRows = rows.length > 60 ? 60 : rows.length;
+        els.gameCountBadge.textContent = `${rows.length} ${rows.length === 1 ? "game" : "games"}`;
+        renderBookFilter();
+        if (!rows.length) {
+          els.gameList.innerHTML = `<div class="empty-state">No qualifying markets for current filters.</div>`;
+          return;
+        }
+        els.gameList.innerHTML = rows.slice(0, maxRows).map(({ game, metrics }) => renderGameCard(game, metrics)).join("");
+        if (rows.length > maxRows) {
+          els.gameList.insertAdjacentHTML("beforeend", `<div class="empty-state">Showing first ${maxRows} games for performance. Narrow the sport, search, or range to see fewer rows.</div>`);
+        }
+      }
+
+      function renderGameCard(game, metrics) {
+        const status = gameStatus(game);
+        const quick = deriveQuickOdds(game);
+        const consensus = metrics.consensus;
+        const leader = consensus.leader;
+        const expanded = state.expandedGames.has(game.id);
+        const moneylineBoxes = quick.moneyline.map((item) => oddsBox(item.outcome.name, item.outcome.price, item.book.title, true)).join("");
+        const spreadBox = quick.spread ? oddsBox("Spread", `${pointLabel(quick.spread.outcome.point)} ${formatOdds(quick.spread.outcome.price)}`, quick.spread.book.title, true) : oddsBox("Spread", "—", "No market", false);
+        const totalBox = quick.total ? oddsBox("Total", `${quick.total.outcome.name} ${pointLabel(quick.total.outcome.point)} ${formatOdds(quick.total.outcome.price)}`, quick.total.book.title, true) : oddsBox("Total", "—", "No market", false);
+        const bestLine = metrics.bestLine;
+        const fairOdds = metrics.fairProb ? probabilityToAmerican(metrics.fairProb) : 0;
+
+        return `
+          <article class="game-card ${expanded ? "is-expanded" : ""}" data-game-id="${escapeHtml(game.id)}">
+            <button class="game-main" type="button" data-toggle-game="${escapeHtml(game.id)}" aria-expanded="${expanded}">
+              <div class="event-cell">
+                <div class="league-line">
+                  <span>${escapeHtml(game.sport_title || sportTitle())}</span>
+                  <span>${formatTime(game.commence_time)}</span>
+                  <span class="status-pill ${status.tone}">${status.label}</span>
+                </div>
+                <div class="teams">
+                  <span>${escapeHtml(game.away_team || "Away")}</span>
+                  <span>${escapeHtml(game.home_team || "Home")}</span>
+                </div>
+              </div>
+              <div class="odds-strip">
+                ${moneylineBoxes || oddsBox("Moneyline", "—", "No market", false)}
+                ${spreadBox}
+                ${totalBox}
+              </div>
+              <div class="value-cell">
+                <div class="value-metric ${metrics.edge >= 0 ? "positive" : "negative"}">${formatEdgePct(metrics.edge)}</div>
+                <span class="badge ${consensus.qualifies ? "good" : "warn"}">${consensus.qualifies ? `Books lean: ${escapeHtml(leader.name)} ${formatPct(leader.probability, 0)}` : `${consensus.confidence} signal`}</span>
+                <span class="subtle">${formatAge(latestBookUpdate(game))}</span>
+              </div>
+            </button>
+            <dl class="metric-grid">
+              <div class="metric"><dt>${state.noVig ? "No-vig win%" : "Implied win%"}</dt><dd>${formatPct(state.noVig ? metrics.fairProb : metrics.marketImplied)}</dd></div>
+              <div class="metric"><dt>Hold / vig</dt><dd>${formatPct(metrics.avgHold)}</dd></div>
+              <div class="metric"><dt>Fair odds</dt><dd>${formatOdds(fairOdds)}</dd></div>
+            </dl>
+            <div class="expanded">
+              <div class="comparison-wrap">
+                ${renderComparisonTable(game)}
+              </div>
+              <dl class="metric-grid" style="padding:14px 0 0;">
+                <div class="metric"><dt>Best vs median</dt><dd>${bestLine ? formatBestVsMedian(game, bestLine) : "—"}</dd></div>
+                <div class="metric"><dt>EV estimate</dt><dd class="${metrics.ev >= 0 ? "positive" : "negative"}">${formatEdgePct(metrics.ev)}</dd></div>
+                <div class="metric"><dt>Movement</dt><dd>${escapeHtml(metrics.movement.label)}</dd></div>
+              </dl>
+              ${renderSparkline(metrics.movement.points)}
+            </div>
+          </article>
+        `;
+      }
+
+      function oddsBox(label, price, book, isBest) {
+        const displayPrice = typeof price === "number" ? formatOdds(price) : price;
+        return `
+          <div class="odds-box ${isBest ? "best" : ""}">
+            <div class="odds-label"><span>${escapeHtml(label)}</span>${isBest ? "<span>Best</span>" : ""}</div>
+            <div class="odds-number">${escapeHtml(displayPrice)}</div>
+            <div class="book-name">${escapeHtml(book)}</div>
+          </div>
+        `;
+      }
+
+      function pointLabel(point) {
+        if (!Number.isFinite(Number(point))) return "";
+        return Number(point) > 0 ? `+${point}` : String(point);
+      }
+
+      function latestBookUpdate(game) {
+        return (game.bookmakers || []).map((book) => book.last_update).filter(Boolean).sort().at(-1);
+      }
+
+      function sportTitle() {
+        return state.sports.find((sport) => sport.key === state.sportKey)?.title || state.sportKey;
+      }
+
+      function renderComparisonTable(game) {
+        const rows = marketOutcomeRows(game, state.market);
+        const bestByOutcome = new Map();
+        for (const comparison of bestAndWorstPrices(game, state.market)) bestByOutcome.set(comparison.name, comparison.best);
+        const outcomeNames = [...new Set(rows.flatMap(({ market }) => market.outcomes.map((outcome) => outcome.name)))].slice(0, 4);
+        return `
+          <table>
+            <thead>
+              <tr>
+                <th>Book</th>
+                ${outcomeNames.map((name) => `<th class="num">${escapeHtml(name)}</th>`).join("")}
+                <th class="num">Hold</th>
+                <th>Updated</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rows.map(({ book, market }) => `
+                <tr>
+                  <td>${escapeHtml(book.title)}</td>
+                  ${outcomeNames.map((name) => {
+                    const outcome = market.outcomes.find((item) => item.name === name);
+                    const best = bestByOutcome.get(name);
+                    const isBest = outcome && best?.book.key === book.key && best?.outcome.price === outcome.price;
+                    return `<td class="num ${isBest ? "positive" : ""}">${outcome ? `${pointLabel(outcome.point)} ${formatOdds(outcome.price)}` : "—"}</td>`;
+                  }).join("")}
+                  <td class="num">${formatPct(holdForOutcomes(market.outcomes))}</td>
+                  <td>${formatAge(book.last_update)}</td>
+                </tr>
+              `).join("")}
+            </tbody>
+          </table>
+        `;
+      }
+
+      function formatBestVsMedian(game, bestLine) {
+        const prices = [];
+        for (const { market } of marketOutcomeRows(game, state.market)) {
+          const outcome = market.outcomes.find((item) => item.name === bestLine.outcome.name && item.point === bestLine.outcome.point);
+          if (outcome) prices.push(americanToImpliedProbability(outcome.price));
+        }
+        if (!prices.length) return "—";
+        const sorted = prices.sort((a, b) => a - b);
+        const median = sorted[Math.floor(sorted.length / 2)];
+        const best = americanToImpliedProbability(bestLine.outcome.price);
+        return formatEdgePct(median - best);
+      }
+
+      function renderSparkline(points) {
+        if (!points.length) return `<div class="subtle" style="padding-top:10px;">Line history starts after the first refresh cycle in this session.</div>`;
+        const min = Math.min(...points);
+        const max = Math.max(...points);
+        const range = max - min || 1;
+        const path = points.map((value, index) => {
+          const x = points.length === 1 ? 0 : (index / (points.length - 1)) * 100;
+          const y = 48 - ((value - min) / range) * 40;
+          return `${index === 0 ? "M" : "L"}${x.toFixed(2)},${y.toFixed(2)}`;
+        }).join(" ");
+        return `
+          <svg class="sparkline" viewBox="0 0 100 54" preserveAspectRatio="none" aria-hidden="true">
+            <path d="${path}" fill="none" stroke="var(--accent)" stroke-width="2.4" vector-effect="non-scaling-stroke"></path>
+          </svg>
+        `;
+      }
+
+      function renderSummary() {
+        const [from, to] = currentRange();
+        const rows = filteredGames();
+        const live = rows.filter(({ game }) => gameStatus(game).label === "Live").length;
+        const avgBooks = rows.length
+          ? rows.reduce((sum, { game }) => sum + visibleBookmakers(game).length, 0) / rows.length
+          : 0;
+        els.slateSummary.innerHTML = `
+          <div class="summary-row"><span>Sport</span><strong>${escapeHtml(sportTitle())}</strong></div>
+          <div class="summary-row"><span>Range</span><strong>${formatShortDate(from)}-${formatShortDate(to)}</strong></div>
+          <div class="summary-row"><span>Live games</span><strong>${live}</strong></div>
+          <div class="summary-row"><span>Avg books</span><strong>${avgBooks.toFixed(1)}</strong></div>
+          <div class="summary-row"><span>Last loaded</span><strong>${state.lastLoadedAt ? state.lastLoadedAt.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) : "—"}</strong></div>
+        `;
+      }
+
+      function renderBookFilter() {
+        const books = new Map();
+        for (const game of state.games) {
+          for (const book of game.bookmakers || []) books.set(book.key, book.title);
+        }
+        const current = state.bookFilter;
+        els.bookFilter.innerHTML = `<option value="all">All books</option>${[...books.entries()]
+          .sort((a, b) => a[1].localeCompare(b[1]))
+          .map(([key, title]) => `<option value="${escapeHtml(key)}">${escapeHtml(title)}</option>`)
+          .join("")}`;
+        els.bookFilter.value = books.has(current) ? current : "all";
+        state.bookFilter = els.bookFilter.value;
+      }
+
+      function renderPropGameSelect() {
+        els.propGameSelect.innerHTML = state.games.map((game) => `
+          <option value="${escapeHtml(game.id)}">${escapeHtml(game.away_team)} at ${escapeHtml(game.home_team)} · ${formatTime(game.commence_time)}</option>
+        `).join("");
+        if (!state.selectedPropGameId && state.games[0]) state.selectedPropGameId = state.games[0].id;
+        els.propGameSelect.value = state.selectedPropGameId;
+      }
+
+      function renderPropMarkets(markets) {
+        els.propMarketSelect.innerHTML = (markets || []).map((market) => {
+          const key = typeof market === "string" ? market : market.key;
+          return `<option value="${escapeHtml(key)}">${escapeHtml(PROP_NAME_MAP.get(key) || humanizeKey(key))}</option>`;
+        }).join("");
+      }
+
+      function humanizeKey(key = "") {
+        return key.replace(/^player_/, "").replace(/_/g, " ").replace(/\b\w/g, (char) => char.toUpperCase());
+      }
+
+      function renderProps() {
+        const query = state.propSearch.toLowerCase();
+        const rows = state.props.filter((row) => !query || `${row.name} ${row.point}`.toLowerCase().includes(query));
+        if (!rows.length) {
+          els.propsList.innerHTML = `<div class="empty-state">No prop rows match the selected game and category.</div>`;
+          return;
+        }
+        els.propsList.innerHTML = rows.map(renderPropRow).join("");
+      }
+
+      function renderPropRow(row) {
+        const overs = row.outcomes.filter(({ outcome }) => /over|yes/i.test(outcome.name));
+        const unders = row.outcomes.filter(({ outcome }) => /under|no/i.test(outcome.name));
+        const bestOver = bestPropSide(overs);
+        const bestUnder = bestPropSide(unders);
+        const fair = fairPropEstimate(row);
+        return `
+          <article class="prop-row">
+            <div class="prop-player">
+              <strong>${escapeHtml(row.name)}</strong>
+              <span class="subtle">${escapeHtml(PROP_NAME_MAP.get(state.selectedPropMarket) || humanizeKey(state.selectedPropMarket))}${Number.isFinite(Number(row.point)) ? ` · ${row.point}` : ""}</span>
+            </div>
+            <div>${propSideBox("Over", bestOver)}</div>
+            <div>${propSideBox("Under", bestUnder)}</div>
+            <div>
+              <span class="badge good">Fair line ${fair}</span>
+              <div class="subtle" style="margin-top:6px;">No-vig estimate from available book pairs.</div>
+            </div>
+          </article>
+        `;
+      }
+
+      function bestPropSide(list) {
+        return [...list].sort((a, b) => americanToDecimal(b.outcome.price) - americanToDecimal(a.outcome.price))[0] || null;
+      }
+
+      function propSideBox(label, item) {
+        if (!item) return `<span class="odds-number">—</span><div class="book-name">${label}</div>`;
+        return `<span class="odds-number">${formatOdds(item.outcome.price)}</span><div class="book-name">${escapeHtml(item.book.title)} · ${formatPct(americanToImpliedProbability(item.outcome.price))}</div>`;
+      }
+
+      function fairPropEstimate(row) {
+        const paired = [];
+        const byBook = groupBy(row.outcomes, (item) => item.book.key);
+        for (const items of byBook.values()) {
+          if (items.length < 2) continue;
+          const probs = noVigProbabilities(items.map((item) => item.outcome));
+          paired.push(probs[0]);
+        }
+        if (!paired.length) return "—";
+        const avg = paired.reduce((sum, value) => sum + value, 0) / paired.length;
+        return formatPct(avg);
+      }
+
+      function renderInsights() {
+        const rows = filteredGames();
+        const lineItems = rows.flatMap(({ game }) => bestAndWorstPrices(game, state.market).slice(0, 2))
+          .sort((a, b) => b.differential - a.differential)
+          .slice(0, 10);
+        els.bestLinesList.innerHTML = lineItems.length ? lineItems.map((item, index) => `
+          <div class="rank-row">
+            <span class="rank-num">${index + 1}</span>
+            <div><strong>${escapeHtml(item.best.outcome.name)}</strong><div class="subtle">${escapeHtml(item.game.away_team)} at ${escapeHtml(item.game.home_team)} · ${escapeHtml(item.best.book.title)} vs ${escapeHtml(item.worst.book.title)}</div></div>
+            <strong class="positive">${formatEdgePct(item.differential)}</strong>
+          </div>
+        `).join("") : `<div class="empty-state">No line-shopping gaps yet.</div>`;
+
+        const consensusRows = rows.map(({ game, metrics }) => ({ game, consensus: metrics.consensus }))
+          .filter((item) => item.consensus.leader)
+          .sort((a, b) => (b.consensus.leader.probability - a.consensus.leader.probability))
+          .slice(0, 10);
+        els.consensusList.innerHTML = consensusRows.length ? consensusRows.map((item, index) => `
+          <div class="rank-row">
+            <span class="rank-num">${index + 1}</span>
+            <div><strong>${escapeHtml(item.consensus.leader.name)}</strong><div class="subtle">${escapeHtml(item.game.away_team)} at ${escapeHtml(item.game.home_team)} · ${item.consensus.bookCount} books · ${item.consensus.confidence}</div></div>
+            <strong>${formatPct(item.consensus.leader.probability, 0)}</strong>
+          </div>
+        `).join("") : `<div class="empty-state">Consensus appears after enough books contribute.</div>`;
+
+        const movers = rows.map(({ game, metrics }) => ({ game, movement: metrics.movement }))
+          .filter((item) => Math.abs(item.movement.magnitude) > 0)
+          .sort((a, b) => Math.abs(b.movement.magnitude) - Math.abs(a.movement.magnitude))
+          .slice(0, 10);
+        els.movementList.innerHTML = movers.length ? movers.map((item, index) => `
+          <div class="rank-row">
+            <span class="rank-num">${index + 1}</span>
+            <div><strong>${escapeHtml(item.game.away_team)} at ${escapeHtml(item.game.home_team)}</strong><div class="subtle">${escapeHtml(item.movement.label)}</div></div>
+            <strong class="${item.movement.magnitude > 0 ? "negative" : "positive"}">${formatEdgePct(item.movement.magnitude)}</strong>
+          </div>
+        `).join("") : `<div class="empty-state">Refresh once more to start session movement tracking.</div>`;
+      }
+
+      function showView(viewName) {
+        state.selectedView = viewName;
+        $$(".view").forEach((view) => view.classList.toggle("is-active", view.id === `${viewName}View`));
+        $$(".tab-button").forEach((button) => button.classList.toggle("is-active", button.dataset.view === viewName));
+        if (viewName === "insights") requestIdleCallbackSafe(renderInsights);
+      }
+
+      function requestIdleCallbackSafe(callback) {
+        if ("requestIdleCallback" in window) window.requestIdleCallback(callback, { timeout: 500 });
+        else setTimeout(callback, 1);
+      }
+
+      function openSheet(sheet) {
+        els.sheetBackdrop.classList.add("is-open");
+        sheet.classList.add("is-open");
+      }
+
+      function closeSheets() {
+        els.sheetBackdrop.classList.remove("is-open");
+        els.sportSheet.classList.remove("is-open");
+        els.detailSheet.classList.remove("is-open");
+      }
+
+      function showGameDetail(gameId) {
+        const game = state.games.find((item) => item.id === gameId);
+        if (!game) return;
+        const metrics = computeGameMetrics(game);
+        els.detailSheetTitle.textContent = `${game.away_team} at ${game.home_team}`;
+        els.detailSheetSubtitle.textContent = `${sportTitle()} · ${formatTime(game.commence_time)}`;
+        els.detailSheetBody.innerHTML = `
+          <div class="metric-grid" style="padding:0 0 14px;">
+            <div class="metric"><dt>Consensus</dt><dd>${metrics.consensus.leader ? `${escapeHtml(metrics.consensus.leader.name)} ${formatPct(metrics.consensus.leader.probability, 0)}` : "—"}</dd></div>
+            <div class="metric"><dt>Confidence</dt><dd>${metrics.consensus.confidence}</dd></div>
+            <div class="metric"><dt>Hold</dt><dd>${formatPct(metrics.avgHold)}</dd></div>
+          </div>
+          <div class="comparison-wrap">${renderComparisonTable(game)}</div>
+          <div class="learn-card" style="margin-top:12px;">
+            <h3>Edge module</h3>
+            <p>Best line is compared with the median book price and the no-vig consensus probability. User win percentage, when supplied in Settings, drives the EV estimate.</p>
+            <code class="formula">EV = (win_probability * decimal_odds) - 1</code>
+          </div>
+        `;
+        openSheet(els.detailSheet);
+      }
+
+      function bindEvents() {
+        $("#sportSheetButton").addEventListener("click", () => openSheet(els.sportSheet));
+        $("#settingsButton").addEventListener("click", () => els.settingsPopover.classList.toggle("is-open"));
+        els.sheetBackdrop.addEventListener("click", closeSheets);
+        $$("[data-close-sheet]").forEach((button) => button.addEventListener("click", closeSheets));
+
+        $$(".tab-button").forEach((button) => button.addEventListener("click", () => showView(button.dataset.view)));
+        $$("[data-view-jump]").forEach((button) => button.addEventListener("click", () => showView(button.dataset.viewJump)));
+        $$(".segmented [data-range]").forEach((button) => button.addEventListener("click", () => {
+          state.range = button.dataset.range;
+          $$(".segmented [data-range]").forEach((item) => item.classList.toggle("is-active", item === button));
+          $$(".custom-range-field").forEach((item) => item.hidden = state.range !== "custom");
+          loadSlate();
+        }));
+        $$(".segmented [data-market]").forEach((button) => button.addEventListener("click", () => {
+          state.market = button.dataset.market;
+          $$(".segmented [data-market]").forEach((item) => item.classList.toggle("is-active", item === button));
+          renderAll();
+        }));
+
+        els.sportGroups.addEventListener("click", (event) => {
+          const button = event.target.closest("[data-sport-key]");
+          if (!button) return;
+          state.sportKey = button.dataset.sportKey;
+          state.expandedGames.clear();
+          closeSheets();
+          renderSports();
+          loadSlate();
+        });
+        els.sportSearchInput.addEventListener("input", renderSports);
+
+        els.searchInput.addEventListener("input", (event) => {
+          state.search = event.target.value;
+          renderAll();
+        });
+        els.customFrom.addEventListener("change", (event) => {
+          state.customFrom = event.target.value;
+          if (state.range === "custom" && state.customTo) loadSlate();
+        });
+        els.customTo.addEventListener("change", (event) => {
+          state.customTo = event.target.value;
+          if (state.range === "custom" && state.customFrom) loadSlate();
+        });
+        $("#refreshButton").addEventListener("click", () => loadSlate({ force: true }));
+        els.bookFilter.addEventListener("change", (event) => {
+          state.bookFilter = event.target.value;
+          renderAll();
+        });
+        els.sortSelect.addEventListener("change", (event) => {
+          state.sort = event.target.value;
+          renderAll();
+        });
+        els.noVigToggle.addEventListener("change", (event) => {
+          state.noVig = event.target.checked;
+          renderGames();
+        });
+        els.majorOnlyToggle.addEventListener("change", (event) => {
+          state.majorOnly = event.target.checked;
+          renderAll();
+        });
+        els.showInactiveToggle.addEventListener("change", (event) => {
+          state.showInactive = event.target.checked;
+          renderSports();
+        });
+        els.compactModeToggle.addEventListener("change", (event) => {
+          state.compact = event.target.checked;
+          document.body.classList.toggle("compact", state.compact);
+        });
+        els.oddsFormatSelect.addEventListener("change", (event) => {
+          state.oddsFormat = event.target.value;
+          renderAll();
+        });
+        els.userWinInput.addEventListener("input", renderGames);
+        els.gameList.addEventListener("click", (event) => {
+          const button = event.target.closest("[data-toggle-game]");
+          if (!button) return;
+          const gameId = button.dataset.toggleGame;
+          if (window.matchMedia("(max-width: 760px)").matches) {
+            showGameDetail(gameId);
+            return;
+          }
+          if (state.expandedGames.has(gameId)) state.expandedGames.delete(gameId);
+          else state.expandedGames.add(gameId);
+          renderGames();
+        });
+
+        els.propGameSelect.addEventListener("change", (event) => {
+          state.selectedPropGameId = event.target.value;
+          state.selectedPropMarket = "";
+          state.props = [];
+          els.propsList.innerHTML = `<div class="empty-state">Load markets for the selected game.</div>`;
+        });
+        els.propMarketSelect.addEventListener("change", (event) => {
+          state.selectedPropMarket = event.target.value;
+          loadPropsForMarket();
+        });
+        els.propSearchInput.addEventListener("input", (event) => {
+          state.propSearch = event.target.value;
+          renderProps();
+        });
+        $("#loadPropsButton").addEventListener("click", loadPropMarkets);
+        els.beginnerToggle.addEventListener("change", (event) => {
+          document.body.classList.toggle("beginner", event.target.checked);
+        });
+
+        document.addEventListener("keydown", (event) => {
+          if (event.key === "Escape") {
+            closeSheets();
+            els.settingsPopover.classList.remove("is-open");
+          }
+        });
+      }
+
+      function demoSports() {
+        return [
+          { key: "basketball_nba", group: "Basketball", title: "NBA", active: true },
+          { key: "icehockey_nhl", group: "Ice Hockey", title: "NHL", active: true },
+          { key: "baseball_mlb", group: "Baseball", title: "MLB", active: true },
+          { key: "americanfootball_nfl", group: "American Football", title: "NFL", active: false },
+          { key: "mma_mixed_martial_arts", group: "MMA", title: "MMA", active: true }
+        ];
+      }
+
+      function demoGames() {
+        const now = Date.now();
+        const book = (key, title, outcomes, lastOffset = 0) => ({
+          key,
+          title,
+          last_update: new Date(now - lastOffset).toISOString(),
+          markets: [
+            { key: "h2h", outcomes: outcomes.h2h },
+            { key: "spreads", outcomes: outcomes.spreads },
+            { key: "totals", outcomes: outcomes.totals }
+          ]
+        });
+        const games = [
+          {
+            id: "demo-lal-bos",
+            sport_key: "basketball_nba",
+            sport_title: "NBA",
+            commence_time: new Date(now + 2 * 60 * 60 * 1000).toISOString(),
+            home_team: "Boston",
+            away_team: "Los Angeles",
+            bookmakers: [
+              book("draftkings", "DraftKings", {
+                h2h: [{ name: "Los Angeles", price: 142 }, { name: "Boston", price: -165 }],
+                spreads: [{ name: "Los Angeles", point: 3.5, price: -108 }, { name: "Boston", point: -3.5, price: -112 }],
+                totals: [{ name: "Over", point: 224.5, price: -110 }, { name: "Under", point: 224.5, price: -110 }]
+              }, 18_000),
+              book("fanduel", "FanDuel", {
+                h2h: [{ name: "Los Angeles", price: 150 }, { name: "Boston", price: -174 }],
+                spreads: [{ name: "Los Angeles", point: 4.0, price: -115 }, { name: "Boston", point: -4.0, price: -105 }],
+                totals: [{ name: "Over", point: 225.5, price: -108 }, { name: "Under", point: 225.5, price: -112 }]
+              }, 52_000),
+              book("betmgm", "BetMGM", {
+                h2h: [{ name: "Los Angeles", price: 136 }, { name: "Boston", price: -158 }],
+                spreads: [{ name: "Los Angeles", point: 3.5, price: -102 }, { name: "Boston", point: -3.5, price: -118 }],
+                totals: [{ name: "Over", point: 224.0, price: -115 }, { name: "Under", point: 224.0, price: -105 }]
+              }, 78_000),
+              book("caesars", "Caesars", {
+                h2h: [{ name: "Los Angeles", price: 145 }, { name: "Boston", price: -170 }],
+                spreads: [{ name: "Los Angeles", point: 3.0, price: -118 }, { name: "Boston", point: -3.0, price: -102 }],
+                totals: [{ name: "Over", point: 225.0, price: -105 }, { name: "Under", point: 225.0, price: -115 }]
+              }, 90_000)
+            ]
+          },
+          {
+            id: "demo-ny-tor",
+            sport_key: "baseball_mlb",
+            sport_title: "MLB",
+            commence_time: new Date(now + 5 * 60 * 60 * 1000).toISOString(),
+            home_team: "Toronto",
+            away_team: "New York",
+            bookmakers: [
+              book("draftkings", "DraftKings", {
+                h2h: [{ name: "New York", price: -112 }, { name: "Toronto", price: -104 }],
+                spreads: [{ name: "New York", point: -1.5, price: 148 }, { name: "Toronto", point: 1.5, price: -178 }],
+                totals: [{ name: "Over", point: 8.5, price: -102 }, { name: "Under", point: 8.5, price: -118 }]
+              }, 20_000),
+              book("fanduel", "FanDuel", {
+                h2h: [{ name: "New York", price: -118 }, { name: "Toronto", price: 100 }],
+                spreads: [{ name: "New York", point: -1.5, price: 152 }, { name: "Toronto", point: 1.5, price: -184 }],
+                totals: [{ name: "Over", point: 8.0, price: -122 }, { name: "Under", point: 8.0, price: 100 }]
+              }, 45_000),
+              book("espnbet", "ESPN BET", {
+                h2h: [{ name: "New York", price: -108 }, { name: "Toronto", price: -108 }],
+                spreads: [{ name: "New York", point: -1.5, price: 145 }, { name: "Toronto", point: 1.5, price: -172 }],
+                totals: [{ name: "Over", point: 8.5, price: 100 }, { name: "Under", point: 8.5, price: -120 }]
+              }, 80_000)
+            ]
+          }
+        ];
+        return games.filter((game) => game.sport_key === state.sportKey || !apiKeyReady());
+      }
+
+      function demoPropMarkets() {
+        return [{ key: "player_points" }, { key: "player_rebounds" }, { key: "player_assists" }, { key: "player_threes" }];
+      }
+
+      function demoProps() {
+        const make = (name, point, overA, underA, overB, underB) => ({
+          name,
+          point,
+          outcomes: [
+            { book: { key: "draftkings", title: "DraftKings" }, outcome: { name: "Over", point, price: overA } },
+            { book: { key: "draftkings", title: "DraftKings" }, outcome: { name: "Under", point, price: underA } },
+            { book: { key: "fanduel", title: "FanDuel" }, outcome: { name: "Over", point, price: overB } },
+            { book: { key: "fanduel", title: "FanDuel" }, outcome: { name: "Under", point, price: underB } }
+          ]
+        });
+        return [
+          make("Jayson Tatum", 28.5, -108, -112, 102, -124),
+          make("Anthony Davis", 24.5, 110, -135, 104, -128),
+          make("LeBron James", 7.5, -130, 106, -118, -108)
+        ];
+      }
+
+      async function init() {
+        bindEvents();
+        const today = startOfToday();
+        els.customFrom.value = today.toISOString().slice(0, 10);
+        els.customTo.value = today.toISOString().slice(0, 10);
+        state.customFrom = els.customFrom.value;
+        state.customTo = els.customTo.value;
+        state.noVig = els.noVigToggle.checked;
+        state.majorOnly = els.majorOnlyToggle.checked;
+        await loadSports();
+        await loadSlate();
+      }
+
+      init();
+    </script>
+  </body>
+</html>
