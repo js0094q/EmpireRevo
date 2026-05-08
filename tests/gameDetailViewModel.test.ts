@@ -18,6 +18,7 @@ function makeBook(overrides: Partial<FairOutcomeBook> = {}): FairOutcomeBook {
     evPct: 0.8,
     evQualified: true,
     isBestPrice: true,
+    priceValueDirection: "worse_than_fair",
     lastUpdate: new Date().toISOString(),
     ...overrides
   };
@@ -131,4 +132,46 @@ test("buildGameDetailViewModel separates internal notes from public notes", () =
   assert.ok(publicView.summary.some((item) => item.label === "Prob gap"));
   assert.ok(publicView.summary.some((item) => item.label === "EV"));
   assert.ok(!publicView.summary.some((item) => item.label === "Edge"));
+  assert.equal(publicView.comparisonRows[0]?.notes, "Below market price");
+});
+
+test("buildGameDetailViewModel uses warning tone for caution EV states", () => {
+  const publicView = buildGameDetailViewModel({
+    league: "nba",
+    model: "weighted",
+    event: makeEvent(),
+    featuredOutcome: makeOutcome(),
+    featuredBook: makeBook({ evPct: -1.2, priceValueDirection: "worse_than_fair" }),
+    featuredBooks: [makeBook({ evPct: -1.2, priceValueDirection: "worse_than_fair" })],
+    marketSwitchOptions: [{ market: "h2h", href: "/game/test", status: "active", pointGroups: 1 }],
+    currentMarketStatus: "active",
+    showRepresentativeNote: false,
+    focusCopy: "Focus copy",
+    methodologyCopy: "Methodology copy",
+    probabilityGapPct: 1.2,
+    timeline: null,
+    pressureSignals: [],
+    valueTiming: {
+      firstPositiveEvAt: null,
+      lastPositiveEvAt: null,
+      positiveEvDurationSeconds: null,
+      valuePersistence: "unknown",
+      edgeTrend: "flat"
+    },
+    latestHistoryTs: "—",
+    backToBoardHref: "/",
+    boardContext: { mode: "board", windowKey: "all", sortBy: "score", side: "all", search: "", positiveEdgeOnly: false },
+    routeId: "evt-1",
+    internalContext: {
+      historyEventId: "evt-1",
+      historyMarketKey: "h2h:away",
+      timelinePoints: 0,
+      pressureLabel: "none",
+      valuePersistence: "unknown"
+    }
+  } as GameDetailPageData);
+
+  const evMetric = publicView.summary.find((item) => item.label === "EV");
+  assert.equal(evMetric?.tone, "warning");
+  assert.equal(publicView.comparisonRows[0]?.notes, "Below market price");
 });

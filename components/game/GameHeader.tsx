@@ -23,7 +23,17 @@ export function GameHeader({
       </div>
       <div className={styles.headerActions}>
         <Badge tone={status === "Live" ? "accent" : "neutral"}>{status}</Badge>
-        <Badge tone={marketHealth === "Limited" ? "warning" : "positive"}>{marketHealth}</Badge>
+        <Badge
+          tone={
+            marketHealth === "Limited"
+              ? "warning"
+              : marketHealth === "Unavailable"
+                ? "danger"
+                : "positive"
+          }
+        >
+          {marketHealth}
+        </Badge>
         <Link href={backHref}>Back to board</Link>
       </div>
     </div>

@@ -17,10 +17,10 @@ export function BookColumnCell({
   const isSharpBook = book.isSharpBook || book.tier === "sharp";
   const edgeContext =
     book.priceValueDirection === "better_than_fair"
-      ? "Available price is better than fair value"
+      ? "Above consensus"
       : book.priceValueDirection === "worse_than_fair"
-        ? "Available price is worse than fair value"
-        : "Available price is near fair value";
+        ? "Below consensus"
+        : "Market-aligned";
   const direction = book.priceValueDirection ?? "near_fair";
   const probabilityGapPct = Number.isFinite(book.probabilityGapPct) ? Number(book.probabilityGapPct) : book.edgePct;
   const edgeTierLabel = getEdgeTierLabel(probabilityGapPct);

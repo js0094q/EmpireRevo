@@ -142,9 +142,11 @@ test("buildBoardViewModel shapes actionable row with pinned book pricing", () =>
   assert.equal(viewModel.coverageLabel, "1 book");
   assert.equal(viewModel.rows[0]?.bestBook, "FanDuel");
   assert.equal(viewModel.rows[0]?.bestPinnedPrice, "+120");
-  assert.equal(viewModel.rows[0]?.priceSignal, "Better payout");
+  assert.equal(viewModel.rows[0]?.priceSignal, "Above consensus price");
   assert.equal(viewModel.rows[0]?.probabilityGap, "+3.00pp");
   assert.equal(viewModel.rows[0]?.ev, "+2.10%");
+  assert.equal(viewModel.rows[0]?.evMeta, "Positive edge");
+  assert.equal(viewModel.rows[0]?.evTone, "positive");
   assert.equal(viewModel.rows[0]?.coverage, "4 books");
   assert.equal(viewModel.rows[0]?.isActionable, true);
 
@@ -215,4 +217,67 @@ test("buildBoardViewModel excludes stale rows when includeStale is false", () =>
   });
 
   assert.equal(hidden.rows.length, 0);
+});
+
+test("buildBoardViewModel maps caution EV states to warning tone", () => {
+  const board = {
+    ok: true,
+    league: "nba",
+    sportKey: "basketball_nba",
+    market: "h2h",
+    model: "weighted",
+    updatedAt: new Date().toISOString(),
+    lastUpdatedLabel: "Updated recently",
+    activeMarkets: ["h2h"],
+    marketAvailability: [],
+    sharpBooksUsed: [],
+    books: [{ key: "fanduel", title: "FanDuel", tier: "mainstream" }],
+    events: [makeEvent({
+      id: "evt-2",
+      outcomes: [makeOutcome({
+        books: [
+          makeBook({
+            priceAmerican: 100,
+            marketPriceAmerican: 100,
+            fairPriceAmerican: 108,
+            marketImpliedProb: 0.5,
+            fairImpliedProb: 0.45,
+            evPct: -1.2,
+            evQualified: true,
+            priceValueDirection: "worse_than_fair"
+          })
+        ]
+      })]
+    })],
+    topOpportunities: [],
+    bookBehavior: [],
+    diagnostics: {
+      calibration: {} as FairBoardResponse["diagnostics"]["calibration"],
+      calibrationMeta: { version: 1 },
+      validation: { emittedEvents: 0, sink: "memory" }
+    },
+    disclaimer: "test"
+  } as unknown as FairBoardResponse;
+
+  const viewModel = buildBoardViewModel({
+    board,
+    league: "nba",
+    model: "weighted",
+    mode: "board",
+    filters: {
+      search: "",
+      sort: "score",
+      bookKey: "all",
+      edgeThresholdPct: 0,
+      minBooks: 4,
+      pinnedOnly: false,
+      includeStale: true,
+      pinnedBooks: new Set<string>()
+    }
+  });
+
+  assert.equal(viewModel.rows.length, 1);
+  assert.equal(viewModel.rows[0]?.evTone, "warning");
+  assert.equal(viewModel.rows[0]?.evMeta, "Below market price");
+  assert.equal(viewModel.rows[0]?.priceSignal, "Below market price");
 });

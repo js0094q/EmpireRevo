@@ -149,18 +149,18 @@ export function whyThisPickText(params: {
 }): string {
   if (params.direction !== "better_than_fair") {
     if (params.direction === "worse_than_fair") {
-      return `Model disagreement exists, but available payout is worse than fair. Probability gap ${formatProbabilityGap(params.probabilityGapPct)}.`;
+      return `Consensus is not favoring this side. Probability gap ${formatProbabilityGap(params.probabilityGapPct)}.`;
     }
-    return `Available payout is close to fair value. Probability gap ${formatProbabilityGap(params.probabilityGapPct)}.`;
+    return `Available payout is closely aligned to consensus. Probability gap ${formatProbabilityGap(params.probabilityGapPct)}.`;
   }
 
   if (params.strength === "strong") {
-    return `Better than fair price with a meaningful probability dislocation. Probability gap ${formatProbabilityGap(params.probabilityGapPct)}.`;
+    return `Market advantage with a meaningful probability edge. Probability gap ${formatProbabilityGap(params.probabilityGapPct)}.`;
   }
   if (params.strength === "longshot_thin") {
-    return `Better than fair price, but this remains a longshot profile with thin signal quality. Probability gap ${formatProbabilityGap(params.probabilityGapPct)}.`;
+    return `Above consensus price, but this remains a longshot profile with thin signal quality. Probability gap ${formatProbabilityGap(params.probabilityGapPct)}.`;
   }
-  return `Better than fair price, but signal strength is not strong enough for top promotion. Probability gap ${formatProbabilityGap(params.probabilityGapPct)}.`;
+  return `Above consensus price, but signal strength is not strong enough for top promotion. Probability gap ${formatProbabilityGap(params.probabilityGapPct)}.`;
 }
 
 function toFavoriteStatus(outcome: FairOutcome): "favorite" | "underdog" | "neutral" {
@@ -194,9 +194,9 @@ export function recommendationLabelFromBadge(badge: RecommendationBadge): Recomm
 }
 
 export function formatPriceValueDirection(direction: PriceValueDirection): string {
-  if (direction === "better_than_fair") return "Positive Deviation";
-  if (direction === "worse_than_fair") return "Negative Deviation";
-  return "Near Fair";
+  if (direction === "better_than_fair") return "Market Advantage";
+  if (direction === "worse_than_fair") return "Below Market";
+  return "Near Market";
 }
 
 export function marketVsModelCopy(params: {
@@ -300,6 +300,9 @@ export function formatOffer(
 export function confidenceTone(label: FairEvent["confidenceLabel"]): "positive" | "warning" | "neutral" {
   if (label === "High Confidence") return "positive";
   if (label === "Moderate Confidence") return "warning";
+  if (label === "Stale Market") return "warning";
+  if (label === "Limited Sharp Coverage") return "warning";
+  if (label === "Thin Market") return "danger";
   return "neutral";
 }
 
@@ -309,10 +312,10 @@ export function movementTone(outcome: FairOutcome): "positive" | "warning" | "ne
   return "neutral";
 }
 
-export function edgeTone(edgePct: number): "positive" | "warning" | "neutral" | "danger" {
+export function edgeTone(edgePct: number): "positive" | "warning" | "neutral" {
   if (edgePct >= 1) return "positive";
   if (edgePct >= 0.2) return "warning";
-  if (edgePct <= -0.5) return "danger";
+  if (edgePct <= -0.5) return "warning";
   return "neutral";
 }
 

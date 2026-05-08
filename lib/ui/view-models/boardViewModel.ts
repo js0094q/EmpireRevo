@@ -13,6 +13,7 @@ import {
   formatSignedNumber,
   formatUpdatedLabel
 } from "@/lib/ui/formatters/display";
+import { getEvPresentation } from "@/lib/ui/evPresentation";
 
 export type BoardSurfaceIntent = "board" | "games";
 export type BoardSortValue = Extract<SortKey, "score" | "edge" | "ev" | "confidence" | "soonest" | "timing" | "book" | "coverage" | "pinned_score">;
@@ -49,6 +50,7 @@ export type BoardRowViewModel = {
   ev: string;
   evValue: number | null;
   evMeta: string | null;
+  evTone: "positive" | "warning" | "neutral";
   confidence: string;
   confidenceBucket: "high" | "medium" | "low";
   books: string;
@@ -105,7 +107,7 @@ function staleLabel(event: FairEvent): string | null {
 function suppressionReason(event: FairEvent, bestBook: FairOutcomeBook | null): string | null {
   if (bestBook?.evReliability === "suppressed") return "Suppressed";
   if (event.confidenceLabel === "Thin Market") return "Thin";
-  if (event.confidenceLabel === "Limited Sharp Coverage") return "Limited";
+  if (event.confidenceLabel === "Limited Sharp Coverage") return "Limited sharp participation";
   return null;
 }
 
@@ -113,16 +115,16 @@ function priceSignal(direction: PriceValueDirection): {
   label: string;
   tone: BoardRowViewModel["priceSignalTone"];
 } {
-  if (direction === "better_than_fair") return { label: "Better payout", tone: "positive" };
-  if (direction === "worse_than_fair") return { label: "Worse payout", tone: "danger" };
-  return { label: "Near fair", tone: "neutral" };
+  if (direction === "better_than_fair") return { label: "Above consensus price", tone: "positive" };
+  if (direction === "worse_than_fair") return { label: "Below market price", tone: "warning" };
+  return { label: "Efficiently priced", tone: "neutral" };
 }
 
 function priceSignalMeta(pick: ReturnType<typeof buildPickSummary>): string {
-  if (pick.priceValueDirection === "worse_than_fair") return "Model lean only";
-  if (pick.priceValueDirection === "near_fair") return "No price gap";
+  if (pick.priceValueDirection === "worse_than_fair") return "Consensus lean";
+  if (pick.priceValueDirection === "near_fair") return "Market aligned";
   if (pick.opportunityStrength === "longshot_thin") return "Thin longshot";
-  if (pick.opportunityStrength === "strong") return "Actionable";
+  if (pick.opportunityStrength === "strong") return "Market advantage";
   return "Watch signal";
 }
 
@@ -130,10 +132,11 @@ function formatEv(book: FairOutcomeBook | null): { value: string; numeric: numbe
   if (!book) return { value: "—", numeric: null, meta: null };
   if (book.evReliability === "suppressed") return { value: "—", numeric: null, meta: "Suppressed" };
   const numeric = Number.isFinite(book.evPct) ? book.evPct : null;
+  const presentation = numeric === null ? null : getEvPresentation(numeric);
   return {
     value: formatSignedNumber(numeric, 2, "%"),
     numeric,
-    meta: book.evReliability === "qualified" || !book.evQualified ? "Qualified" : null
+    meta: presentation?.label ?? "No edge detected"
   };
 }
 
@@ -182,12 +185,14 @@ function buildBoardRow(event: FairEvent, board: FairBoardResponse, league: strin
   const bestBook = pick.book;
   const stale = eventIsStale(event);
   const signal = priceSignal(pick.priceValueDirection);
+  const evPresentation = bestBook?.evReliability === "suppressed" || bestBook?.evPct === undefined ? null : getEvPresentation(bestBook.evPct);
   const probabilityGapValue = Number.isFinite(pick.probabilityGapPct)
     ? pick.probabilityGapPct
     : Number.isFinite(bestBook?.edgePct)
       ? Number(bestBook?.edgePct)
       : 0;
   const ev = formatEv(bestBook);
+  const evTone = evPresentation ? (evPresentation.tone === "caution" ? "warning" : evPresentation.tone) : "neutral";
   const coverage = coverageLabel(event);
   const eventHref = new URLSearchParams({
     league,
@@ -217,6 +222,7 @@ function buildBoardRow(event: FairEvent, board: FairBoardResponse, league: strin
     ev: ev.value,
     evValue: ev.numeric,
     evMeta: ev.meta,
+    evTone,
     confidence: formatConfidenceLabel(event.confidenceLabel),
     confidenceBucket: confidenceBucket(event.confidenceLabel),
     books: formatBookCount(event.contributingBookCount),

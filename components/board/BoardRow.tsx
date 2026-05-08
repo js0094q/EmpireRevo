@@ -9,8 +9,14 @@ import type { BoardRowViewModel } from "@/lib/ui/view-models/boardViewModel";
 import styles from "./workstation.module.css";
 
 export function BoardRow({ row }: { row: BoardRowViewModel }) {
-  const probabilityGapTone = row.probabilityGapValue >= 1 ? "positive" : row.probabilityGapValue > 0 ? "warning" : row.probabilityGapValue < 0 ? "danger" : "neutral";
-  const evTone = row.evValue === null ? "neutral" : row.evValue >= 1 ? "positive" : row.evValue > 0 ? "warning" : row.evValue < 0 ? "danger" : "neutral";
+  const probabilityGapTone =
+    row.probabilityGapValue >= 1
+      ? "positive"
+      : row.probabilityGapValue >= 0.2
+        ? "warning"
+        : row.probabilityGapValue >= -0.5
+          ? "neutral"
+          : "warning";
 
   return (
     <tr className={[styles.row, row.isActionable ? styles.rowActionable : "", row.isStale ? styles.rowStale : ""].join(" ")}>
@@ -50,7 +56,7 @@ export function BoardRow({ row }: { row: BoardRowViewModel }) {
       </td>
       <td>
         <div className={styles.statusCell}>
-          <EdgeCell value={row.ev} tone={evTone} />
+          <EdgeCell value={row.ev} tone={row.evTone} />
           {row.evMeta ? <span className={styles.booksMeta}>{row.evMeta}</span> : null}
         </div>
       </td>
