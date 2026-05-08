@@ -27,7 +27,9 @@ npm ci
 
 Create `.env.local`
 
-ODDS_API_KEY='00547f8163741cb20868cbde64f44117'
+ODDS_API_KEY=<your-odds-api-key>
+
+Do not commit real keys. Configure production values in the Vercel environment variable settings.
 
 Start dev server
 
