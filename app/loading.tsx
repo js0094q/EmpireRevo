@@ -1,3 +1,5 @@
+import { LoadingState } from "@/components/board/LoadingState";
+
 export default function Loading() {
-  return <p className="muted">Loading board…</p>;
+  return <LoadingState message="Loading the live board and market context." />;
 }

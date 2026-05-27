@@ -963,12 +963,14 @@ async function run(): Promise<void> {
     {
       name: "home",
       path: "/?league=nba&market=h2h&model=weighted&window=today",
-      expectedText: "Board"
+      expectedText: "Board",
+      mobileExpectedText: "Open board"
     },
     {
       name: "games",
       path: "/games?league=nba&market=h2h&model=weighted",
-      expectedText: "Games"
+      expectedText: "Games",
+      mobileExpectedText: "Grouped by start window"
     },
     {
       name: "game",
@@ -996,7 +998,7 @@ async function run(): Promise<void> {
     {
       name: "stale",
       path: "/?league=ncaab&market=h2h&model=weighted&stale=1",
-      expectedText: "Stale on",
+      expectedText: "Stale",
       expectedBodyText: "Stale"
     },
     {
@@ -1022,8 +1024,8 @@ async function run(): Promise<void> {
     {
       name: "game-error",
       path: "/game/error-event?league=nfl&market=h2h&model=weighted",
-      expectedText: "Odds unavailable",
-      expectedBodyText: "Game detail could not be loaded."
+      expectedText: "Game detail unavailable",
+      expectedBodyText: "Game detail could not be loaded right now"
     }
   ];
 

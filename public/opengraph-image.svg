@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" fill="none">
+  <rect width="1200" height="630" rx="36" fill="#090d12"/>
+  <rect x="60" y="72" width="1080" height="486" fill="#0d141d" stroke="#3f8cff" stroke-width="4"/>
+  <text x="95" y="220" fill="#98bcff" font-family="Arial" font-size="72" font-weight="700">EmpirePicks</text>
+  <text x="95" y="305" fill="#edf1f7" font-family="Arial" font-size="52">Fair odds and opportunity board</text>
+  <text x="95" y="380" fill="#9eabbe" font-family="Arial" font-size="34">Find the best sportsbook prices before the market moves.</text>
+  <path d="M88 460h260v11h-260z" fill="#3f8cff"/>
+</svg>

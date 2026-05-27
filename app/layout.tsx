@@ -1,15 +1,50 @@
 import "./globals.css";
 import type { Metadata } from "next";
+import Link from "next/link";
+import type { ReactNode } from "react";
 import { Analytics } from "@vercel/analytics/next";
 import { SiteHeader } from "@/components/layout/SiteHeader";
 import layoutStyles from "@/components/layout/layout.module.css";
 
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.empirepicks.com";
+
 export const metadata: Metadata = {
-  title: "EmpirePicks",
-  description: "Professional sportsbook pricing board for fair value, line shopping, and market diagnostics."
+  metadataBase: new URL(siteUrl),
+  title: {
+    template: "%s | EmpirePicks",
+    default: "EmpirePicks"
+  },
+  description:
+    "Find the best sportsbook prices before the market moves with enterprise-style fair odds and market diagnostics.",
+  applicationName: "EmpirePicks",
+  keywords: ["sports betting", "odds shopping", "fair odds", "expected value", "line shopping", "sportsbook"],
+  openGraph: {
+    title: "EmpirePicks",
+    description: "Professional sportsbook pricing and opportunity board for real-time lineup decisions.",
+    type: "website",
+    images: [
+      {
+        url: "/opengraph-image.svg",
+        width: 1200,
+        height: 630,
+        alt: "EmpirePicks board screenshot"
+      }
+    ]
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "EmpirePicks",
+    description: "Find the best sportsbook prices before the market moves.",
+    images: ["/opengraph-image.svg"]
+  },
+  icons: {
+    icon: "/icon.svg",
+    shortcut: "/icon.svg"
+  },
+  manifest: "/site.webmanifest"
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
       <body>
@@ -18,6 +53,28 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <main className={layoutStyles.main}>
             <div className={layoutStyles.container}>{children}</div>
           </main>
+          <footer className={layoutStyles.footer}>
+            <div className={layoutStyles.footerInner}>
+              <nav className={layoutStyles.footerLinks} aria-label="Legal and product links">
+                <Link href="/about" className={layoutStyles.footerLink}>
+                  About
+                </Link>
+                <Link href="/contact" className={layoutStyles.footerLink}>
+                  Contact
+                </Link>
+                <Link href="/terms" className={layoutStyles.footerLink}>
+                  Terms
+                </Link>
+                <Link href="/privacy" className={layoutStyles.footerLink}>
+                  Privacy
+                </Link>
+                <Link href="/responsible-gaming" className={layoutStyles.footerLink}>
+                  Responsible Gaming
+                </Link>
+              </nav>
+              <p className={layoutStyles.footerLegal}>© {new Date().getFullYear()} EmpirePicks. Not advice for wagering.</p>
+            </div>
+          </footer>
         </div>
         <Analytics />
       </body>

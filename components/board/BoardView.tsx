@@ -56,6 +56,7 @@ export function BoardView({
   const [edgeThresholdPct, setEdgeThresholdPct] = useState(Number(searchParams?.get("edgeThresholdPct") || "0"));
   const [includeStale, setIncludeStale] = useState(searchParams?.get("stale") === "1");
   const [pinnedOnly, setPinnedOnly] = useState(searchParams?.get("pinned") === "1");
+  const [beginnerMode, setBeginnerMode] = useState<"beginner" | "advanced">("beginner");
   const [compactMode, setCompactMode] = useState(
     searchParams?.get("compact") ? searchParams.get("compact") !== "0" : (storedPreferences?.compactMode ?? true)
   );
@@ -202,6 +203,8 @@ export function BoardView({
             pinnedBooks
           })
         }
+        experienceMode={beginnerMode}
+        onModeChange={(nextMode) => setBeginnerMode(nextMode)}
       />
 
       {viewModel.rows.length ? (

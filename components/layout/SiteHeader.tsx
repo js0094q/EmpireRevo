@@ -6,6 +6,18 @@ import { BrandMark } from "@/components/layout/BrandMark";
 import layoutStyles from "./layout.module.css";
 import { cn } from "@/lib/ui/cn";
 
+const NAV_ITEMS = [
+  { href: "/", label: "Board" },
+  { href: "/games", label: "Games" },
+  { href: "/about", label: "About" },
+  { href: "/contact", label: "Contact" }
+];
+
+function isActive(pathname: string, href: string) {
+  if (href === "/") return pathname === "/";
+  return pathname === href || pathname.startsWith(`${href}/`);
+}
+
 export function SiteHeader() {
   const pathname = usePathname();
 
@@ -20,15 +32,29 @@ export function SiteHeader() {
           </span>
         </Link>
 
-        <nav className={layoutStyles.nav} aria-label="Primary">
-          <Link href="/" className={cn(layoutStyles.navLink, pathname === "/" && layoutStyles.navLinkActive)}>
-            Board
-          </Link>
-          <Link href="/games" className={cn(layoutStyles.navLink, pathname?.startsWith("/games") && layoutStyles.navLinkActive)}>
-            Games
-          </Link>
+        <nav className={layoutStyles.nav} aria-label="Primary desktop">
+          {NAV_ITEMS.map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={cn(layoutStyles.navLink, pathname && isActive(pathname, item.href) && layoutStyles.navLinkActive)}
+            >
+              {item.label}
+            </Link>
+          ))}
         </nav>
       </div>
+      <nav className={layoutStyles.mobileNav} aria-label="Primary mobile">
+        {NAV_ITEMS.map((item) => (
+          <Link
+            key={item.href}
+            href={item.href}
+            className={cn(layoutStyles.mobileNavLink, pathname && isActive(pathname, item.href) && layoutStyles.mobileNavLinkActive)}
+          >
+            {item.label}
+          </Link>
+        ))}
+      </nav>
     </header>
   );
 }

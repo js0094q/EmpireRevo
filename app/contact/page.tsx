@@ -1,0 +1,39 @@
+import type { Metadata } from "next";
+import styles from "../legal.module.css";
+
+export const metadata: Metadata = {
+  title: "Contact EmpirePicks",
+  description: "Contact information and support options for EmpirePicks."
+};
+
+export default function ContactPage() {
+  return (
+    <main className={styles.legalPage}>
+      <h1 className={styles.legalTitle}>Contact</h1>
+      <p className={styles.legalLead}>Have a support request, enterprise question, or integration inquiry?</p>
+      <p className={styles.legalMeta}>EmpirePicks is preparing a formal ticket workflow.</p>
+
+      <section className={styles.legalSection}>
+        <h2>Support channels</h2>
+        <div className={styles.contactLinks}>
+          <a className={styles.contactLink} href="mailto:support@empirepicks.app">
+            support@empirepicks.app
+          </a>
+          <a className={styles.contactLink} href="/responsible-gaming">
+            Responsible Gaming resources
+          </a>
+          <a className={styles.contactLink} href="/about">
+            Learn more about the platform
+          </a>
+        </div>
+      </section>
+
+      <section className={styles.legalSection}>
+        <h2>Response expectations</h2>
+        <p>
+          We prioritize production incidents, access issues, and integration questions. Product and feature feedback is reviewed during each release cycle.
+        </p>
+      </section>
+    </main>
+  );
+}

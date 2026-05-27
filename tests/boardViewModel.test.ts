@@ -145,7 +145,7 @@ test("buildBoardViewModel shapes actionable row with pinned book pricing", () =>
   assert.equal(viewModel.rows[0]?.priceSignal, "Above consensus");
   assert.equal(viewModel.rows[0]?.probabilityGap, "+3.00pp");
   assert.equal(viewModel.rows[0]?.ev, "+2.10%");
-  assert.equal(viewModel.rows[0]?.evMeta, "Positive edge");
+  assert.equal(viewModel.rows[0]?.evMeta, "Strong opportunity");
   assert.equal(viewModel.rows[0]?.evTone, "positive");
   assert.equal(viewModel.rows[0]?.coverage, "4 books");
   assert.equal(viewModel.rows[0]?.isActionable, true);
@@ -278,6 +278,6 @@ test("buildBoardViewModel keeps below-market EV states neutral", () => {
 
   assert.equal(viewModel.rows.length, 1);
   assert.equal(viewModel.rows[0]?.evTone, "neutral");
-  assert.equal(viewModel.rows[0]?.evMeta, "Below market");
+  assert.equal(viewModel.rows[0]?.evMeta, "Market is less favorable");
   assert.equal(viewModel.rows[0]?.priceSignal, "Below market");
 });
