@@ -122,20 +122,6 @@ export default async function Page({
 
   const topEdges = preview.rows.slice(0, 3);
   const sportsbookExamples = board.books.slice(0, 6);
-  const faqs = [
-    {
-      q: "What is a fair line?",
-      a: "A fair line is the market-implied price after removing sportsbook margin and averaging multiple books into a consensus view."
-    },
-    {
-      q: "What is EV?",
-      a: "EV is the expected-value signal for a selected price versus fair value. Positive values are usually better opportunities; neutral values may still be worth monitoring."
-    },
-    {
-      q: "Should I only use strong EV signals?",
-      a: "Strong EV is the clearest opportunity signal, but market confidence, liquidity, and freshness are also important for execution confidence."
-    }
-  ];
 
   return (
     <div className={styles.page}>
@@ -150,7 +136,7 @@ export default async function Page({
             <Link href="#board" className={styles.heroPrimary}>
               Open board
             </Link>
-            <Link href="#faq" className={styles.heroSecondary}>
+            <Link href="/faq" className={styles.heroSecondary}>
               How it works
             </Link>
           </div>
@@ -182,8 +168,14 @@ export default async function Page({
                 <span>
                   <strong>{row.event}</strong>
                   <span className={styles.itemMeta}>{row.market}</span>
+                  <span className={styles.itemMeta}>
+                    {row.bestBook} {row.bestPrice} · Fair {row.fairPrice}
+                  </span>
                 </span>
-                <span className={styles.itemStats}>{row.evMeta || "Market-neutral"}</span>
+                <span className={styles.edgePriceStack}>
+                  <span className={styles.edgePricePrimary}>{row.bestPrice}</span>
+                  <span className={styles.edgePriceSecondary}>{row.evMeta || "Market-neutral"}</span>
+                </span>
               </li>
             ))}
           </ul>
@@ -253,18 +245,6 @@ export default async function Page({
           <p className={styles.sectionCopy}>Markets are sorted by actionability, movement, and confidence.</p>
         </div>
         <BoardView board={board} league={league} model={model} mode="board" />
-      </section>
-
-      <section className={styles.faqSection} id="faq">
-        <h2>FAQ</h2>
-        <div className={styles.faqList}>
-          {faqs.map((item) => (
-            <details key={item.q} className={styles.faqItem}>
-              <summary>{item.q}</summary>
-              <p>{item.a}</p>
-            </details>
-          ))}
-        </div>
       </section>
 
       <section className={styles.mobileCta}>

@@ -318,6 +318,28 @@
   white-space: nowrap;
 }
 
+.edgePriceStack {
+  display: grid;
+  gap: 0.1rem;
+  justify-items: end;
+  min-width: 6.7rem;
+  text-align: right;
+}
+
+.edgePricePrimary {
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 0.88rem;
+  font-weight: 760;
+  white-space: nowrap;
+}
+
+.edgePriceSecondary {
+  color: var(--text-secondary);
+  font-size: 0.72rem;
+  line-height: 1.2;
+}
+
 .sectionIntro {
   color: var(--text-secondary);
 }

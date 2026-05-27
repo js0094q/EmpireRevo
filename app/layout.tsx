@@ -62,6 +62,9 @@ export default function RootLayout({ children }: { children: ReactNode }) {
                 <Link href="/contact" className={layoutStyles.footerLink}>
                   Contact
                 </Link>
+                <Link href="/faq" className={layoutStyles.footerLink}>
+                  FAQ
+                </Link>
                 <Link href="/terms" className={layoutStyles.footerLink}>
                   Terms
                 </Link>
