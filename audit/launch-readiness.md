@@ -25,16 +25,16 @@ Overall Launch Score: 5.4/10
 | Trust | 7/10 | Public transparency page explains fair-line, CLV, ROI, and sample-size boundaries. |
 | Performance | 7/10 | Homepage no longer collapses into a full-page board/config error. |
 | Mobile | 7/10 | Board rows now have mobile cards with core metrics visible without horizontal scroll. |
-| Conversion | 6/10 | Pricing/launch-access route and tracked CTAs exist; payment/CRM still future work. |
+| Conversion | 7/10 | Pricing, lead capture, checkout URL hooks, and tracked CTAs exist; provider URLs/webhook still need production configuration. |
 | Scalability | 7/10 | No new persistence or payment dependency added. |
 
-Overall Launch Score: 6.9/10
+Overall Launch Score: 7.5/10
 
 ## Remaining Launch Blockers
 
 | Issue | Why it matters | Severity | Expected impact | Exact implementation recommendation | Files requiring modification |
 |---|---|---:|---|---|---|
-| No payment/entitlement system | Users still cannot self-serve a paid subscription. | Critical | Revenue | Integrate selected checkout provider and account entitlement checks. | future payment/auth files |
-| No durable lead capture | Tracked launch-access clicks are measurable, but contact capture still depends on email/manual flow. | High | Sales operations | Add provider-backed form or CRM/email integration. | future API/action + provider config |
-| No public historical record page | Transparency methodology exists, but users still cannot filter audited records. | High | Trust/retention | Add `/history` after sample data is durable and sample-size gates are met. | future `app/history/page.tsx` |
+| Checkout URLs not configured | Users still cannot self-serve paid subscription until provider URLs are supplied. | High | Revenue | Configure `NEXT_PUBLIC_EMPIRE_CHECKOUT_INDIVIDUAL_URL` and `NEXT_PUBLIC_EMPIRE_CHECKOUT_PRO_URL`; add account entitlement checks when auth is selected. | deployment environment, future auth files |
+| Lead webhook not configured | Lead modal validates and submits, but durable delivery requires a destination. | High | Sales operations | Configure `LEAD_CAPTURE_WEBHOOK_URL`; current API returns a safe email-fallback response when unset. | deployment environment |
+| Public historical record data not yet published | `/history` now explains methodology, but no audited pick rows are published. | High | Trust/retention | Publish rows only after validation events, outcomes, close references, and sample-size gates are ready. | future data-backed history surface |
 | Production env missing in current shell | `npm run validate:env` fails locally without `ODDS_API_KEY`. | High | Runtime readiness | Confirm production Vercel env vars before deploy. | deployment environment |

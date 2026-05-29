@@ -1,4 +1,5 @@
 import { TrackedLink } from "@/components/analytics/TrackedLink";
+import { LeadCapture } from "@/components/lead/LeadCapture";
 import { ErrorState } from "@/components/primitives/ErrorState";
 import { BoardView } from "@/components/board/BoardView";
 import { buildBoardViewModel } from "@/lib/ui/view-models/boardViewModel";
@@ -29,10 +30,6 @@ export default async function Page({
 }: {
   searchParams?: Promise<{ league?: string; market?: string; model?: string; minBooks?: string }>;
 }) {
-  if (!hasOddsKey()) {
-    return <ConfigRequired />;
-  }
-
   const params = (await searchParams) || {};
   const league = params.league || "nba";
   const market = params.market === "spreads" || params.market === "totals" ? params.market : HOME_FILTERS.market;
@@ -282,6 +279,15 @@ export default async function Page({
           >
             View launch access
           </TrackedLink>
+          <LeadCapture
+            triggerLabel="Get launch brief"
+            title="Request the launch brief"
+            intent="resource_download"
+            resource="ev-betting"
+            resourceHref="/learn/ev-betting"
+            variant="secondary"
+            placement="homepage_launch_access"
+          />
         </article>
       </section>
 

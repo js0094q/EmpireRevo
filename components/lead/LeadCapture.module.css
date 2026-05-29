@@ -1,0 +1,131 @@
+.trigger {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.35rem;
+  border-radius: 0.55rem;
+  border: 1px solid var(--accent-solid);
+  background: var(--accent-solid);
+  color: #07111d;
+  padding: 0.45rem 0.8rem;
+  font: inherit;
+  font-size: 0.86rem;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.triggerSecondary {
+  border-color: var(--surface-border);
+  background: var(--surface-raised);
+  color: var(--text-primary);
+}
+
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: grid;
+  place-items: center;
+  background: rgba(5, 8, 13, 0.72);
+  padding: 1rem;
+}
+
+.dialog {
+  width: min(30rem, 100%);
+  border: 1px solid var(--surface-border);
+  border-radius: 0.7rem;
+  background: var(--surface-panel);
+  box-shadow: 0 24px 80px -48px rgba(63, 140, 255, 0.72);
+  padding: 1rem;
+  display: grid;
+  gap: 0.75rem;
+}
+
+.dialogHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.dialogTitle {
+  margin: 0;
+  font-size: 1.08rem;
+}
+
+.dialogCopy,
+.statusText {
+  margin: 0;
+  color: var(--text-secondary);
+  line-height: 1.45;
+}
+
+.closeButton {
+  appearance: none;
+  border: 1px solid var(--surface-border);
+  border-radius: 0.45rem;
+  background: var(--surface-base);
+  color: var(--text-secondary);
+  cursor: pointer;
+  font: inherit;
+  min-height: 2rem;
+  padding: 0.25rem 0.55rem;
+}
+
+.form {
+  display: grid;
+  gap: 0.62rem;
+}
+
+.field {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.label {
+  color: var(--text-muted);
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.input {
+  width: 100%;
+  min-height: 2.35rem;
+  border: 1px solid var(--surface-border);
+  border-radius: 0.52rem;
+  background: var(--surface-base);
+  color: var(--text-primary);
+  font: inherit;
+  padding: 0.45rem 0.65rem;
+}
+
+.input:focus-visible,
+.closeButton:focus-visible,
+.trigger:focus-visible {
+  outline: 2px solid var(--accent-solid);
+  outline-offset: 2px;
+}
+
+.submit {
+  appearance: none;
+  min-height: 2.4rem;
+  border: 1px solid var(--accent-solid);
+  border-radius: 0.55rem;
+  background: var(--accent-solid);
+  color: #07111d;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 700;
+}
+
+.submit:disabled {
+  cursor: wait;
+  opacity: 0.7;
+}
+
+.resourceLink {
+  color: var(--accent-text);
+  font-weight: 650;
+}

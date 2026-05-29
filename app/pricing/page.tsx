@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { TrackedLink } from "@/components/analytics/TrackedLink";
+import { LeadCapture } from "@/components/lead/LeadCapture";
 import styles from "../legal.module.css";
 
 export const metadata: Metadata = {
@@ -13,19 +14,25 @@ const tiers = [
     name: "Launch Watchlist",
     price: "Free",
     description: "Best for evaluating the product before paid access opens.",
-    features: ["Live board preview", "Fair-line methodology", "Launch updates"]
+    features: ["Live board preview", "Fair-line methodology", "Launch updates"],
+    intent: "launch_access",
+    checkoutUrl: ""
   },
   {
     name: "Individual",
     price: "Invite",
     description: "Best for bettors who want a daily pricing workstation.",
-    features: ["Pinned books", "Market filters", "Detail pages", "Transparency updates"]
+    features: ["Pinned books", "Market filters", "Detail pages", "Transparency updates"],
+    intent: "individual_checkout",
+    checkoutUrl: process.env.NEXT_PUBLIC_EMPIRE_CHECKOUT_INDIVIDUAL_URL || ""
   },
   {
     name: "Pro",
     price: "Invite",
     description: "Best for power users who care about workflow and auditability.",
-    features: ["Priority onboarding", "Advanced diagnostics", "CLV/ROI methodology", "Feature feedback loop"]
+    features: ["Priority onboarding", "Advanced diagnostics", "CLV/ROI methodology", "Feature feedback loop"],
+    intent: "pro_checkout",
+    checkoutUrl: process.env.NEXT_PUBLIC_EMPIRE_CHECKOUT_PRO_URL || ""
   }
 ];
 
@@ -38,14 +45,13 @@ export default function PricingPage() {
         evaluation infrastructure without tout-style performance claims.
       </p>
       <div className={styles.ctaRow}>
-        <TrackedLink
-          href="mailto:support@empirepicks.app?subject=EmpirePicks%20launch%20access"
-          className={styles.primaryCta}
-          eventName="pricing_cta"
-          eventProperties={{ placement: "pricing_hero", intent: "launch_access" }}
-        >
-          Request launch access
-        </TrackedLink>
+        <LeadCapture
+          triggerLabel="Request launch access"
+          title="Request EmpirePicks launch access"
+          intent="launch_access"
+          variant="primary"
+          placement="pricing_hero"
+        />
         <TrackedLink
           href="/transparency"
           className={styles.secondaryCta}
@@ -67,8 +73,37 @@ export default function PricingPage() {
                 <li key={feature}>{feature}</li>
               ))}
             </ul>
+            {tier.checkoutUrl ? (
+              <TrackedLink
+                href={tier.checkoutUrl}
+                className={styles.primaryCta}
+                eventName="checkout_start"
+                eventProperties={{ placement: "pricing_card", tier: tier.name }}
+              >
+                Start checkout
+              </TrackedLink>
+            ) : (
+              <LeadCapture
+                triggerLabel={tier.name === "Launch Watchlist" ? "Join watchlist" : "Request invite"}
+                title={`${tier.name} access`}
+                intent={tier.intent}
+                variant={tier.name === "Launch Watchlist" ? "secondary" : "primary"}
+                placement={`pricing_${tier.name.toLowerCase().replaceAll(" ", "_")}`}
+              />
+            )}
           </article>
         ))}
+      </section>
+
+      <section className={styles.legalSection}>
+        <h2>Checkout configuration</h2>
+        <p>
+          Self-serve checkout is configuration-ready through
+          <code> NEXT_PUBLIC_EMPIRE_CHECKOUT_INDIVIDUAL_URL </code>
+          and
+          <code> NEXT_PUBLIC_EMPIRE_CHECKOUT_PRO_URL</code>. Until those URLs are configured, paid-plan actions route to
+          launch-access capture rather than pretending payment is live.
+        </p>
       </section>
 
       <section className={styles.legalSection}>

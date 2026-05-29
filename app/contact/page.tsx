@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { TrackedLink } from "@/components/analytics/TrackedLink";
+import { LeadCapture } from "@/components/lead/LeadCapture";
 import styles from "../legal.module.css";
 
 export const metadata: Metadata = {
@@ -13,6 +14,23 @@ export default function ContactPage() {
       <h1 className={styles.legalTitle}>Contact</h1>
       <p className={styles.legalLead}>Have a support request, enterprise question, or integration inquiry?</p>
       <p className={styles.legalMeta}>EmpirePicks is preparing a formal ticket workflow.</p>
+      <div className={styles.ctaRow}>
+        <LeadCapture
+          triggerLabel="Request launch access"
+          title="Request EmpirePicks launch access"
+          intent="contact"
+          variant="primary"
+          placement="contact_hero"
+        />
+        <TrackedLink
+          className={styles.secondaryCta}
+          href="/transparency"
+          eventName="transparency_cta"
+          eventProperties={{ placement: "contact_hero" }}
+        >
+          Review methodology
+        </TrackedLink>
+      </div>
 
       <section className={styles.legalSection}>
         <h2>Support channels</h2>

@@ -39,6 +39,11 @@ Detailed audit artifacts:
 - Changed mobile nav from fixed bottom overlay to a non-overlapping header row.
 - Added skip link for keyboard navigation.
 - Added `app/robots.ts` and `app/sitemap.ts`.
+- Added `/api/leads` plus a modal lead-capture flow with email and ZIP validation.
+- Added configuration-ready checkout URLs for Individual and Pro pricing actions.
+- Added `/history` public record-methodology page.
+- Added `/learn` and five SEO guide pages for EV, CLV, bankroll, line shopping, and market inefficiencies.
+- Added WebApplication structured data and a raster OpenGraph image.
 - Updated visual regression expectation and baselines for intentional UI changes.
 
 ## Files Changed
@@ -46,12 +51,18 @@ Detailed audit artifacts:
 - `app/page.tsx`, `app/page.module.css`
 - `app/pricing/page.tsx`
 - `app/transparency/page.tsx`
+- `app/history/page.tsx`
+- `app/learn/*`
+- `app/api/leads/route.ts`
 - `app/contact/page.tsx`
 - `app/layout.tsx`, `app/globals.css`, `app/legal.module.css`
 - `app/robots.ts`, `app/sitemap.ts`
 - `components/analytics/TrackedLink.tsx`
+- `components/lead/*`
 - `components/board/BoardTable.tsx`, `components/board/workstation.module.css`
 - `components/layout/SiteHeader.tsx`, `components/layout/layout.module.css`
+- `public/opengraph-image.png`
+- `README.md`, `docs/deployment.md`
 - `scripts/visual-regression.ts`
 - `tests/visual/baseline/*.png`
 - `audit/*.md`
@@ -60,7 +71,7 @@ Detailed audit artifacts:
 
 Before: 5.4/10
 
-After implemented high/critical fixes: 6.9/10
+After implemented recommendations: 7.5/10
 
 ## Validation
 
@@ -68,14 +79,15 @@ After implemented high/critical fixes: 6.9/10
 |---|---|---|
 | `npm run lint` | Pass | ESLint completed with exit 0. |
 | `npm run typecheck` | Pass | TypeScript completed with exit 0. |
-| `npm test` | Pass | 199/199 tests passed. |
-| `npm run build` | Pass | Next.js production build completed; `/pricing`, `/transparency`, `/robots.txt`, and `/sitemap.xml` generated. |
+| `npm test` | Pass | 201/201 tests passed. |
+| `npm run build` | Pass | Next.js production build completed; `/pricing`, `/history`, `/transparency`, `/learn/*`, `/api/leads`, `/robots.txt`, and `/sitemap.xml` generated. |
 | `npm run test:visual` | Pass | All desktop/mobile visual scenarios passed after baseline refresh for intentional UI changes. |
 | `npm run validate:env` | Fail | Current shell is missing `ODDS_API_KEY`; `EMPIRE_INTERNAL_API_KEY` and `NEXT_PUBLIC_DEFAULT_LEAGUE` warnings also reported. |
 
 ## Remaining Recommendations
 
-- Integrate actual checkout and entitlement checks before self-serve paid launch.
-- Add durable lead capture or CRM/email provider integration; current launch access path is CTA/email based.
-- Add public pick-history page only after validation events, outcomes, close references, and sample-size gates are ready.
+- Configure `LEAD_CAPTURE_WEBHOOK_URL` for durable lead delivery.
+- Configure `NEXT_PUBLIC_EMPIRE_CHECKOUT_INDIVIDUAL_URL` and `NEXT_PUBLIC_EMPIRE_CHECKOUT_PRO_URL` before self-serve paid launch.
+- Add account entitlement checks when a real auth/payment provider is selected.
+- Publish actual public record rows only after validation events, outcomes, close references, and sample-size gates are ready.
 - Confirm production `ODDS_API_KEY`, `EMPIRE_INTERNAL_API_KEY`, and Redis env vars before deploy.

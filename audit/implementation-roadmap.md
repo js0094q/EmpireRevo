@@ -27,15 +27,15 @@ Expected to increase conversion, authority, mobile engagement, and launch confid
 
 | Task | Issue | Severity | Recommendation | Files |
 |---|---|---:|---|---|
-| Learn cluster | Thin content SEO | Medium | Add education pages for EV betting, CLV, bankroll, line shopping, and responsible use. | future `app/learn/*` |
-| Structured data | No schema | Medium | Add WebApplication schema after pricing copy is stable. | future SEO helper |
-| OG image | SVG-only OG image | Medium | Add raster social card. | future `public/opengraph-image.png` |
+| Learn cluster | Thin content SEO | Medium | Implemented education pages for EV betting, CLV, bankroll, line shopping, and market inefficiencies. | `app/learn/*` |
+| Structured data | No schema | Medium | Implemented WebApplication schema in root layout. | `app/layout.tsx` |
+| OG image | SVG-only OG image | Medium | Implemented raster social card. | `public/opengraph-image.png` |
 
 ## Phase 4: Long-Term Authority Platform
 
 | Task | Issue | Severity | Recommendation | Files |
 |---|---|---:|---|---|
-| Public pick history | No auditable history | High | Add `/history` when sample data is durable and sample-size gate is met. | future `app/history/page.tsx` |
+| Public pick history | No auditable history | High | Implemented methodology page; publish real rows only after sample-size gates are met. | `app/history/page.tsx`, future data-backed rows |
 | Subscriber retention | No saved state/account layer | High | Add auth, saved books, alerts, daily slate digest, and account billing. | future auth/checkout |
 | Payment system | No checkout | Critical | Integrate selected provider, likely Stripe, with server-side entitlement checks. | future payment routes |
 

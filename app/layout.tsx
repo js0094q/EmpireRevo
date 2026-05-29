@@ -7,6 +7,21 @@ import { SiteHeader } from "@/components/layout/SiteHeader";
 import layoutStyles from "@/components/layout/layout.module.css";
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.empirepicks.com";
+const structuredData = {
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  name: "EmpirePicks",
+  applicationCategory: "FinanceApplication",
+  operatingSystem: "Web",
+  url: siteUrl,
+  description:
+    "Sportsbook pricing workstation for fair odds, line shopping, expected value context, and transparent market methodology.",
+  offers: {
+    "@type": "Offer",
+    category: "Launch access",
+    availability: "https://schema.org/PreOrder"
+  }
+};
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
@@ -24,7 +39,7 @@ export const metadata: Metadata = {
     type: "website",
     images: [
       {
-        url: "/opengraph-image.svg",
+        url: "/opengraph-image.png",
         width: 1200,
         height: 630,
         alt: "EmpirePicks board screenshot"
@@ -35,7 +50,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "EmpirePicks",
     description: "Find the best sportsbook prices before the market moves.",
-    images: ["/opengraph-image.svg"]
+    images: ["/opengraph-image.png"]
   },
   icons: {
     icon: "/icon.svg",
@@ -68,8 +83,14 @@ export default function RootLayout({ children }: { children: ReactNode }) {
                 <Link href="/pricing" className={layoutStyles.footerLink}>
                   Pricing
                 </Link>
+                <Link href="/history" className={layoutStyles.footerLink}>
+                  Record
+                </Link>
                 <Link href="/transparency" className={layoutStyles.footerLink}>
                   Transparency
+                </Link>
+                <Link href="/learn" className={layoutStyles.footerLink}>
+                  Learn
                 </Link>
                 <Link href="/faq" className={layoutStyles.footerLink}>
                   FAQ
@@ -88,6 +109,10 @@ export default function RootLayout({ children }: { children: ReactNode }) {
             </div>
           </footer>
         </div>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+        />
         <Analytics />
       </body>
     </html>
