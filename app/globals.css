@@ -57,6 +57,25 @@ a {
   text-decoration: none;
 }
 
+.skip-link {
+  position: fixed;
+  left: 0.75rem;
+  top: 0.75rem;
+  z-index: 100;
+  transform: translateY(-180%);
+  border: 1px solid var(--accent-border);
+  border-radius: 0.5rem;
+  background: var(--surface-raised);
+  color: var(--text-primary);
+  padding: 0.55rem 0.7rem;
+}
+
+.skip-link:focus {
+  transform: translateY(0);
+  outline: 2px solid var(--accent-solid);
+  outline-offset: 2px;
+}
+
 .app-link {
   color: var(--accent-text);
 }

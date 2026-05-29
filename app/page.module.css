@@ -87,6 +87,24 @@
   gap: 0.55rem;
 }
 
+.trustStrip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.42rem;
+  align-items: center;
+  max-width: 62rem;
+}
+
+.trustStrip span {
+  border: 1px solid color-mix(in srgb, var(--accent-solid) 40%, var(--surface-border-muted));
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--surface-base) 54%, transparent);
+  color: color-mix(in srgb, var(--text-secondary) 70%, var(--text-primary));
+  font-size: 0.72rem;
+  line-height: 1.1;
+  padding: 0.24rem 0.58rem;
+}
+
 .heroPrimary,
 .heroSecondary {
   display: inline-flex;
@@ -344,6 +362,26 @@
   color: var(--text-secondary);
 }
 
+.inlineCta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: fit-content;
+  min-height: 2rem;
+  border-radius: 0.5rem;
+  border: 1px solid color-mix(in srgb, var(--accent-solid) 45%, var(--surface-border-muted));
+  background: color-mix(in srgb, var(--accent-soft) 20%, transparent);
+  color: var(--accent-text);
+  font-size: 0.8rem;
+  font-weight: 650;
+  padding: 0.35rem 0.65rem;
+}
+
+.inlineCta:hover {
+  border-color: var(--accent-border);
+  background: color-mix(in srgb, var(--accent-soft) 34%, transparent);
+}
+
 .tagWrap {
   display: flex;
   flex-wrap: wrap;
@@ -483,7 +521,8 @@
   }
 
   .heroPrimary,
-  .heroSecondary {
+  .heroSecondary,
+  .inlineCta {
     width: 100%;
   }
 

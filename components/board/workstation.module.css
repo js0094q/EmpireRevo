@@ -288,6 +288,10 @@
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent-solid) 12%, transparent);
 }
 
+.mobileCards {
+  display: none;
+}
+
 .table tbody tr:nth-child(even) td {
   background-color: color-mix(in srgb, var(--surface-base) 92%, transparent);
 }
@@ -669,6 +673,81 @@
 
   .hideOnMobile {
     display: none;
+  }
+
+  .tableWrap {
+    display: none;
+  }
+
+  .mobileCards {
+    display: grid;
+    gap: 0.58rem;
+  }
+
+  .mobileCard {
+    display: grid;
+    gap: 0.58rem;
+    border: 1px solid var(--surface-border-muted);
+    border-left: 2px solid color-mix(in srgb, var(--positive-border) 82%, var(--accent-border));
+    border-radius: 0.58rem;
+    background:
+      linear-gradient(90deg, color-mix(in srgb, var(--positive-soft) 13%, transparent), transparent 42%),
+      var(--surface-base);
+    padding: 0.7rem;
+    color: var(--text-primary);
+  }
+
+  .mobileCardHeader {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.7rem;
+    align-items: flex-start;
+  }
+
+  .mobileCardHeader strong,
+  .mobileMarket {
+    line-height: 1.25;
+  }
+
+  .mobileStatus {
+    border: 1px solid var(--positive-border);
+    border-radius: 999px;
+    color: var(--positive-text);
+    background: var(--positive-soft);
+    padding: 0.12rem 0.45rem;
+    font-size: 0.66rem;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  .mobileMarket {
+    color: var(--text-primary);
+    font-size: 0.92rem;
+    font-weight: 650;
+  }
+
+  .mobileMetricGrid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.5rem;
+  }
+
+  .mobileMetricGrid > span {
+    display: grid;
+    gap: 0.12rem;
+    min-width: 0;
+  }
+
+  .mobileMetricGrid strong {
+    font-family: var(--font-mono);
+    font-size: 0.92rem;
+  }
+
+  .mobileMetricLabel {
+    color: var(--text-muted);
+    font-size: 0.62rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
   }
 
   .toolbarField select,

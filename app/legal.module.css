@@ -59,8 +59,89 @@
   color: var(--accent-text);
 }
 
+.ctaRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  align-items: center;
+}
+
+.primaryCta,
+.secondaryCta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.35rem;
+  border-radius: 0.55rem;
+  border: 1px solid var(--surface-border);
+  padding: 0.45rem 0.8rem;
+  font-size: 0.86rem;
+  font-weight: 650;
+}
+
+.primaryCta {
+  background: var(--accent-solid);
+  border-color: var(--accent-solid);
+  color: #07111d;
+}
+
+.secondaryCta {
+  background: var(--surface-raised);
+  color: var(--text-primary);
+}
+
+.pricingGrid,
+.metricGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.pricingCard,
+.metricCard {
+  border: 1px solid var(--surface-border);
+  border-radius: 0.66rem;
+  background: color-mix(in srgb, var(--surface-base) 88%, transparent);
+  padding: 0.85rem;
+  display: grid;
+  gap: 0.45rem;
+}
+
+.pricingCard strong,
+.metricCard strong {
+  font-size: 1rem;
+}
+
+.priceValue {
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 1.22rem;
+  font-weight: 760;
+}
+
+.featureList {
+  display: grid;
+  gap: 0.34rem;
+  margin: 0;
+  padding-left: 1.05rem;
+}
+
+.inlineLink {
+  color: var(--accent-text);
+}
+
 @media (max-width: 768px) {
   .legalTitle {
     font-size: 1.34rem;
+  }
+
+  .pricingGrid,
+  .metricGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .primaryCta,
+  .secondaryCta {
+    width: 100%;
   }
 }

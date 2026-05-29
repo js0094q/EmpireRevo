@@ -964,7 +964,7 @@ async function run(): Promise<void> {
       name: "home",
       path: "/?league=nba&market=h2h&model=weighted&window=today",
       expectedText: "Board",
-      mobileExpectedText: "Open board"
+      mobileExpectedText: "Open live board"
     },
     {
       name: "games",

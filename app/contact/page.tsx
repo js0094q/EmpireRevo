@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { TrackedLink } from "@/components/analytics/TrackedLink";
 import styles from "../legal.module.css";
 
 export const metadata: Metadata = {
@@ -19,6 +20,22 @@ export default function ContactPage() {
           <a className={styles.contactLink} href="mailto:support@empirepicks.app">
             support@empirepicks.app
           </a>
+          <TrackedLink
+            className={styles.contactLink}
+            href="/pricing"
+            eventName="pricing_cta"
+            eventProperties={{ placement: "contact_support" }}
+          >
+            Request launch access
+          </TrackedLink>
+          <TrackedLink
+            className={styles.contactLink}
+            href="/transparency"
+            eventName="transparency_cta"
+            eventProperties={{ placement: "contact_support" }}
+          >
+            Review transparency methodology
+          </TrackedLink>
           <a className={styles.contactLink} href="/responsible-gaming">
             Responsible Gaming resources
           </a>

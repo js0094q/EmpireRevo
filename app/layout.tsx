@@ -48,9 +48,12 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
       <body>
+        <a href="#main-content" className="skip-link">
+          Skip to content
+        </a>
         <div className={layoutStyles.shell}>
           <SiteHeader />
-          <main className={layoutStyles.main}>
+          <main id="main-content" className={layoutStyles.main}>
             <div className={layoutStyles.container}>{children}</div>
           </main>
           <footer className={layoutStyles.footer}>
@@ -61,6 +64,12 @@ export default function RootLayout({ children }: { children: ReactNode }) {
                 </Link>
                 <Link href="/contact" className={layoutStyles.footerLink}>
                   Contact
+                </Link>
+                <Link href="/pricing" className={layoutStyles.footerLink}>
+                  Pricing
+                </Link>
+                <Link href="/transparency" className={layoutStyles.footerLink}>
+                  Transparency
                 </Link>
                 <Link href="/faq" className={layoutStyles.footerLink}>
                   FAQ

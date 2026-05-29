@@ -9,6 +9,7 @@ import { cn } from "@/lib/ui/cn";
 const NAV_ITEMS = [
   { href: "/", label: "Board" },
   { href: "/games", label: "Games" },
+  { href: "/pricing", label: "Pricing" },
   { href: "/about", label: "About" },
   { href: "/contact", label: "Contact" }
 ];
