@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import type { FairBoardResponse, FairEvent, FairOutcome, FairOutcomeBook } from "../lib/server/odds/types";
+import type { FairBoardResponse, FairEvent, FairOutcome, FairOutcomeBook, PersistedOutcomeResult } from "../lib/server/odds/types";
 import { buildBoardViewModel } from "../lib/ui/view-models/boardViewModel";
 
 function makeBook(overrides: Partial<FairOutcomeBook> = {}): FairOutcomeBook {
@@ -130,6 +130,8 @@ test("buildBoardViewModel shapes actionable row with pinned book pricing", () =>
       sort: "score",
       bookKey: "all",
       edgeThresholdPct: 0,
+      confidence: "all",
+      outcomeStatus: "all",
       minBooks: 4,
       pinnedOnly: false,
       includeStale: true,
@@ -141,7 +143,9 @@ test("buildBoardViewModel shapes actionable row with pinned book pricing", () =>
   assert.equal(viewModel.resultLabel, "1 market");
   assert.equal(viewModel.coverageLabel, "1 book");
   assert.equal(viewModel.rows[0]?.bestBook, "FanDuel");
+  assert.equal(viewModel.rows[0]?.bestBookAbbrev, "FAND");
   assert.equal(viewModel.rows[0]?.bestPinnedPrice, "+120");
+  assert.equal(viewModel.rows[0]?.pinnedAvailability, "Pinned available");
   assert.equal(viewModel.rows[0]?.priceSignal, "Above consensus");
   assert.equal(viewModel.rows[0]?.probabilityGap, "+3.00pp");
   assert.equal(viewModel.rows[0]?.ev, "+2.10%");
@@ -149,6 +153,9 @@ test("buildBoardViewModel shapes actionable row with pinned book pricing", () =>
   assert.equal(viewModel.rows[0]?.evTone, "positive");
   assert.equal(viewModel.rows[0]?.coverage, "4 books");
   assert.equal(viewModel.rows[0]?.isActionable, true);
+  assert.equal(viewModel.rows[0]?.outcomeLabel, "Pending");
+  assert.ok(viewModel.statusItems.some((item) => item.label === "Stale excluded"));
+  assert.ok(viewModel.rows[0]?.whySignal.some((item) => item.label === "Consensus fair" && item.value === "+108"));
 
   const filteredByBestBook = buildBoardViewModel({
     board,
@@ -160,6 +167,8 @@ test("buildBoardViewModel shapes actionable row with pinned book pricing", () =>
       sort: "score",
       bookKey: "fanduel",
       edgeThresholdPct: 0,
+      confidence: "all",
+      outcomeStatus: "all",
       minBooks: 4,
       pinnedOnly: false,
       includeStale: true,
@@ -168,6 +177,69 @@ test("buildBoardViewModel shapes actionable row with pinned book pricing", () =>
   });
 
   assert.equal(filteredByBestBook.rows.length, 1);
+});
+
+test("buildBoardViewModel attaches and filters persisted outcome status", () => {
+  const board = {
+    ok: true,
+    league: "nba",
+    sportKey: "basketball_nba",
+    market: "h2h",
+    model: "weighted",
+    updatedAt: new Date().toISOString(),
+    lastUpdatedLabel: "Updated recently",
+    activeMarkets: ["h2h"],
+    marketAvailability: [],
+    sharpBooksUsed: [],
+    books: [{ key: "fanduel", title: "FanDuel", tier: "mainstream" }],
+    events: [makeEvent()],
+    topOpportunities: [],
+    bookBehavior: [],
+    diagnostics: {
+      calibration: {} as FairBoardResponse["diagnostics"]["calibration"],
+      calibrationMeta: { version: 1 },
+      validation: { emittedEvents: 0, sink: "memory" }
+    },
+    disclaimer: "test"
+  } as unknown as FairBoardResponse;
+  const outcomes: PersistedOutcomeResult[] = [
+    {
+      version: 1,
+      id: "basketball_nba:evt-1:h2h:away:away",
+      createdAt: 1,
+      updatedAt: 1,
+      sportKey: "basketball_nba",
+      eventId: "evt-1",
+      marketKey: "h2h:away",
+      sideKey: "away",
+      result: "win",
+      source: "manual"
+    }
+  ];
+
+  const viewModel = buildBoardViewModel({
+    board,
+    league: "nba",
+    model: "weighted",
+    mode: "board",
+    outcomes,
+    filters: {
+      search: "",
+      sort: "outcome",
+      bookKey: "all",
+      edgeThresholdPct: 0,
+      confidence: "all",
+      outcomeStatus: "win",
+      minBooks: 4,
+      pinnedOnly: false,
+      includeStale: true,
+      pinnedBooks: new Set<string>()
+    }
+  });
+
+  assert.equal(viewModel.rows.length, 1);
+  assert.equal(viewModel.rows[0]?.outcomeLabel, "Win");
+  assert.equal(viewModel.rows[0]?.outcomeTone, "positive");
 });
 
 test("buildBoardViewModel excludes stale rows when includeStale is false", () => {
@@ -209,6 +281,8 @@ test("buildBoardViewModel excludes stale rows when includeStale is false", () =>
       sort: "score",
       bookKey: "all",
       edgeThresholdPct: 0,
+      confidence: "all",
+      outcomeStatus: "all",
       minBooks: 4,
       pinnedOnly: false,
       includeStale: false,
@@ -217,6 +291,78 @@ test("buildBoardViewModel excludes stale rows when includeStale is false", () =>
   });
 
   assert.equal(hidden.rows.length, 0);
+  assert.equal(hidden.staleExcludedCount, 1);
+});
+
+test("buildBoardViewModel treats old feed-published events as historical unless stale is included", () => {
+  const historicalEvent = makeEvent({
+    id: "historical",
+    commenceTime: new Date(Date.now() - 16 * 60 * 60 * 1000).toISOString()
+  });
+  const board = {
+    ok: true,
+    league: "nba",
+    sportKey: "basketball_nba",
+    market: "h2h",
+    model: "weighted",
+    updatedAt: new Date().toISOString(),
+    lastUpdatedLabel: "Updated recently",
+    activeMarkets: ["h2h"],
+    marketAvailability: [],
+    sharpBooksUsed: [],
+    books: [{ key: "fanduel", title: "FanDuel", tier: "mainstream" }],
+    events: [historicalEvent],
+    topOpportunities: [],
+    bookBehavior: [],
+    diagnostics: {
+      calibration: {} as FairBoardResponse["diagnostics"]["calibration"],
+      calibrationMeta: { version: 1 },
+      validation: { emittedEvents: 0, sink: "memory" }
+    },
+    disclaimer: "test"
+  } as unknown as FairBoardResponse;
+
+  const hidden = buildBoardViewModel({
+    board,
+    league: "nba",
+    model: "weighted",
+    mode: "board",
+    filters: {
+      search: "",
+      sort: "score",
+      bookKey: "all",
+      edgeThresholdPct: 0,
+      confidence: "all",
+      outcomeStatus: "all",
+      minBooks: 4,
+      pinnedOnly: false,
+      includeStale: false,
+      pinnedBooks: new Set<string>()
+    }
+  });
+  const visible = buildBoardViewModel({
+    board,
+    league: "nba",
+    model: "weighted",
+    mode: "board",
+    filters: {
+      search: "",
+      sort: "score",
+      bookKey: "all",
+      edgeThresholdPct: 0,
+      confidence: "all",
+      outcomeStatus: "all",
+      minBooks: 4,
+      pinnedOnly: false,
+      includeStale: true,
+      pinnedBooks: new Set<string>()
+    }
+  });
+
+  assert.equal(hidden.rows.length, 0);
+  assert.equal(hidden.staleExcludedCount, 1);
+  assert.equal(visible.rows[0]?.marketStatus, "Historical");
+  assert.equal(visible.rows[0]?.staleLabel, "Historical");
 });
 
 test("buildBoardViewModel keeps below-market EV states neutral", () => {
@@ -269,6 +415,8 @@ test("buildBoardViewModel keeps below-market EV states neutral", () => {
       sort: "score",
       bookKey: "all",
       edgeThresholdPct: 0,
+      confidence: "all",
+      outcomeStatus: "all",
       minBooks: 4,
       pinnedOnly: false,
       includeStale: true,

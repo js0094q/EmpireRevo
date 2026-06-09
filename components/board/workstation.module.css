@@ -78,6 +78,60 @@
   background: var(--surface-border);
 }
 
+.healthStrip {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(7.4rem, 1fr));
+  gap: 0.4rem;
+  border: 1px solid color-mix(in srgb, var(--surface-border-muted) 82%, var(--accent-border));
+  border-radius: 0.5rem;
+  background: color-mix(in srgb, var(--surface-panel) 78%, transparent);
+  padding: 0.42rem;
+}
+
+.healthStrip span {
+  display: grid;
+  gap: 0.1rem;
+  min-width: 0;
+  border-right: 1px solid var(--surface-border-muted);
+  padding-right: 0.42rem;
+}
+
+.healthStrip span:last-child {
+  border-right: 0;
+}
+
+.healthStrip small {
+  color: var(--text-muted);
+  font-size: 0.58rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+
+.healthStrip strong {
+  overflow: hidden;
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 0.73rem;
+  font-weight: 650;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.health_positive strong {
+  color: var(--positive-text);
+}
+
+.health_warning strong {
+  color: var(--warning-text);
+}
+
+.health_neutral strong {
+  color: var(--text-secondary);
+}
+
 .toolbar {
   position: sticky;
   top: 3.9rem;
@@ -299,7 +353,7 @@
 .table {
   width: 100%;
   border-collapse: collapse;
-  min-width: 1180px;
+  min-width: 1040px;
 }
 
 .table th,
@@ -324,7 +378,7 @@
 
 .stickyMarket {
   left: 16.5rem;
-  min-width: 10rem;
+  min-width: 8.5rem;
   box-shadow: 1px 0 0 var(--surface-border-muted);
 }
 
@@ -358,11 +412,9 @@
   background: linear-gradient(180deg, color-mix(in srgb, var(--surface-panel) 82%, var(--accent-strong) 10%), color-mix(in srgb, var(--surface-panel) 84%, #090d12));
 }
 
-.table th:nth-child(3),
 .table th:nth-child(5),
 .table th:nth-child(6),
 .table th:nth-child(7),
-.table td:nth-child(3),
 .table td:nth-child(5),
 .table td:nth-child(6),
 .table td:nth-child(7) {
@@ -470,6 +522,24 @@
   font-weight: 560;
 }
 
+.bookPill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2.4rem;
+  margin-right: 0.36rem;
+  border: 1px solid color-mix(in srgb, var(--accent-border) 52%, var(--surface-border));
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent-soft) 24%, var(--surface-panel));
+  color: var(--accent-text);
+  font-family: var(--font-mono);
+  font-size: 0.64rem;
+  font-weight: 720;
+  line-height: 1.4;
+  padding: 0.08rem 0.34rem;
+  vertical-align: middle;
+}
+
 .priceSignal {
   color: var(--text-secondary);
   font-size: 0.77rem;
@@ -510,6 +580,60 @@
   font-size: 0.72rem;
   font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum" 1;
+  white-space: nowrap;
+}
+
+.explanationRow td {
+  padding: 0 !important;
+  background: color-mix(in srgb, var(--surface-panel) 54%, var(--surface-base));
+}
+
+.signalDetails {
+  border-bottom: 1px solid var(--surface-border-muted);
+}
+
+.signalDetails summary {
+  cursor: pointer;
+  color: var(--text-secondary);
+  font-size: 0.72rem;
+  font-weight: 650;
+  padding: 0.32rem 0.58rem;
+}
+
+.signalDetails[open] summary {
+  color: var(--accent-text);
+}
+
+.signalDetails dl {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.42rem 0.7rem;
+  margin: 0;
+  padding: 0 0.58rem 0.58rem;
+}
+
+.signalDetails div {
+  display: grid;
+  gap: 0.12rem;
+  min-width: 0;
+}
+
+.signalDetails dt {
+  color: var(--text-muted);
+  font-size: 0.58rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.signalDetails dd {
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  color: var(--text-primary);
+  font-size: 0.76rem;
+  line-height: 1.3;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
@@ -632,7 +756,8 @@
   .filterFields,
   .preferencesGrid,
   .bookChecks,
-  .gameCardMetrics {
+  .gameCardMetrics,
+  .signalDetails dl {
     grid-template-columns: 1fr;
   }
 
@@ -668,7 +793,7 @@
   }
 
   .table {
-    min-width: 980px;
+    min-width: 920px;
   }
 
   .hideOnMobile {

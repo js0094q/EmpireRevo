@@ -6,7 +6,8 @@ import { Button } from "@/components/primitives/Button";
 import { Input } from "@/components/primitives/Input";
 import { Select } from "@/components/primitives/Select";
 import { Tabs } from "@/components/primitives/Tabs";
-import type { BoardSortValue } from "@/lib/ui/view-models/boardViewModel";
+import type { BoardConfidenceFilter, BoardOutcomeFilter, BoardSortValue } from "@/lib/ui/view-models/boardViewModel";
+import type { PublicSportOption } from "@/lib/server/odds/sportsRegistry";
 import styles from "./workstation.module.css";
 
 type FilterValue = {
@@ -18,6 +19,8 @@ type FilterValue = {
   search: string;
   sort: BoardSortValue;
   edgeThresholdPct: number;
+  confidence: BoardConfidenceFilter;
+  outcomeStatus: BoardOutcomeFilter;
   includeStale: boolean;
   pinnedOnly: boolean;
   compactMode: boolean;
@@ -29,24 +32,46 @@ type ExperienceMode = "beginner" | "advanced";
 export function BoardFilters({
   value,
   books,
+  sports,
   onChange,
   onSaveDefaults,
   preferencesLabel,
   experienceMode,
-  onModeChange
+  onModeChange,
+  onRefresh
 }: {
   value: FilterValue;
   books: Array<{ key: string; title: string; tier: string }>;
+  sports: PublicSportOption[];
   onChange: (next: Partial<FilterValue>) => void;
   onSaveDefaults: () => void;
   preferencesLabel: string;
   experienceMode: ExperienceMode;
   onModeChange: (mode: ExperienceMode) => void;
+  onRefresh: () => void;
 }) {
   const [showPreferences, setShowPreferences] = useState(false);
   const staleLabel = value.includeStale ? "Including stale" : "Fresh only";
   const pinnedLabel = value.pinnedOnly ? "Pinned only" : "All books";
   const densityLabel = value.compactMode ? "Compact" : "Comfort";
+  const sportGroups = Array.from(new Set(sports.map((sport) => sport.group)));
+  const sportOptions = sportGroups.length
+    ? sportGroups.map((group) => (
+        <optgroup key={group} label={group}>
+          {sports
+            .filter((sport) => sport.group === group)
+            .map((sport) => (
+              <option key={sport.key} value={sport.key}>
+                {sport.label}
+              </option>
+            ))}
+        </optgroup>
+      ))
+    : [
+        <option key={value.league} value={value.league}>
+          {value.league.toUpperCase()}
+        </option>
+      ];
 
   const tooltips = {
     search: "Search teams, outcomes, or book names.",
@@ -59,6 +84,8 @@ export function BoardFilters({
     model: "Weight model used by board scoring.",
     minBooks: "Minimum books required for each recommendation.",
     edgeThresholdPct: "Hide low-confidence opportunities below this edge threshold.",
+    confidence: "Filter by minimum signal confidence.",
+    outcome: "Filter rows by settlement status.",
     book: "Restrict board rows to a single book.",
     defaults: "Persist your preferred default settings in this browser."
   };
@@ -81,11 +108,7 @@ export function BoardFilters({
                 League
               </span>
               <Select value={value.league} onChange={(event) => onChange({ league: event.target.value })}>
-                <option value="nba">NBA</option>
-                <option value="nfl">NFL</option>
-                <option value="nhl">NHL</option>
-                <option value="ncaab">NCAAB</option>
-                <option value="mlb">MLB</option>
+                {sportOptions}
               </Select>
             </label>
             <div className={`${styles.toolbarField} ${styles.marketField}`}>
@@ -114,13 +137,14 @@ export function BoardFilters({
               </span>
               <Select value={value.sort} onChange={(event) => onChange({ sort: event.target.value as BoardSortValue })}>
                 <option value="score">Decision score</option>
-                <option value="edge">Gap</option>
-                <option value="ev">Opportunity</option>
+                <option value="ev">Highest EV</option>
+                <option value="best">Best price</option>
                 <option value="confidence">Confidence</option>
+                <option value="soonest">Start time</option>
+                <option value="outcome">Outcome status</option>
                 <option value="book">Book</option>
                 <option value="coverage">Coverage</option>
-                <option value="soonest">Start time</option>
-                <option value="timing">Movement</option>
+                <option value="timing">Freshness</option>
                 <option value="pinned_score">Pinned score</option>
               </Select>
             </label>
@@ -150,16 +174,14 @@ export function BoardFilters({
               </div>
             </div>
             <div className={styles.toolbarField}>
-              <span className={styles.toolbarLabel}>Density</span>
+              <span className={styles.toolbarLabel}>Refresh</span>
               <div className={styles.toggleRow}>
                 <Button
                   type="button"
                   className={styles.controlButton}
-                  aria-pressed={value.compactMode}
-                  onClick={() => onChange({ compactMode: !value.compactMode })}
-                  variant={value.compactMode ? "primary" : "default"}
+                  onClick={onRefresh}
                 >
-                  {densityLabel}
+                  Refresh odds
                 </Button>
               </div>
             </div>
@@ -201,7 +223,7 @@ export function BoardFilters({
               <div className={styles.filterFields}>
                 <label className={styles.toolbarField}>
                   <span className={styles.toolbarLabel} title={tooltips.edgeThresholdPct}>
-                    Gap Floor
+                    EV Floor
                   </span>
                   <Select value={`${value.edgeThresholdPct}`} onChange={(event) => onChange({ edgeThresholdPct: Number(event.target.value) })}>
                     {[0, 0.5, 1, 1.5, 2].map((threshold) => (
@@ -209,6 +231,31 @@ export function BoardFilters({
                         {threshold.toFixed(1)}pp
                       </option>
                     ))}
+                  </Select>
+                </label>
+                <label className={styles.toolbarField}>
+                  <span className={styles.toolbarLabel} title={tooltips.confidence}>
+                    Confidence
+                  </span>
+                  <Select value={value.confidence} onChange={(event) => onChange({ confidence: event.target.value as BoardConfidenceFilter })}>
+                    <option value="all">All confidence</option>
+                    <option value="high">High only</option>
+                    <option value="medium">Medium+</option>
+                    <option value="low">Low only</option>
+                  </Select>
+                </label>
+                <label className={styles.toolbarField}>
+                  <span className={styles.toolbarLabel} title={tooltips.outcome}>
+                    Outcome
+                  </span>
+                  <Select value={value.outcomeStatus} onChange={(event) => onChange({ outcomeStatus: event.target.value as BoardOutcomeFilter })}>
+                    <option value="all">All outcomes</option>
+                    <option value="pending">Pending</option>
+                    <option value="win">Win</option>
+                    <option value="loss">Loss</option>
+                    <option value="push">Push</option>
+                    <option value="void">Void</option>
+                    <option value="unknown">Unknown</option>
                   </Select>
                 </label>
                 <div className={styles.toolbarField}>
@@ -310,11 +357,7 @@ export function BoardFilters({
                   Default League
                 </span>
                 <Select value={value.league} onChange={(event) => onChange({ league: event.target.value })}>
-                  <option value="nba">NBA</option>
-                  <option value="nfl">NFL</option>
-                  <option value="nhl">NHL</option>
-                  <option value="ncaab">NCAAB</option>
-                  <option value="mlb">MLB</option>
+                  {sportOptions}
                 </Select>
               </label>
               <label className={styles.toolbarField}>

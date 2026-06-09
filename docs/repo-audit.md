@@ -12,12 +12,12 @@
 
 ## Key changes implemented
 
-- Public IA is now split into `Board`, `Games`, `Game Detail`, and protected `Internal`.
+- Public IA is now split into `Board`, `Record`, `Game Detail`, and protected `Internal`.
 - Public rendering now runs through shared formatters and view models under `lib/ui`.
 - Public board UI is table-first and compact, with URL-synced filters and browser-local preferences.
 - `Game Detail` no longer persists snapshots during page render.
 - Internal diagnostics are rendered through a dedicated operator view.
-- Visual regression coverage now targets `home`, `games`, `game`, `empty`, and `internal`.
+- Visual regression coverage now targets `home`, `game`, `empty`, and `internal`.
 
 ## Remaining follow-up candidates
 

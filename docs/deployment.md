@@ -18,10 +18,6 @@ UPSTASH_REDIS_REST_TOKEN
 Optional:
 
 NEXT_PUBLIC_DEFAULT_LEAGUE
-LEAD_CAPTURE_WEBHOOK_URL
-NEXT_PUBLIC_EMPIRE_CHECKOUT_INDIVIDUAL_URL
-NEXT_PUBLIC_EMPIRE_CHECKOUT_PRO_URL
-
 ## Local Setup
 
 Install dependencies
@@ -49,8 +45,6 @@ Environment variables must be configured in the Vercel dashboard.
 ## Production Checklist
 
 - Redis configured
-- Lead capture webhook configured or email fallback accepted
-- Checkout URLs configured before self-serve paid launch
 - Rate limiting enabled
 - `/api/fair` functional
 - Integration tests passing
@@ -65,6 +59,6 @@ Aggregated board: 15–30 seconds
 ## Post Deploy Checks
 
 1. Homepage loads
-2. `/games` renders
+2. `/history` renders
 3. `/api/health` returns success
 4. `/api/status` reports healthy services

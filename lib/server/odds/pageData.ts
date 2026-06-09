@@ -2,23 +2,14 @@ import { getOddsApiKey } from "@/lib/server/odds/env";
 import { getMarketAvailabilityForBoard, LIMITED_MARKET_MIN_BOOKS } from "@/lib/server/odds/fairEngine";
 import { getFairBoard, getNormalizedOdds } from "@/lib/server/odds/oddsService";
 import { buildBoardDrilldownRows } from "@/lib/server/odds/boardView";
+import { toSportKey } from "@/lib/server/odds/sportsRegistry";
 import type { MarketKey } from "@/lib/odds/schemas";
 import type { FairBoardResponse, MarketAvailability, MarketAvailabilityStatus } from "@/lib/server/odds/types";
 
-const LEAGUE_TO_SPORTKEY: Record<string, string> = {
-  nba: "basketball_nba",
-  nfl: "americanfootball_nfl",
-  nhl: "icehockey_nhl",
-  ncaab: "basketball_ncaab",
-  mlb: "baseball_mlb"
-};
+export { toSportKey } from "@/lib/server/odds/sportsRegistry";
 
 export function hasOddsKey(): boolean {
   return Boolean(getOddsApiKey());
-}
-
-export function toSportKey(league: string): string {
-  return LEAGUE_TO_SPORTKEY[league] || LEAGUE_TO_SPORTKEY.nba;
 }
 
 export type FairBoardPageData = {

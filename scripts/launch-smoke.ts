@@ -47,9 +47,32 @@ function isBoardPayloadText(rawText: string): boolean {
   }
 }
 
+function oddsProviderConfigured(rawText: string): boolean {
+  try {
+    const parsed = JSON.parse(rawText);
+    return Boolean(parsed?.odds_api_status?.configured);
+  } catch {
+    return false;
+  }
+}
+
 async function main(): Promise<void> {
+  const statusResult = await fetchWithTimeout("/api/status");
+  const hasConfiguredOddsProvider = statusResult.ok && oddsProviderConfigured(statusResult.text);
+
   await Promise.all([
-    check("/", (result) => (result.ok ? null : `HTTP ${result.status}`)),
+    check("/", (result) => {
+      if (!result.ok) return `HTTP ${result.status}`;
+      if (!result.text.includes("Public read-only preview")) return "Testing-phase preview copy missing";
+      return null;
+    }),
+    check("/props", (result) => {
+      if (!result.ok) return `HTTP ${result.status}`;
+      if (!result.text.includes("Props roadmap")) return "Props route did not render roadmap structure";
+      return null;
+    }),
+    check("/pricing", (result) => (result.status === 404 ? null : "Pricing should remain unavailable in testing mode")),
+    check("/api/leads", (result) => (result.status === 405 || result.status === 410 ? null : "Lead capture endpoint should not accept public collection")),
     check("/api/health", (result) => {
       if (!result.ok) return `HTTP ${result.status}`;
       if (!startsWithJson(result, "{\"ok\":true")) return "Did not receive expected health payload";
@@ -60,11 +83,17 @@ async function main(): Promise<void> {
       if (!startsWithJson(result, "{\"ok\":true")) return "Did not receive expected status payload";
       return null;
     }),
-    check("/api/board?league=nba&market=h2h&model=weighted&minBooks=2", (result) => {
-      if (!result.ok) return `HTTP ${result.status}`;
-      if (!isBoardPayloadText(result.text)) return "Board payload shape mismatch";
-      return null;
-    })
+    hasConfiguredOddsProvider
+      ? check("/api/board?sport=nba&market=h2h&model=weighted&minBooks=2", (result) => {
+          if (!result.ok) return `HTTP ${result.status}`;
+          if (!isBoardPayloadText(result.text)) return "Board payload shape mismatch";
+          return null;
+        })
+      : check("/api/board?sport=nba&market=h2h&model=weighted&minBooks=2", (result) => {
+          if (result.status !== 500) return "Expected missing-key failure when odds provider is not configured";
+          if (!result.text.includes("MISSING_KEY")) return "Missing-key failure did not use sanitized public error";
+          return null;
+        })
   ]);
 
   if (failures.length) {

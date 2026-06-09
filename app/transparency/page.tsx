@@ -44,12 +44,12 @@ export default function TransparencyPage() {
           Open live board
         </TrackedLink>
         <TrackedLink
-          href="/pricing"
+          href="/history"
           className={styles.secondaryCta}
-          eventName="pricing_cta"
+          eventName="history_cta"
           eventProperties={{ placement: "transparency_hero" }}
         >
-          View launch access
+          View record policy
         </TrackedLink>
       </div>
 

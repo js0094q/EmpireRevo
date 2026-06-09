@@ -5,6 +5,7 @@ import { buildFactorPerformance } from "@/lib/server/odds/factorPerformance";
 import { buildProbabilityCalibration } from "@/lib/server/odds/calibrationAnalysis";
 import { buildEvaluationReports } from "@/lib/server/odds/evaluationReport";
 import { getEvaluationSummary } from "@/lib/server/odds/evaluationRunner";
+import { buildOutcomeMapForValidationEvents, buildRoiSegmentSummariesFromData, type RoiSegmentSummary } from "@/lib/server/odds/roiEvaluation";
 import { getOddsHistoryConfig } from "@/lib/server/odds/historyConfig";
 import { listRecentEventHistory } from "@/lib/server/odds/historyStore";
 import { getPersistenceStatus } from "@/lib/server/odds/persistence";
@@ -39,6 +40,11 @@ export type InternalDiagnosticsPayload = {
   factorAnalytics?: Awaited<ReturnType<typeof buildFactorAnalytics>>;
   evaluation?: Awaited<ReturnType<typeof getEvaluationSummary>>;
   roiSummary?: Awaited<ReturnType<typeof getEvaluationSummary>>["roiSummary"];
+  roiSegments?: {
+    bySport: RoiSegmentSummary[];
+    byMarket: RoiSegmentSummary[];
+    byConfidence: RoiSegmentSummary[];
+  };
   probabilityCalibration?: Awaited<ReturnType<typeof buildProbabilityCalibration>>;
   factorPerformance?: Awaited<ReturnType<typeof buildFactorPerformance>>;
   evaluationReports?: Awaited<ReturnType<typeof buildEvaluationReports>>;
@@ -82,6 +88,12 @@ export async function getInternalDiagnostics(limit = 400): Promise<InternalDiagn
     (sum, event) => sum + event.markets.filter((market) => market.snapshotCount >= 2).length,
     0
   );
+  const outcomeMap = await buildOutcomeMapForValidationEvents(validationEvents);
+  const roiSegments = {
+    bySport: buildRoiSegmentSummariesFromData(validationEvents, outcomeMap, "sport"),
+    byMarket: buildRoiSegmentSummariesFromData(validationEvents, outcomeMap, "market"),
+    byConfidence: buildRoiSegmentSummariesFromData(validationEvents, outcomeMap, "confidence")
+  };
 
   return {
     ok: true,
@@ -100,6 +112,7 @@ export async function getInternalDiagnostics(limit = 400): Promise<InternalDiagn
     factorAnalytics,
     evaluation,
     roiSummary: evaluation.roiSummary,
+    roiSegments,
     probabilityCalibration,
     factorPerformance,
     evaluationReports,

@@ -2,11 +2,20 @@
 
 import { startTransition, useDeferredValue, useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { TrackOnMount, trackProductEvent } from "@/components/analytics/ProductAnalytics";
 import { EmptyState } from "@/components/primitives/EmptyState";
 import { BoardTable } from "@/components/board/BoardTable";
 import { BoardToolbar } from "@/components/board/BoardToolbar";
-import type { FairBoardResponse } from "@/lib/server/odds/types";
-import { buildBoardViewModel, buildPinnedBooksPreferenceLabel, type BoardSortValue, type BoardSurfaceIntent } from "@/lib/ui/view-models/boardViewModel";
+import type { FairBoardResponse, PersistedOutcomeResult } from "@/lib/server/odds/types";
+import type { PublicSportOption } from "@/lib/server/odds/sportsRegistry";
+import {
+  buildBoardViewModel,
+  buildPinnedBooksPreferenceLabel,
+  type BoardConfidenceFilter,
+  type BoardOutcomeFilter,
+  type BoardSortValue,
+  type BoardSurfaceIntent
+} from "@/lib/ui/view-models/boardViewModel";
 import styles from "./workstation.module.css";
 
 const PREF_KEY = "empirepicks:preferences";
@@ -38,12 +47,16 @@ export function BoardView({
   board,
   league,
   model,
-  mode
+  mode,
+  outcomes = [],
+  sports = []
 }: {
   board: FairBoardResponse;
   league: string;
   model: "sharp" | "equal" | "weighted";
   mode: BoardSurfaceIntent;
+  outcomes?: PersistedOutcomeResult[];
+  sports?: PublicSportOption[];
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -54,6 +67,8 @@ export function BoardView({
   const [sort, setSort] = useState<BoardSortValue>((searchParams?.get("sort") as BoardSortValue) || "score");
   const [bookKey, setBookKey] = useState(searchParams?.get("book") || "all");
   const [edgeThresholdPct, setEdgeThresholdPct] = useState(Number(searchParams?.get("edgeThresholdPct") || "0"));
+  const [confidence, setConfidence] = useState<BoardConfidenceFilter>((searchParams?.get("confidence") as BoardConfidenceFilter) || "all");
+  const [outcomeStatus, setOutcomeStatus] = useState<BoardOutcomeFilter>((searchParams?.get("outcome") as BoardOutcomeFilter) || "all");
   const [includeStale, setIncludeStale] = useState(searchParams?.get("stale") === "1");
   const [pinnedOnly, setPinnedOnly] = useState(searchParams?.get("pinned") === "1");
   const [beginnerMode, setBeginnerMode] = useState<"beginner" | "advanced">("beginner");
@@ -113,17 +128,29 @@ export function BoardView({
           sort,
           bookKey,
           edgeThresholdPct,
+          confidence,
+          outcomeStatus,
           minBooks,
           pinnedOnly,
           includeStale,
           pinnedBooks: new Set(pinnedBooks)
-        }
+        },
+        outcomes
       }),
-    [board, bookKey, deferredSearch, edgeThresholdPct, includeStale, league, minBooks, mode, model, pinnedBooks, pinnedOnly, sort]
+    [board, bookKey, confidence, deferredSearch, edgeThresholdPct, includeStale, league, minBooks, mode, model, outcomeStatus, outcomes, pinnedBooks, pinnedOnly, sort]
   );
 
   return (
     <div className={styles.surface}>
+      <TrackOnMount
+        eventName="board_view"
+        properties={{
+          league,
+          market: board.market,
+          model,
+          rows: viewModel.rows.length
+        }}
+      />
       <div className={styles.header}>
         <div className={styles.titleBlock}>
           <h1 className={styles.title}>{viewModel.title}</h1>
@@ -133,8 +160,21 @@ export function BoardView({
           <span>{viewModel.resultLabel}</span>
           <span>{viewModel.coverageLabel}</span>
           <span>{viewModel.updatedLabel}</span>
+          <span>{includeStale ? "Stale included" : "Fresh only"}</span>
           <span>{compactMode ? "Compact" : "Comfortable"}</span>
         </div>
+      </div>
+
+      <div className={styles.healthStrip} aria-label="Market health">
+        {[
+          ...(sports.length ? [{ label: "Sports", value: `${sports.length}` }] : []),
+          ...viewModel.statusItems
+        ].map((item) => (
+          <span key={`${item.label}-${item.value}`} className={item.tone ? styles[`health_${item.tone}`] : undefined}>
+            <small>{item.label}</small>
+            <strong>{item.value}</strong>
+          </span>
+        ))}
       </div>
 
       <BoardToolbar
@@ -147,16 +187,25 @@ export function BoardView({
           search,
           sort,
           edgeThresholdPct,
+          confidence,
+          outcomeStatus,
           includeStale,
           pinnedOnly,
           compactMode,
           pinnedBooks
         }}
         books={viewModel.books}
+        sports={sports}
         preferencesLabel={buildPinnedBooksPreferenceLabel(board, new Set(pinnedBooks))}
         onChange={(next) => {
-          if (next.league !== undefined) updateParams({ league: next.league });
-          if (next.market !== undefined) updateParams({ market: next.market });
+          if (next.league !== undefined) {
+            updateParams({ league: next.league });
+            trackProductEvent("filter_change", { filter: "sport", value: next.league, league: next.league, market: board.market });
+          }
+          if (next.market !== undefined) {
+            updateParams({ market: next.market });
+            trackProductEvent("filter_change", { filter: "market", value: next.market, league, market: next.market });
+          }
           if (next.model !== undefined) updateParams({ model: next.model });
           if (next.minBooks !== undefined) {
             setMinBooks(next.minBooks);
@@ -169,18 +218,32 @@ export function BoardView({
           if (next.sort !== undefined) {
             setSort(next.sort);
             updateParams({ sort: next.sort });
+            trackProductEvent("sort_change", { sort: next.sort, league, market: board.market });
           }
           if (next.bookKey !== undefined) {
             setBookKey(next.bookKey);
             updateParams({ book: next.bookKey === "all" ? null : next.bookKey });
+            trackProductEvent("filter_change", { filter: "book", value: next.bookKey, league, market: board.market });
           }
           if (next.edgeThresholdPct !== undefined) {
             setEdgeThresholdPct(next.edgeThresholdPct);
             updateParams({ edgeThresholdPct: next.edgeThresholdPct > 0 ? `${next.edgeThresholdPct}` : null });
+            trackProductEvent("filter_change", { filter: "ev_threshold", value: next.edgeThresholdPct, league, market: board.market });
+          }
+          if (next.confidence !== undefined) {
+            setConfidence(next.confidence);
+            updateParams({ confidence: next.confidence === "all" ? null : next.confidence });
+            trackProductEvent("filter_change", { filter: "confidence", value: next.confidence, league, market: board.market });
+          }
+          if (next.outcomeStatus !== undefined) {
+            setOutcomeStatus(next.outcomeStatus);
+            updateParams({ outcome: next.outcomeStatus === "all" ? null : next.outcomeStatus });
+            trackProductEvent("filter_change", { filter: "outcome", value: next.outcomeStatus, league, market: board.market });
           }
           if (next.includeStale !== undefined) {
             setIncludeStale(next.includeStale);
             updateParams({ stale: next.includeStale ? "1" : null });
+            trackProductEvent("filter_change", { filter: "freshness", value: next.includeStale ? "include_stale" : "fresh_only", league, market: board.market });
           }
           if (next.pinnedOnly !== undefined) {
             setPinnedOnly(next.pinnedOnly);
@@ -193,6 +256,10 @@ export function BoardView({
           if (next.pinnedBooks !== undefined) {
             setPinnedBooks(next.pinnedBooks);
           }
+        }}
+        onRefresh={() => {
+          trackProductEvent("odds_refresh", { league, market: board.market, model });
+          router.refresh();
         }}
         onSaveDefaults={() =>
           writePreferences({

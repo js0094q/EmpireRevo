@@ -12,7 +12,7 @@ import {
 } from "@/lib/odds/priceValue";
 import { toEventRouteId } from "@/lib/server/odds/eventRoute";
 
-export type BoardMode = "board" | "games";
+export type BoardMode = "board";
 export type BoardSortKey = "score" | "edge" | "ev" | "confidence" | "best" | "book" | "coverage" | "soonest" | "timing";
 export type BoardWindowKey = "all";
 export type BoardSideKey = "all" | "favored" | "underdogs";
@@ -341,11 +341,10 @@ export function eventDetailHref(params: {
     market: params.market,
     model: params.model
   });
-  if (params.context?.mode === "games") query.set("mode", "games");
   if (params.context?.sortBy && params.context.sortBy !== "score") query.set("sort", params.context.sortBy);
   if (params.context?.side && params.context.side !== "all") query.set("side", params.context.side);
   const search = params.context?.search?.trim();
   if (search) query.set("search", search);
   if (params.context?.positiveEdgeOnly) query.set("edge", "1");
-  return `/games/${encodeURIComponent(toEventRouteId(params.event))}?${query.toString()}`;
+  return `/game/${encodeURIComponent(toEventRouteId(params.event))}?${query.toString()}`;
 }

@@ -81,6 +81,67 @@ export async function fetchOddsFromUpstream(params: {
   return parsed;
 }
 
+export type OddsApiSport = {
+  key: string;
+  group: string;
+  title: string;
+  description?: string;
+  active: boolean;
+  has_outrights?: boolean;
+};
+
+export async function fetchSportsFromUpstream(): Promise<OddsApiSport[]> {
+  const apiKey = getOddsApiKey();
+  if (!apiKey) {
+    const err = new Error("Missing ODDS_API_KEY");
+    (err as Error & { code?: string }).code = "MISSING_KEY";
+    throw err;
+  }
+
+  const base = getOddsApiBaseUrl();
+  const upstream = new URL("/v4/sports", base);
+  upstream.searchParams.set("apiKey", apiKey);
+
+  const response = await fetchWithRetry(upstream.toString());
+  const text = await response.text();
+  if (!response.ok) {
+    const err = new Error(`Upstream error ${response.status}`);
+    const e = err as Error & { code?: string };
+    if (response.status === 401 || response.status === 403) {
+      e.code = "UPSTREAM_AUTH_FAILURE";
+    } else if (response.status === 429) {
+      e.code = "UPSTREAM_RATE_LIMIT";
+    } else {
+      e.code = "UPSTREAM_ERROR";
+    }
+    throw err;
+  }
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(text);
+  } catch {
+    const err = new Error("Upstream payload is not valid JSON");
+    (err as Error & { code?: string }).code = "UPSTREAM_EMPTY_PAYLOAD";
+    throw err;
+  }
+  if (!Array.isArray(parsed)) {
+    const err = new Error("Upstream payload is not an array");
+    (err as Error & { code?: string }).code = "UPSTREAM_EMPTY_PAYLOAD";
+    throw err;
+  }
+  return parsed
+    .map((entry: any) => ({
+      key: String(entry.key || ""),
+      group: String(entry.group || "Other"),
+      title: String(entry.title || entry.key || "Unknown"),
+      description: entry.description === undefined ? undefined : String(entry.description),
+      active: Boolean(entry.active),
+      has_outrights: entry.has_outrights === undefined ? undefined : Boolean(entry.has_outrights)
+    }))
+    .filter((entry) => entry.key.length > 0);
+}
+
 async function fetchWithRetry(url: string): Promise<Response> {
   let lastFailure: unknown = null;
   for (let attempt = 1; attempt <= MAX_UPSTREAM_ATTEMPTS; attempt += 1) {

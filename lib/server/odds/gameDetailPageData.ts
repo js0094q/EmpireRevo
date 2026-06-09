@@ -7,9 +7,21 @@ import { readMarketTimeline } from "@/lib/server/odds/historyStore";
 import { buildMarketTimeline } from "@/lib/server/odds/timeline";
 import { deriveMarketPressureSignal, deriveValueTimingSignal } from "@/lib/server/odds/movement";
 import type { MarketKey } from "@/lib/odds/schemas";
-import type { FairEvent, FairOutcome, FairOutcomeBook, MarketPressureSignal, MarketTimelineResponse, ValueTimingSignal } from "@/lib/server/odds/types";
+import type {
+  FairEvent,
+  FairOutcome,
+  FairOutcomeBook,
+  MarketPressureSignal,
+  MarketTimelineResponse,
+  PersistedEvaluationResult,
+  PersistedOutcomeResult,
+  PersistedValidationEvent,
+  ValueTimingSignal
+} from "@/lib/server/odds/types";
 import { buildPickSummary, type BoardMode, type BoardNavigationContext, type BoardSideKey, type BoardSortKey } from "@/components/board/board-helpers";
 import { buildOutcomeMarketKey } from "@/lib/server/odds/snapshotPersistence";
+import { getOutcomeResult } from "@/lib/server/odds/outcomes";
+import { getClosingEvaluation, listValidationEvents } from "@/lib/server/odds/validationStore";
 
 type NormalizedEvent = Awaited<ReturnType<typeof getNormalizedOdds>>["normalized"][number];
 
@@ -34,6 +46,9 @@ export type GameDetailPageData = {
   timeline: MarketTimelineResponse | null;
   pressureSignals: MarketPressureSignal[];
   valueTiming: ValueTimingSignal;
+  outcomeResult: PersistedOutcomeResult | null;
+  latestValidation: PersistedValidationEvent | null;
+  closingEvaluation: PersistedEvaluationResult["close"] | null;
   latestHistoryTs: string;
   backToBoardHref: string;
   boardContext: BoardNavigationContext;
@@ -113,8 +128,8 @@ function pickRelatedMarketEvent(params: {
   return params.relatedEvents[0] ?? null;
 }
 
-function parseBoardMode(value?: string): BoardMode {
-  return value === "games" ? "games" : "board";
+function parseBoardMode(_value?: string): BoardMode {
+  return "board";
 }
 
 function parseBoardSort(value?: string): BoardSortKey {
@@ -133,7 +148,7 @@ function boardReturnHref(params: {
   model: "sharp" | "equal" | "weighted";
   context: BoardNavigationContext;
 }): string {
-  const basePath = params.context.mode === "games" ? "/games" : "/";
+  const basePath = "/";
   const query = new URLSearchParams({
     league: params.league,
     market: params.market,
@@ -159,7 +174,6 @@ function detailHref(params: {
     market: params.market,
     model: params.model
   });
-  if (params.context.mode === "games") query.set("mode", "games");
   if (params.context.sortBy && params.context.sortBy !== "score") query.set("sort", params.context.sortBy);
   if (params.context.side && params.context.side !== "all") query.set("side", params.context.side);
   const search = params.context.search?.trim();
@@ -172,6 +186,26 @@ function joinTitles(values: string[]): string {
   if (values.length <= 1) return values[0] ?? "";
   if (values.length === 2) return `${values[0]} and ${values[1]}`;
   return `${values.slice(0, -1).join(", ")}, and ${values[values.length - 1]}`;
+}
+
+async function findLatestValidation(params: {
+  sportKey: string;
+  eventId: string;
+  marketKey: string;
+  sideKey: string;
+}): Promise<PersistedValidationEvent | null> {
+  const events = await listValidationEvents(500).catch(() => []);
+  return (
+    events
+      .filter(
+        (event) =>
+          event.sportKey === params.sportKey &&
+          event.eventId === params.eventId &&
+          event.marketKey === params.marketKey &&
+          event.sideKey === params.sideKey
+      )
+      .sort((a, b) => b.createdAt - a.createdAt)[0] ?? null
+  );
 }
 
 export async function getGameDetailPageData(params: {
@@ -223,7 +257,6 @@ export async function getGameDetailPageData(params: {
       market: resolvedMarket,
       model
     });
-    if (boardContext.mode === "games") nextParams.set("mode", "games");
     if (boardContext.sortBy && boardContext.sortBy !== "score") nextParams.set("sort", boardContext.sortBy);
     if (boardContext.side && boardContext.side !== "all") nextParams.set("side", boardContext.side);
     if (boardContext.search?.trim()) nextParams.set("search", boardContext.search.trim());
@@ -308,12 +341,27 @@ export async function getGameDetailPageData(params: {
 
   const historyEventId = event.baseEventId || event.id;
   const historyMarketKey = buildOutcomeMarketKey(event.market, featuredOutcome.name);
-  const rawTimeline = await readMarketTimeline(sportKey, historyEventId, historyMarketKey);
-  const timeline = await buildMarketTimeline({
-    sportKey,
-    eventId: historyEventId,
-    marketKey: historyMarketKey
-  });
+  const [rawTimeline, timeline, outcomeResult, latestValidation, closingEvaluation] = await Promise.all([
+    readMarketTimeline(sportKey, historyEventId, historyMarketKey),
+    buildMarketTimeline({
+      sportKey,
+      eventId: historyEventId,
+      marketKey: historyMarketKey
+    }),
+    getOutcomeResult({
+      sportKey,
+      eventId: event.id,
+      marketKey: historyMarketKey,
+      sideKey: featuredOutcome.name
+    }).catch(() => null),
+    findLatestValidation({
+      sportKey,
+      eventId: event.id,
+      marketKey: historyMarketKey,
+      sideKey: featuredOutcome.name
+    }),
+    getClosingEvaluation(sportKey, event.id, historyMarketKey).catch(() => null)
+  ]);
   const marketPressure = deriveMarketPressureSignal({
     timeline: rawTimeline,
     nowMs: Date.now()
@@ -344,6 +392,9 @@ export async function getGameDetailPageData(params: {
     timeline,
     pressureSignals,
     valueTiming,
+    outcomeResult,
+    latestValidation,
+    closingEvaluation: closingEvaluation?.close ?? null,
     latestHistoryTs,
     backToBoardHref: boardReturnHref({
       league,

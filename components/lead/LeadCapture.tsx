@@ -64,8 +64,8 @@ export function LeadCapture({
       setStatus("success");
       setMessage(
         payload.captured
-          ? "Request received. Launch access follow-up will use the email provided."
-          : "Request prepared. Email support is still the fallback until lead capture is configured."
+          ? "Request received. Follow-up will use the email provided."
+          : "Request prepared. Email support is still the fallback."
       );
     } catch (error) {
       setStatus("error");
@@ -98,7 +98,7 @@ export function LeadCapture({
                   {title}
                 </h2>
                 <p id={descriptionId} className={styles.dialogCopy}>
-                  Enter email and ZIP code so launch access can be routed by market availability and product fit.
+                  Enter email and ZIP code so follow-up can be routed to the right inbox.
                 </p>
               </div>
               <button type="button" className={styles.closeButton} onClick={() => setOpen(false)}>
@@ -143,7 +143,7 @@ export function LeadCapture({
               </a>
             ) : null}
             {status === "success" ? (
-              <a className={styles.resourceLink} href="mailto:support@empirepicks.app?subject=EmpirePicks%20launch%20access">
+              <a className={styles.resourceLink} href="mailto:support@empirepicks.app?subject=EmpirePicks%20support">
                 Email support fallback
               </a>
             ) : null}

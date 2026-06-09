@@ -1,3 +1,4 @@
+import { TrackOnMount } from "@/components/analytics/ProductAnalytics";
 import { Panel } from "@/components/primitives/Panel";
 import { Table } from "@/components/primitives/Table";
 import type { InternalDiagnosticsViewModel as InternalViewModel } from "@/lib/ui/view-models/internalDiagnosticsViewModel";
@@ -6,6 +7,7 @@ import styles from "./internal.module.css";
 export function InternalEngineView({ viewModel }: { viewModel: InternalViewModel }) {
   return (
     <div className={styles.surface}>
+      <TrackOnMount eventName="evaluation_viewed" properties={{ sections: viewModel.sections.length }} />
       <div className={styles.header}>
         <h1 className={styles.title}>{viewModel.title}</h1>
         <p className={styles.subtitle}>{viewModel.subtitle}</p>

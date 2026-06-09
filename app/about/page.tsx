@@ -3,7 +3,7 @@ import styles from "../legal.module.css";
 
 export const metadata: Metadata = {
   title: "About EmpirePicks",
-  description: "Learn how EmpirePicks helps bettors compare sportsbook pricing with fair-line and confidence context."
+  description: "Learn how the EmpirePicks testing build compares sportsbook pricing with fair-line and confidence context."
 };
 
 export default function AboutPage() {
@@ -11,7 +11,7 @@ export default function AboutPage() {
     <main className={styles.legalPage}>
       <h1 className={styles.legalTitle}>About EmpirePicks</h1>
       <p className={styles.legalLead}>
-        EmpirePicks is a commercial-grade betting intelligence dashboard focused on fast, understandable market decisions.
+        EmpirePicks is a testing-phase betting analytics workstation focused on fair-line comparison, market freshness, and clear limitations.
       </p>
       <p className={styles.legalMeta}>Last updated: May 27, 2026</p>
 
@@ -33,12 +33,12 @@ export default function AboutPage() {
       </section>
 
       <section className={styles.legalSection}>
-        <h2>What makes it launch-ready</h2>
+        <h2>What is being validated</h2>
         <ul className={styles.legalList}>
           <li>Rate limiting and input validation on public and internal surfaces.</li>
           <li>Security boundaries for internal tools and raw data access.</li>
           <li>Production observability with health, validation, and retention checks.</li>
-          <li>Consistent commercial metadata, legal pages, and onboarding guidance.</li>
+          <li>Testing-phase public messaging without signup, account, or paid-conversion flows.</li>
         </ul>
       </section>
     </main>

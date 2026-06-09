@@ -1,11 +1,15 @@
-# Dependencies / build output
+# Dependencies and build output
 node_modules/
 .next/
 out/
+dist/
+coverage/
+
+# Local Vercel state
+.vercel/
 
 # Environment and secrets
 .env
-.redis.local
 .env.*
 !.env.example
 !.env.sample
@@ -17,18 +21,16 @@ odds.api
 *.p12
 *.pfx
 
-# Logs
+# Logs and local artifacts
 *.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
-
-# Local tooling / platform files
 .DS_Store
-.vercel/
 *.tsbuildinfo
+.codex/
 
-# Test artifacts
+# Visual regression output
 tests/visual/current/
 tests/visual/diff/

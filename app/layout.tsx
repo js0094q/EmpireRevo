@@ -15,12 +15,7 @@ const structuredData = {
   operatingSystem: "Web",
   url: siteUrl,
   description:
-    "Sportsbook pricing workstation for fair odds, line shopping, expected value context, and transparent market methodology.",
-  offers: {
-    "@type": "Offer",
-    category: "Launch access",
-    availability: "https://schema.org/PreOrder"
-  }
+    "Testing-phase sportsbook pricing workstation for fair odds, line shopping, expected value context, and transparent market methodology.",
 };
 
 export const metadata: Metadata = {
@@ -30,12 +25,12 @@ export const metadata: Metadata = {
     default: "EmpirePicks"
   },
   description:
-    "Find the best sportsbook prices before the market moves with enterprise-style fair odds and market diagnostics.",
+    "Read-only testing preview of sportsbook prices, no-vig fair lines, market freshness, and transparent diagnostics.",
   applicationName: "EmpirePicks",
   keywords: ["sports betting", "odds shopping", "fair odds", "expected value", "line shopping", "sportsbook"],
   openGraph: {
     title: "EmpirePicks",
-    description: "Professional sportsbook pricing and opportunity board for real-time lineup decisions.",
+    description: "Testing-phase sportsbook pricing board for fair-line and market-freshness review.",
     type: "website",
     images: [
       {
@@ -49,7 +44,7 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "EmpirePicks",
-    description: "Find the best sportsbook prices before the market moves.",
+    description: "Read-only testing preview of fair-line and market-freshness analytics.",
     images: ["/opengraph-image.png"]
   },
   icons: {
@@ -80,8 +75,8 @@ export default function RootLayout({ children }: { children: ReactNode }) {
                 <Link href="/contact" className={layoutStyles.footerLink}>
                   Contact
                 </Link>
-                <Link href="/pricing" className={layoutStyles.footerLink}>
-                  Pricing
+                <Link href="/props" className={layoutStyles.footerLink}>
+                  Props
                 </Link>
                 <Link href="/history" className={layoutStyles.footerLink}>
                   Record

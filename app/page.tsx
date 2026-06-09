@@ -3,6 +3,8 @@ import { ErrorState } from "@/components/primitives/ErrorState";
 import { BoardView } from "@/components/board/BoardView";
 import { buildBoardViewModel } from "@/lib/ui/view-models/boardViewModel";
 import { fetchFairBoardPageData, hasOddsKey } from "@/lib/server/odds/pageData";
+import { getPublicSportOptions, resolveSportOption } from "@/lib/server/odds/sportsRegistry";
+import { listOutcomeResults } from "@/lib/server/odds/outcomes";
 import { redirect } from "next/navigation";
 import styles from "./page.module.css";
 
@@ -30,7 +32,9 @@ export default async function Page({
   searchParams?: Promise<{ league?: string; market?: string; model?: string; minBooks?: string }>;
 }) {
   const params = (await searchParams) || {};
-  const league = params.league || "nba";
+  const sports = await getPublicSportOptions();
+  const selectedSport = resolveSportOption(params.league, sports);
+  const league = selectedSport.key;
   const market = params.market === "spreads" || params.market === "totals" ? params.market : HOME_FILTERS.market;
   const model =
     params.model === "sharp" || params.model === "equal" || params.model === "weighted"
@@ -78,7 +82,7 @@ export default async function Page({
     boardError = {
       title: "Live board configuration required",
       message: "ODDS_API_KEY is missing on the server.",
-      detail: "The public launch, pricing, and transparency pages remain available."
+      detail: "The public record and transparency pages remain available."
     };
   }
 
@@ -92,6 +96,9 @@ export default async function Page({
   }
 
   const board = pageData?.board ?? null;
+  const outcomes = board
+    ? await listOutcomeResults(500).catch(() => [])
+    : [];
   if (board && !(board.events?.length ?? 0)) {
     boardError = {
       title: "No qualifying markets for current filters.",
@@ -111,11 +118,14 @@ export default async function Page({
           sort: "edge",
           bookKey: "all",
           edgeThresholdPct: 0,
+          confidence: "all",
+          outcomeStatus: "all",
           minBooks,
           pinnedOnly: false,
-          includeStale: true,
+          includeStale: false,
           pinnedBooks: new Set<string>()
-        }
+        },
+        outcomes
       })
     : null;
 
@@ -123,26 +133,27 @@ export default async function Page({
     <div className={styles.page}>
       <section className={styles.heroWrap}>
         <section className={styles.hero}>
-          <h1 className={styles.heroTitle}>See the market edge before the market shifts.</h1>
+          <p className={styles.phaseLabel}>Public read-only preview · Testing build</p>
+          <h1 className={styles.heroTitle}>EmpirePicks market board</h1>
           <p className={styles.heroCopy}>
-            EmpirePicks compares posted sportsbook prices against no-vig fair lines, freshness, and confidence.
+            Live sportsbook prices compared against no-vig fair lines, freshness, confidence, and book coverage.
           </p>
           <div className={styles.heroActions}>
             <TrackedLink
-              href="/pricing"
+              href="#board"
               className={styles.heroPrimary}
-              eventName="hero_cta"
-              eventProperties={{ placement: "homepage_hero", intent: "pricing" }}
+              eventName="board_open"
+              eventProperties={{ placement: "homepage_hero", intent: "board" }}
             >
-              View launch access
+              Open board
             </TrackedLink>
             <TrackedLink
-              href="#board"
+              href="/history"
               className={styles.heroSecondary}
-              eventName="board_open"
+              eventName="history_cta"
               eventProperties={{ placement: "homepage_hero" }}
             >
-              Open live board
+              View record policy
             </TrackedLink>
           </div>
         </section>
@@ -150,16 +161,18 @@ export default async function Page({
 
       <section className={styles.statusLine} aria-label="Board status">
         <strong>{preview?.resultLabel ?? "Board unavailable"}</strong>
+        <span>{sports.length} {sports.length === 1 ? "active sport" : "active sports"}</span>
         <span>{preview?.coverageLabel ?? "Pending feed"}</span>
-        <span>{preview?.updatedLabel ?? "No live update"}</span>
+        <span>{preview?.updatedLabel ?? "No live odds refresh"}</span>
+        <span>{preview ? `${preview.staleExcludedCount} stale excluded` : "Freshness pending"}</span>
       </section>
 
       <section id="board" className={styles.boardSection}>
         <div className={styles.sectionLead}>
           <h2>Live board</h2>
-          <p className={styles.sectionCopy}>Markets are sorted by actionability, movement, and confidence.</p>
+          <p className={styles.sectionCopy}>Testing-phase data is read-only; stale and historical markets are excluded by default.</p>
         </div>
-        {board && !boardError ? <BoardView board={board} league={league} model={model} mode="board" /> : boardError ? (
+        {board && !boardError ? <BoardView board={board} league={league} model={model} mode="board" outcomes={outcomes} sports={sports} /> : boardError ? (
           boardError.title === "Live board configuration required" ? (
             <ConfigRequired />
           ) : (
@@ -182,13 +195,6 @@ export default async function Page({
           eventProperties={{ placement: "homepage_support_links" }}
         >
           Record policy
-        </TrackedLink>
-        <TrackedLink
-          href="/pricing"
-          eventName="pricing_cta"
-          eventProperties={{ placement: "homepage_support_links" }}
-        >
-          Launch access
         </TrackedLink>
       </nav>
     </div>

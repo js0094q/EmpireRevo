@@ -12,7 +12,7 @@ Public rendering now runs through:
 Public routes are intentionally split:
 
 - `/` for `Board`
-- `/games` for `Games`
+- `/history` for public record policy and outcome context
 - `/game/[eventId]` for event detail
 
 Protected operator rendering remains under `/internal/*`.

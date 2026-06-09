@@ -9,10 +9,10 @@ import { cn } from "@/lib/ui/cn";
 const NAV_ITEMS = [
   { href: "/", label: "Board" },
   { href: "/games", label: "Games" },
-  { href: "/pricing", label: "Pricing" },
-  { href: "/history", label: "Record" },
-  { href: "/about", label: "About" },
-  { href: "/contact", label: "Contact" }
+  { href: "/transparency", label: "Transparency" },
+  { href: "/learn", label: "Learn" },
+  { href: "/responsible-gaming", label: "Responsible Gaming" },
+  { href: "/faq", label: "FAQ" }
 ];
 
 function isActive(pathname: string, href: string) {

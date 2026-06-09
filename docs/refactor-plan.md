@@ -9,7 +9,6 @@
 - `lib/server/odds/gameDetailPageData.ts`
 - `components/primitives/*`
 - `components/board/*` new workstation components
-- `components/games/*`
 - `components/game/*`
 - `components/internal/InternalEngineView.tsx`
 
@@ -17,7 +16,6 @@
 
 - `app/layout.tsx`
 - `app/page.tsx`
-- `app/games/page.tsx`
 - `app/game/[eventId]/page.tsx`
 - `app/games/[eventId]/page.tsx`
 - `app/internal/engine/page.tsx`

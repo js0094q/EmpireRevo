@@ -110,6 +110,9 @@ test("buildGameDetailViewModel separates internal notes from public notes", () =
       valuePersistence: "unknown",
       edgeTrend: "flat"
     },
+    outcomeResult: null,
+    latestValidation: null,
+    closingEvaluation: null,
     latestHistoryTs: "—",
     backToBoardHref: "/",
     boardContext: { mode: "board", windowKey: "all", sortBy: "score", side: "all", search: "", positiveEdgeOnly: false },
@@ -158,6 +161,9 @@ test("buildGameDetailViewModel keeps below-market EV states neutral", () => {
       valuePersistence: "unknown",
       edgeTrend: "flat"
     },
+    outcomeResult: null,
+    latestValidation: null,
+    closingEvaluation: null,
     latestHistoryTs: "—",
     backToBoardHref: "/",
     boardContext: { mode: "board", windowKey: "all", sortBy: "score", side: "all", search: "", positiveEdgeOnly: false },

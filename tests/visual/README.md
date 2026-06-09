@@ -9,7 +9,6 @@ surface:
 - Upstream-error board (`/?league=nhl&market=h2h&model=weighted` on desktop,
   `/?league=nfl&market=h2h&model=weighted` on mobile)
 - Stale-inclusive board (`/?league=ncaab&market=h2h&model=weighted&stale=1`)
-- Games list (`/games?league=nba&market=h2h&model=weighted`)
 - Game detail (`/game/[eventId]?league=nba&market=h2h&model=weighted`)
 - Game detail not-found (`/game/not-current-event?league=nba&market=h2h&model=weighted`)
 - Game detail upstream-error (`/game/error-event?league=nfl&market=h2h&model=weighted`)

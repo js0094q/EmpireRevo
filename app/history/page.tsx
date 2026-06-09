@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { LeadCapture } from "@/components/lead/LeadCapture";
 import { TrackedLink } from "@/components/analytics/TrackedLink";
 import styles from "../legal.module.css";
 
@@ -36,13 +35,9 @@ export default function HistoryPage() {
         can be audited. This page is the public contract for how that record will be shown.
       </p>
       <div className={styles.ctaRow}>
-        <LeadCapture
-          triggerLabel="Get record updates"
-          title="Request public record updates"
-          intent="launch_access"
-          variant="primary"
-          placement="history_hero"
-        />
+        <TrackedLink href="/" className={styles.primaryCta} eventName="board_open" eventProperties={{ placement: "history_hero" }}>
+          Open live board
+        </TrackedLink>
         <TrackedLink
           href="/transparency"
           className={styles.secondaryCta}

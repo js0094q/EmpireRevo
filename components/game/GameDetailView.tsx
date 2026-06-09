@@ -1,3 +1,4 @@
+import { TrackOnMount } from "@/components/analytics/ProductAnalytics";
 import { Panel } from "@/components/primitives/Panel";
 import type { GameDetailPageData } from "@/lib/server/odds/gameDetailPageData";
 import type { GameDetailViewModel } from "@/lib/ui/view-models/gameDetailViewModel";
@@ -6,12 +7,21 @@ import { ConsensusSummary } from "@/components/game/ConsensusSummary";
 import { GameHeader } from "@/components/game/GameHeader";
 import { MarketHistoryPanel } from "@/components/game/MarketHistoryPanel";
 import { MarketTabs } from "@/components/game/MarketTabs";
+import { OutcomeRecorder } from "@/components/game/OutcomeRecorder";
 import { QualityNotesPanel } from "@/components/game/QualityNotesPanel";
 import styles from "./detail.module.css";
 
 export function GameDetailView({ viewModel, data }: { viewModel: GameDetailViewModel; data: GameDetailPageData }) {
   return (
     <div className={styles.surface}>
+      <TrackOnMount
+        eventName="game_open"
+        properties={{
+          sport: data.event.sportKey,
+          market: data.event.market,
+          outcome: data.featuredOutcome.name
+        }}
+      />
       <GameHeader
         title={viewModel.title}
         subtitle={viewModel.subtitle}
@@ -20,7 +30,8 @@ export function GameDetailView({ viewModel, data }: { viewModel: GameDetailViewM
         backHref={viewModel.backHref}
       />
 
-      <ConsensusSummary summary={viewModel.summary} />
+      <ConsensusSummary title="Best Available Price" summary={viewModel.summary} />
+      <ConsensusSummary title="Fair Line Summary" summary={viewModel.fairLine} />
 
       {viewModel.tabs.length ? (
         <Panel>
@@ -32,8 +43,11 @@ export function GameDetailView({ viewModel, data }: { viewModel: GameDetailViewM
       ) : null}
 
       <BookComparisonTable rows={viewModel.comparisonRows} />
+      <QualityNotesPanel title="Signal Quality" notes={viewModel.qualityNotes} />
       <MarketHistoryPanel viewModel={viewModel.history} data={data} />
-      <QualityNotesPanel title="Quality Notes" notes={viewModel.qualityNotes} />
+      <Panel>
+        <OutcomeRecorder outcome={viewModel.outcome} />
+      </Panel>
       <QualityNotesPanel title="Model Notes" notes={viewModel.modelNotes} />
       {viewModel.internalNotes ? (
         <Panel>

@@ -298,11 +298,15 @@ async function getFreePort(): Promise<number> {
 async function waitForHttp(url: string, timeoutMs = 45_000): Promise<void> {
   const started = Date.now();
   while (Date.now() - started < timeoutMs) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 2000);
     try {
-      const response = await fetch(url);
+      const response = await fetch(url, { signal: controller.signal });
       if (response.ok) return;
     } catch {
       // Server not ready yet.
+    } finally {
+      clearTimeout(timer);
     }
     await new Promise((resolve) => setTimeout(resolve, 500));
   }
@@ -706,6 +710,17 @@ async function createMockOddsServer(params: {
   const server = http.createServer((req, res) => {
     const requestUrl = new URL(req.url || "/", "http://127.0.0.1");
 
+    if (requestUrl.pathname === "/v4/sports") {
+      sendJson(res, 200, [
+        { key: "basketball_nba", group: "Basketball", title: "NBA", active: true },
+        { key: "basketball_ncaab", group: "Basketball", title: "NCAAB", active: true },
+        { key: "baseball_mlb", group: "Baseball", title: "MLB", active: true },
+        { key: "icehockey_nhl", group: "Hockey", title: "NHL", active: true },
+        { key: "americanfootball_nfl", group: "Football", title: "NFL", active: true }
+      ]);
+      return;
+    }
+
     if (requestUrl.pathname.startsWith("/v4/sports/") && requestUrl.pathname.endsWith("/odds")) {
       const sportKey = sportKeyFromPathname(requestUrl.pathname);
       if (sportKey === "icehockey_nhl" || sportKey === "americanfootball_nfl") {
@@ -743,7 +758,7 @@ function startNextServer(params: {
   clockShimPath: string;
 }): ChildProcessWithoutNullStreams {
   const nodeOptions = [process.env.NODE_OPTIONS, `--require=${params.clockShimPath}`].filter(Boolean).join(" ");
-  const child = spawn("npm", ["run", "dev", "--", "--port", String(params.port)], {
+  const child = spawn("npm", ["run", "start", "--", "--port", String(params.port)], {
     cwd: ROOT,
     env: {
       ...process.env,
@@ -963,14 +978,15 @@ async function run(): Promise<void> {
     {
       name: "home",
       path: "/?league=nba&market=h2h&model=weighted&window=today",
-      expectedText: "Board",
-      mobileExpectedText: "Open live board"
+      expectedText: "EmpirePicks market board",
+      mobileExpectedText: "Open board",
+      expectedBodyTexts: ["Public read-only preview", "stale excluded"]
     },
     {
-      name: "games",
-      path: "/games?league=nba&market=h2h&model=weighted",
-      expectedText: "Games",
-      mobileExpectedText: "Grouped by start window"
+      name: "props",
+      path: "/props",
+      expectedText: "Props roadmap",
+      expectedBodyText: "No signup or paid access workflow is active."
     },
     {
       name: "game",

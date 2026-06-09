@@ -1,8 +1,8 @@
 # Final QA Checklist
 
-- [x] Public nav is limited to `Board` and `Games`
+- [x] Public nav is limited to `Board`, `Record`, `About`, and `Contact`
 - [x] Board is table-first and compact
-- [x] Games is distinct from Board
+- [x] Game detail is reached from Board rows
 - [x] Game detail is read-only and does not persist snapshots during render
 - [x] Internal surface remains protected
 - [x] Public UI uses shared formatters and view models

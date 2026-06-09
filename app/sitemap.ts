@@ -4,8 +4,6 @@ const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.empirepicks.com
 
 const routes = [
   "/",
-  "/games",
-  "/pricing",
   "/history",
   "/transparency",
   "/learn",
@@ -14,6 +12,7 @@ const routes = [
   "/learn/bankroll",
   "/learn/line-shopping",
   "/learn/market-inefficiencies",
+  "/props",
   "/about",
   "/contact",
   "/faq",
@@ -27,7 +26,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
   return routes.map((route) => ({
     url: `${siteUrl}${route}`,
     lastModified: now,
-    changeFrequency: route === "/" || route === "/games" ? "hourly" : "monthly",
-    priority: route === "/" ? 1 : route === "/pricing" || route === "/transparency" ? 0.8 : 0.6
+    changeFrequency: route === "/" ? "hourly" : "monthly",
+    priority: route === "/" ? 1 : route === "/history" || route === "/transparency" ? 0.8 : 0.6
   }));
 }

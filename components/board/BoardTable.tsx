@@ -11,36 +11,35 @@ export function BoardTable({ rows, compactMode }: { rows: BoardRowViewModel[]; c
           <thead>
             <tr>
               <th scope="col" className={styles.stickyEvent} title="Sort and compare events to see ranked opportunities.">
-                Event
+                Game
               </th>
-              <th scope="col" className={styles.stickyMarket} title="Market outcome currently being ranked for this event.">
+              <th scope="col" className={styles.stickyMarket} title="Market type currently being ranked for this event.">
                 Market
               </th>
-              <th scope="col" title="Best posted line across all supported books versus fair price.">
-                Best line
+              <th scope="col" title="Team or side being evaluated.">
+                Selection
               </th>
-              <th scope="col" title="Books that posted the best actionable line.">Book</th>
-              <th scope="col" title="No-vig consensus probability converted to fair American odds.">Fair line</th>
-              <th scope="col" title="Gap between posted odds and fair odds (positive is a larger edge)">
-                Gap
+              <th scope="col" title="Book posting the best available price.">
+                Best Book
               </th>
-              <th scope="col" title="Opportunity versus projected edge from the selected model.">
-                Opportunity
+              <th scope="col" title="Best posted line across all supported books.">
+                Best Price
               </th>
-              <th scope="col" title="Best/booked movement versus fair value for this market.">Signal</th>
+              <th scope="col" title="No-vig consensus probability converted to fair American odds.">Fair Price</th>
+              <th scope="col" title="Expected value versus the fair price.">EV %</th>
               <th scope="col" title="How stable this recommendation signal is across books and freshness.">Confidence</th>
-              <th scope="col" className={styles.hideOnMobile} title="Books contributing to this recommendation.">
-                Coverage
-              </th>
-              <th scope="col">Movement</th>
               <th scope="col" className={styles.hideOnMobile} title="How recently this opportunity was updated.">
-                Updated
+                Freshness
               </th>
+              <th scope="col" className={styles.hideOnMobile} title="Whether the best price is available at pinned books.">
+                Pinned
+              </th>
+              <th scope="col" title="Settlement state for the tracked opportunity.">Outcome</th>
             </tr>
           </thead>
           <tbody>
-            {rows.map((row) => (
-              <BoardRow key={row.id} row={row} />
+            {rows.map((row, index) => (
+              <BoardRow key={row.id} row={row} expandByDefault={index === 0} />
             ))}
           </tbody>
         </table>
@@ -54,9 +53,10 @@ export function BoardTable({ rows, compactMode }: { rows: BoardRowViewModel[]; c
                 <strong>{row.event}</strong>
                 <span className={styles.eventMeta}>{row.eventMeta}</span>
               </span>
-              <span className={styles.mobileStatus}>{row.isActionable ? "Actionable" : row.marketStatus}</span>
+              <span className={styles.mobileStatus}>{row.isStale ? "Stale" : row.isActionable ? "Actionable" : row.marketStatus}</span>
             </span>
             <span className={styles.mobileMarket}>{row.market}</span>
+            <span className={styles.eventMeta}>{row.selection}</span>
             <span className={styles.mobileMetricGrid}>
               <span>
                 <span className={styles.mobileMetricLabel}>Best</span>
@@ -77,6 +77,16 @@ export function BoardTable({ rows, compactMode }: { rows: BoardRowViewModel[]; c
                 <span className={styles.mobileMetricLabel}>Confidence</span>
                 <strong>{row.confidence}</strong>
                 <span className={styles.eventMeta}>{row.updated}</span>
+              </span>
+              <span>
+                <span className={styles.mobileMetricLabel}>Pinned</span>
+                <strong>{row.pinnedAvailability}</strong>
+                <span className={styles.eventMeta}>{row.bestPinnedPrice ? `Pinned ${row.bestPinnedPrice}` : "No pinned edge"}</span>
+              </span>
+              <span>
+                <span className={styles.mobileMetricLabel}>Outcome</span>
+                <strong>{row.outcomeLabel}</strong>
+                <span className={styles.eventMeta}>{row.marketStatus}</span>
               </span>
             </span>
           </Link>

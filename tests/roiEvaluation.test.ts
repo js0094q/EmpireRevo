@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { resetPersistenceForTests } from "../lib/server/odds/persistence";
 import { persistValidationEvent } from "../lib/server/odds/validationStore";
 import { persistOutcomeResult } from "../lib/server/odds/outcomes";
-import { getRoiSummary } from "../lib/server/odds/roiEvaluation";
+import { buildOutcomeMapForValidationEvents, buildRoiSegmentSummariesFromData, getRoiSummary } from "../lib/server/odds/roiEvaluation";
 import type { PersistedValidationEvent } from "../lib/server/odds/types";
 
 function validationEvent(id: string, sideKey: string, price: number): PersistedValidationEvent {
@@ -94,4 +94,44 @@ test("roi summary handles win and push outcomes with flat one-unit stake", async
   assert.equal(summary.unitsWon, 1.5);
   assert.equal(summary.roi, 0.75);
   assert.equal(summary.winRate, 1);
+});
+
+test("roi segment summaries group realized results by market and confidence", async () => {
+  const win = validationEvent("roi-segment-win", "away", 150);
+  const loss = {
+    ...validationEvent("roi-segment-loss", "home", -110),
+    marketKey: "spread:home",
+    model: {
+      ...validationEvent("roi-segment-loss", "home", -110).model,
+      confidenceScore: 0.42,
+      evPct: 1
+    }
+  };
+
+  await persistValidationEvent(win);
+  await persistValidationEvent(loss);
+  await persistOutcomeResult({
+    sportKey: "basketball_nba",
+    eventId: "evt-roi",
+    marketKey: "h2h",
+    sideKey: "away",
+    result: "win",
+    source: "manual"
+  });
+  await persistOutcomeResult({
+    sportKey: "basketball_nba",
+    eventId: "evt-roi",
+    marketKey: "spread:home",
+    sideKey: "home",
+    result: "loss",
+    source: "manual"
+  });
+
+  const outcomeMap = await buildOutcomeMapForValidationEvents([win, loss]);
+  const byMarket = buildRoiSegmentSummariesFromData([win, loss], outcomeMap, "market");
+  const byConfidence = buildRoiSegmentSummariesFromData([win, loss], outcomeMap, "confidence");
+
+  assert.equal(byMarket.find((row) => row.segment === "h2h")?.wins, 1);
+  assert.equal(byMarket.find((row) => row.segment === "spread:home")?.losses, 1);
+  assert.equal(byConfidence.find((row) => row.segment === "low")?.losses, 1);
 });

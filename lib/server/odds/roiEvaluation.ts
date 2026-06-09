@@ -27,6 +27,19 @@ export type RoiSummary = {
   };
 };
 
+export type RoiSegmentSummary = {
+  segment: string;
+  sampleSize: number;
+  settledSampleSize: number;
+  wins: number;
+  losses: number;
+  pushes: number;
+  voids: number;
+  averageEv: number | null;
+  unitsWon: number | null;
+  roi: number | null;
+};
+
 function avg(values: number[]): number | null {
   if (!values.length) return null;
   return values.reduce((sum, value) => sum + value, 0) / values.length;
@@ -160,6 +173,59 @@ export function buildRoiRowsFromData(
       profit
     };
   });
+}
+
+function confidenceBucketForEvent(event: PersistedValidationEvent): "high" | "medium" | "low" {
+  const score = Number(event.model.confidenceScore);
+  if (Number.isFinite(score)) {
+    if (score >= 0.75) return "high";
+    if (score >= 0.55) return "medium";
+  }
+  return "low";
+}
+
+function toSegmentSummary(segment: string, events: PersistedValidationEvent[], outcomeMap: Map<string, PersistedOutcomeResult>): RoiSegmentSummary {
+  const rows = buildRoiRowsFromData(events, outcomeMap);
+  const summary = summarizeRoiRows(rows);
+  const evValues = events
+    .map((event) => event.model.evPct)
+    .filter((value): value is number => Number.isFinite(value));
+
+  return {
+    segment,
+    sampleSize: events.length,
+    settledSampleSize: summary.settledSampleSize,
+    wins: summary.outcomes.win,
+    losses: summary.outcomes.loss,
+    pushes: summary.outcomes.push,
+    voids: summary.outcomes.void,
+    averageEv: avg(evValues),
+    unitsWon: summary.unitsWon,
+    roi: summary.roi
+  };
+}
+
+export function buildRoiSegmentSummariesFromData(
+  events: PersistedValidationEvent[],
+  outcomeMap: Map<string, PersistedOutcomeResult>,
+  dimension: "sport" | "market" | "confidence"
+): RoiSegmentSummary[] {
+  const groups = new Map<string, PersistedValidationEvent[]>();
+  for (const event of events) {
+    const key =
+      dimension === "sport"
+        ? event.sportKey
+        : dimension === "market"
+          ? event.marketKey
+          : confidenceBucketForEvent(event);
+    const existing = groups.get(key) || [];
+    existing.push(event);
+    groups.set(key, existing);
+  }
+
+  return Array.from(groups.entries())
+    .map(([segment, groupedEvents]) => toSegmentSummary(segment, groupedEvents, outcomeMap))
+    .sort((a, b) => b.sampleSize - a.sampleSize || a.segment.localeCompare(b.segment));
 }
 
 export async function summarizeRoiForValidationEvents(events: PersistedValidationEvent[]): Promise<RoiSummary> {

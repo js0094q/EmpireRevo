@@ -1,52 +1,150 @@
-# EmpirePicks Implementation Roadmap
+# Board + Game UX Implementation Roadmap
 
-Date: May 29, 2026
+## Change
 
-## Phase 1: Highest ROI
+Audit the existing board/detail/outcome/evaluation structure before code changes.
 
-Expected to increase conversion, authority, mobile engagement, and launch confidence.
+## Files Modified
 
-| Task | Issue | Severity | Expected impact | Exact implementation recommendation | Files requiring modification |
-|---|---|---:|---|---|---|
-| Pricing/access route | No monetization path | Critical | Conversion | Add `/pricing`, nav/footer links, launch-access CTA. | `app/pricing/page.tsx`, `components/layout/SiteHeader.tsx`, `app/layout.tsx` |
-| Resilient homepage | Live odds dependency can break landing | Critical | Trust/performance | Render homepage value sections even when board data unavailable. | `app/page.tsx` |
-| Public transparency page | No public record methodology | High | Trust | Add `/transparency` with CLV/ROI/sample-size methodology. | `app/transparency/page.tsx`, nav/footer |
-| Mobile board cards | Table-first mobile board | High | Retention | Add mobile row-card layout. | `components/board/BoardTable.tsx`, `components/board/workstation.module.css` |
-| SEO discovery files | No sitemap/robots | High | Search readiness | Add App Router generated routes. | `app/sitemap.ts`, `app/robots.ts` |
-| CTA analytics | CTA clicks untracked | High | Conversion learning | Add tracked-link primitive and use on major CTAs. | `components/analytics/TrackedLink.tsx`, public pages |
+- `audit/board-game-overhaul.md`
+- `audit/implementation-roadmap.md`
 
-## Phase 2: Design Improvements
+## Why It Was Needed
 
-| Task | Issue | Severity | Recommendation | Files |
-|---|---|---:|---|---|
-| Hero trust proof | Above-the-fold proof is light | Medium | Add concise trust strip: fair lines, coverage, CLV-ready, responsible use. | `app/page.tsx`, `app/page.module.css` |
-| Contact route polish | Passive email-only contact | Medium | Add launch access prompts and tracked links. | `app/contact/page.tsx` |
-| Mobile nav audit | Fixed nav competes with dense content | Medium | Validate after mobile cards; reduce height if needed. | `components/layout/layout.module.css` |
+The overhaul touches public board UI, game detail UI, internal outcome workflow, analytics, and evaluation reporting. The audit locks the implementation to actual repo files instead of assumptions.
 
-## Phase 3: SEO Expansion
+## User Impact
 
-| Task | Issue | Severity | Recommendation | Files |
-|---|---|---:|---|---|
-| Learn cluster | Thin content SEO | Medium | Implemented education pages for EV betting, CLV, bankroll, line shopping, and market inefficiencies. | `app/learn/*` |
-| Structured data | No schema | Medium | Implemented WebApplication schema in root layout. | `app/layout.tsx` |
-| OG image | SVG-only OG image | Medium | Implemented raster social card. | `public/opengraph-image.png` |
+The implementation can stay narrow: reuse the existing odds engine, validation snapshots, persisted outcomes, and internal auth boundary.
 
-## Phase 4: Long-Term Authority Platform
+## Verification
 
-| Task | Issue | Severity | Recommendation | Files |
-|---|---|---:|---|---|
-| Public pick history | No auditable history | High | Implemented methodology page; publish real rows only after sample-size gates are met. | `app/history/page.tsx`, future data-backed rows |
-| Subscriber retention | No saved state/account layer | High | Add auth, saved books, alerts, daily slate digest, and account billing. | future auth/checkout |
-| Payment system | No checkout | Critical | Integrate selected provider, likely Stripe, with server-side entitlement checks. | future payment routes |
+Initial verification is source inspection of `app/page.tsx`, `app/game/[eventId]/page.tsx`, `components/board/*`, `components/game/*`, `lib/server/odds/*`, and `lib/ui/view-models/*`.
 
-## Verification Plan
+## Planned Changes
 
-Before completion:
+### Change
 
-1. `npm run lint`
-2. `npm run typecheck`
-3. `npm test`
-4. `npm run build`
-5. `npm run test:visual`
+Simplify the board into a faster table-first workflow.
 
-`npm run predeploy:check` is expected to remain blocked in the current shell until `ODDS_API_KEY` is present.
+### Files Modified
+
+- `app/page.tsx`
+- `components/board/BoardView.tsx`
+- `components/board/BoardFilters.tsx`
+- `components/board/BoardTable.tsx`
+- `components/board/BoardRow.tsx`
+- `components/board/workstation.module.css`
+- `lib/ui/view-models/boardViewModel.ts`
+
+### Why It Was Needed
+
+The existing board is dense, but it exposes too many secondary concepts as top-level columns and does not show outcome status.
+
+### User Impact
+
+Users will scan game, market, selection, best book, best price, fair price, EV, confidence, freshness, and outcome status in one row.
+
+### Verification
+
+Targeted board view-model tests, board helper tests, lint, typecheck, and visual regression.
+
+### Change
+
+Improve game detail as an analytical drilldown.
+
+### Files Modified
+
+- `app/game/[eventId]/page.tsx`
+- `components/game/GameDetailView.tsx`
+- `components/game/GameHeader.tsx`
+- `components/game/ConsensusSummary.tsx`
+- `components/game/BookComparisonTable.tsx`
+- `components/game/MarketHistoryPanel.tsx`
+- `components/game/detail.module.css`
+- `lib/server/odds/gameDetailPageData.ts`
+- `lib/ui/view-models/gameDetailViewModel.ts`
+
+### Why It Was Needed
+
+The detail page already has fair-line and history data, but it does not surface the tracked price/outcome/ROI workflow.
+
+### User Impact
+
+Users can open a game from the board and see why it appears, which books contribute, whether history exists, and what happened after settlement.
+
+### Verification
+
+Targeted game detail view-model tests, route build checks, typecheck, and visual regression.
+
+### Change
+
+Add internal outcome recording.
+
+### Files Modified
+
+- `app/api/internal/outcomes/route.ts`
+- `components/game/OutcomeRecorder.tsx`
+- `lib/server/odds/outcomes.ts`
+- `tests/outcomes.test.ts`
+
+### Why It Was Needed
+
+Outcome persistence exists, but there is no internal operator workflow for recording results.
+
+### User Impact
+
+Internal operators can record win, loss, push, void, or unknown results without accounts, signup, or public editing controls.
+
+### Verification
+
+Route-level tests, outcome persistence tests, lint, typecheck, and API behavior inspection.
+
+### Change
+
+Expose realized ROI and evaluation segments.
+
+### Files Modified
+
+- `lib/server/odds/roiEvaluation.ts`
+- `lib/server/odds/internalDiagnostics.ts`
+- `lib/ui/view-models/internalDiagnosticsViewModel.ts`
+- `components/internal/InternalEngineView.tsx`
+- `tests/roiEvaluation.test.ts`
+
+### Why It Was Needed
+
+The internal surface shows aggregate ROI, but not the requested breakdown by sport, market, or confidence bucket.
+
+### User Impact
+
+Internal review can compare realized performance by segment without exposing operator controls publicly.
+
+### Verification
+
+ROI tests, internal diagnostics route tests, lint, typecheck, and build.
+
+### Change
+
+Add product-use analytics events.
+
+### Files Modified
+
+- `components/analytics/ProductAnalytics.tsx`
+- `components/board/BoardView.tsx`
+- `components/board/BoardFilters.tsx`
+- `components/game/GameDetailView.tsx`
+- `components/game/OutcomeRecorder.tsx`
+- `components/internal/InternalEngineView.tsx`
+
+### Why It Was Needed
+
+The current analytics layer tracks links and lead actions, not board/detail/product workflow events.
+
+### User Impact
+
+Product-use events can show board usage, game opens, filters, sorting, refreshes, outcome updates, and evaluation views without adding signup tracking.
+
+### Verification
+
+Lint/typecheck and source inspection to confirm no signup, account, newsletter, gated-content, popup, or invasive tracking logic was added.

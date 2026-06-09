@@ -25,6 +25,18 @@ function fixed(value: number | null | undefined, digits = 3): string {
   return Number(value).toFixed(digits);
 }
 
+function roiSegmentRows(rows: NonNullable<InternalDiagnosticsPayload["roiSegments"]>["bySport"]): Array<Record<string, string>> {
+  return rows.slice(0, 12).map((row) => ({
+    segment: row.segment,
+    samples: `${row.sampleSize}`,
+    settled: `${row.settledSampleSize}`,
+    record: `${row.wins}-${row.losses}-${row.pushes}-${row.voids}`,
+    avgEv: Number.isFinite(row.averageEv) ? `${Number(row.averageEv).toFixed(2)}%` : "—",
+    units: fixed(row.unitsWon, 3),
+    roi: formatPercent(row.roi)
+  }));
+}
+
 function reliabilityWarning(tier: "low" | "medium" | "high"): string {
   return tier === "low" ? "Low sample reliability" : "—";
 }
@@ -38,6 +50,7 @@ export function buildInternalDiagnosticsViewModel(diagnostics: InternalDiagnosti
     !diagnostics.probabilityCalibration ||
     !diagnostics.factorPerformance ||
     !diagnostics.evaluationReports ||
+    !diagnostics.roiSegments ||
     !diagnostics.history ||
     !diagnostics.calibration
   ) {
@@ -92,6 +105,45 @@ export function buildInternalDiagnosticsViewModel(diagnostics: InternalDiagnosti
           { metric: "Confidence", value: roi.confidenceTier },
           { metric: "Sample Warning", value: reliabilityWarning(roi.confidenceTier) }
         ]
+      },
+      {
+        title: "ROI by Sport",
+        columns: [
+          { key: "segment", header: "Sport" },
+          { key: "samples", header: "Tracked" },
+          { key: "settled", header: "Settled" },
+          { key: "record", header: "W-L-P-V" },
+          { key: "avgEv", header: "Avg EV" },
+          { key: "units", header: "Units" },
+          { key: "roi", header: "ROI" }
+        ],
+        rows: roiSegmentRows(diagnostics.roiSegments.bySport)
+      },
+      {
+        title: "ROI by Market",
+        columns: [
+          { key: "segment", header: "Market" },
+          { key: "samples", header: "Tracked" },
+          { key: "settled", header: "Settled" },
+          { key: "record", header: "W-L-P-V" },
+          { key: "avgEv", header: "Avg EV" },
+          { key: "units", header: "Units" },
+          { key: "roi", header: "ROI" }
+        ],
+        rows: roiSegmentRows(diagnostics.roiSegments.byMarket)
+      },
+      {
+        title: "ROI by Confidence",
+        columns: [
+          { key: "segment", header: "Confidence" },
+          { key: "samples", header: "Tracked" },
+          { key: "settled", header: "Settled" },
+          { key: "record", header: "W-L-P-V" },
+          { key: "avgEv", header: "Avg EV" },
+          { key: "units", header: "Units" },
+          { key: "roi", header: "ROI" }
+        ],
+        rows: roiSegmentRows(diagnostics.roiSegments.byConfidence)
       },
       {
         title: "Calibration",

@@ -4,8 +4,8 @@ EmpirePicks is a sportsbook pricing workstation for fair odds, line shopping, an
 
 ## Public Product Surfaces
 
-- `Board`: ranked scanner for best line versus fair value
-- `Games`: event directory with cleaner orientation into detail
+- `Board`: ranked scanner for best line versus fair value and game detail
+- `Record`: public record policy, tracked outcomes, CLV, and ROI context
 - `Game Detail`: event comparison, market tabs, and real persisted history when available
 - `Internal`: protected diagnostics and evaluation tools
 
@@ -120,9 +120,6 @@ ODDS_CALIBRATION_OVERRIDES_JSON={"ranking":{"penalties":{"sparseCoveragePenalty"
 UPSTASH_REDIS_REST_URL=...
 UPSTASH_REDIS_REST_TOKEN=...
 EMPIRE_INTERNAL_API_KEY=...
-LEAD_CAPTURE_WEBHOOK_URL=https://example.com/empirepicks/leads
-NEXT_PUBLIC_EMPIRE_CHECKOUT_INDIVIDUAL_URL=
-NEXT_PUBLIC_EMPIRE_CHECKOUT_PRO_URL=
 ODDS_SNAPSHOT_COLLECTION_ENABLED=false
 ODDS_SNAPSHOT_INTERVAL_SECONDS=60
 ODDS_SNAPSHOT_RETENTION_HOURS=72
