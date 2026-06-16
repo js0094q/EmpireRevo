@@ -5,6 +5,7 @@ import { buildBoardViewModel } from "@/lib/ui/view-models/boardViewModel";
 import { fetchFairBoardPageData, hasOddsKey } from "@/lib/server/odds/pageData";
 import { getPublicSportOptions, resolveSportOption } from "@/lib/server/odds/sportsRegistry";
 import { listOutcomeResults } from "@/lib/server/odds/outcomes";
+import { getPropsDisplayState, normalizeBoardScope, normalizePropType } from "@/lib/ui/propsDisplay";
 import { redirect } from "next/navigation";
 import styles from "./page.module.css";
 
@@ -29,12 +30,14 @@ const HOME_FILTERS = {
 export default async function Page({
   searchParams
 }: {
-  searchParams?: Promise<{ league?: string; market?: string; model?: string; minBooks?: string }>;
+  searchParams?: Promise<{ league?: string; market?: string; model?: string; minBooks?: string; scope?: string; propType?: string }>;
 }) {
   const params = (await searchParams) || {};
   const sports = await getPublicSportOptions();
   const selectedSport = resolveSportOption(params.league, sports);
   const league = selectedSport.key;
+  const scope = normalizeBoardScope(params.scope);
+  const propType = normalizePropType(params.propType);
   const market = params.market === "spreads" || params.market === "totals" ? params.market : HOME_FILTERS.market;
   const model =
     params.model === "sharp" || params.model === "equal" || params.model === "weighted"
@@ -51,7 +54,9 @@ export default async function Page({
         model,
         minBooks,
         windowHours,
-        historyWindowHours: 72
+        historyWindowHours: 72,
+        scope,
+        propType
       })
         .then((board) => board)
         .catch((error: Error & { code?: string; status?: number }) => {
@@ -103,12 +108,23 @@ export default async function Page({
     ? await listOutcomeResults(500).catch(() => [])
     : [];
   if (board && !(board.events?.length ?? 0)) {
+    const propsState =
+      scope === "props"
+        ? getPropsDisplayState({
+            reason: propType === "main" ? "NO_MAIN_MARKETS" : pageData?.propsData?.emptyReason,
+            leagueLabel: selectedSport.label,
+            propType
+          })
+        : null;
     boardError = {
-      title: selectedSport.key === "college_baseball" ? "No college baseball odds are currently available." : "No qualifying markets for current filters.",
+      title:
+        propsState?.title ??
+        (selectedSport.key === "college_baseball" ? "No college baseball odds are currently available." : "No qualifying markets for current filters."),
       message:
-        selectedSport.key === "college_baseball"
+        propsState?.message ??
+        (selectedSport.key === "college_baseball"
           ? "The provider has no comparable College Baseball markets in the current feed."
-          : "Try another league, market, or book threshold.",
+          : "Try another league, market, or book threshold."),
       detail: "EmpirePicks only shows markets with live comparable prices."
     };
   }
@@ -178,7 +194,9 @@ export default async function Page({
           <h2>Live board</h2>
           <p className={styles.sectionCopy}>Testing-phase data is read-only; stale and historical markets are excluded by default.</p>
         </div>
-        {board && !boardError ? <BoardView board={board} league={league} model={model} mode="board" outcomes={outcomes} sports={sports} /> : boardError ? (
+        {board && !boardError ? (
+          <BoardView board={board} league={league} model={model} mode="board" outcomes={outcomes} sports={sports} propsData={pageData?.propsData ?? null} />
+        ) : boardError ? (
           boardError.title === "Live board configuration required" ? (
             <ConfigRequired />
           ) : (

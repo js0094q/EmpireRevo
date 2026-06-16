@@ -91,6 +91,52 @@
   gap: 0.55rem;
 }
 
+.propsTableWrap {
+  overflow-x: auto;
+}
+
+.propsTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+}
+
+.propsTable th,
+.propsTable td {
+  border-bottom: 1px solid var(--surface-border-muted);
+  padding: 0.52rem 0.45rem;
+  text-align: left;
+  vertical-align: top;
+}
+
+.propsTable th {
+  color: var(--text-muted);
+  font-size: 0.64rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.propsTable td {
+  color: var(--text-secondary);
+}
+
+.propsTable strong,
+.propsTable span {
+  display: block;
+}
+
+.propsTable strong {
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+}
+
+.propsTable span {
+  margin-top: 0.12rem;
+  color: var(--text-muted);
+  font-size: 0.72rem;
+}
+
 .historyStats span,
 .propsMeta span {
   display: grid;

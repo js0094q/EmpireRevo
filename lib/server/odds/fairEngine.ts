@@ -760,6 +760,7 @@ function buildFairEvent(params: {
   return {
     id: params.market === "h2h" ? params.baseId : `${params.baseId}:${params.group.signature}`,
     baseEventId: params.baseId,
+    providerEventId: params.normalized.event.providerEventId,
     commenceTime: params.normalized.event.commenceTime,
     homeTeam: params.normalized.event.home.name,
     awayTeam: params.normalized.event.away.name,

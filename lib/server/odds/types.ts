@@ -237,6 +237,7 @@ export type FairEventBookExclusion = {
 export type FairEvent = {
   id: string;
   baseEventId: string;
+  providerEventId?: string;
   commenceTime: string;
   homeTeam: string;
   awayTeam: string;

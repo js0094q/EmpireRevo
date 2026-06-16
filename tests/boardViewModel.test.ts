@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import type { PropsBoardData } from "../lib/server/odds/propsService";
 import type { FairBoardResponse, FairEvent, FairOutcome, FairOutcomeBook, PersistedOutcomeResult } from "../lib/server/odds/types";
 import { buildBoardViewModel } from "../lib/ui/view-models/boardViewModel";
 
@@ -430,7 +431,58 @@ test("buildBoardViewModel keeps below-market EV states neutral", () => {
   assert.equal(viewModel.rows[0]?.priceSignal, "Below market");
 });
 
-test("buildBoardViewModel exposes props as line-shopping only without mixing EV rows", () => {
+test("buildBoardViewModel keeps main-line rows in props main scope", () => {
+  const board = {
+    ok: true,
+    league: "college_baseball",
+    sportKey: "baseball_ncaa",
+    market: "h2h",
+    model: "weighted",
+    updatedAt: new Date().toISOString(),
+    lastUpdatedLabel: "Updated recently",
+    activeMarkets: ["h2h"],
+    marketAvailability: [],
+    sharpBooksUsed: [],
+    books: [{ key: "fanduel", title: "FanDuel", tier: "mainstream" }],
+    events: [makeEvent({ sportKey: "baseball_ncaa" })],
+    topOpportunities: [],
+    bookBehavior: [],
+    diagnostics: {
+      calibration: {} as FairBoardResponse["diagnostics"]["calibration"],
+      calibrationMeta: { version: 1 },
+      validation: { emittedEvents: 0, sink: "memory" }
+    },
+    disclaimer: "test"
+  } as unknown as FairBoardResponse;
+
+  const viewModel = buildBoardViewModel({
+    board,
+    league: "college_baseball",
+    model: "weighted",
+    mode: "board",
+    filters: {
+      search: "",
+      sort: "score",
+      bookKey: "all",
+      edgeThresholdPct: 0,
+      confidence: "all",
+      outcomeStatus: "all",
+      minBooks: 4,
+      pinnedOnly: false,
+      includeStale: true,
+      pinnedBooks: new Set<string>(),
+      marketScope: "props",
+      propMarketType: "main"
+    }
+  });
+
+  assert.equal(viewModel.rows.length, 1);
+  assert.equal(viewModel.title, "Props");
+  assert.equal(viewModel.rows[0]?.market, "Moneyline");
+  assert.equal(viewModel.rows[0]?.ev, "+2.10%");
+});
+
+test("buildBoardViewModel exposes event props as line-shopping rows when EV is suppressed", () => {
   const board = {
     ok: true,
     league: "mlb",
@@ -453,12 +505,42 @@ test("buildBoardViewModel exposes props as line-shopping only without mixing EV 
     },
     disclaimer: "test"
   } as unknown as FairBoardResponse;
+  const propsData: PropsBoardData = {
+    rows: [
+      {
+        id: "prop-1",
+        href: "/game/evt-1?scope=props&propType=player",
+        event: "Away at Home",
+        eventMeta: "Batter Hits",
+        startTime: "2099-01-01T00:00:00.000Z",
+        market: "Batter Hits",
+        marketMeta: "Line 1.5",
+        selection: "Player A Over",
+        bestBook: "FanDuel",
+        bestBookKey: "fanduel",
+        bestPrice: 115,
+        line: 1.5,
+        bookCount: 2,
+        updatedAt: new Date().toISOString(),
+        status: "Sparse coverage",
+        evPct: null,
+        fairPriceAmerican: null,
+        confidence: "Line shop"
+      }
+    ],
+    marketFamily: "player_prop",
+    propType: "player",
+    fetchMode: "event",
+    requestedMarkets: ["batter_hits"],
+    failures: 0
+  };
 
   const viewModel = buildBoardViewModel({
     board,
     league: "mlb",
     model: "weighted",
     mode: "board",
+    propsData,
     filters: {
       search: "",
       sort: "score",
@@ -471,12 +553,12 @@ test("buildBoardViewModel exposes props as line-shopping only without mixing EV 
       includeStale: true,
       pinnedBooks: new Set<string>(),
       marketScope: "props",
-      propMarketType: "player_props"
+      propMarketType: "player"
     }
   });
 
-  assert.equal(viewModel.rows.length, 0);
-  assert.equal(viewModel.props.evVisible, false);
-  assert.match(viewModel.emptyTitle, /No prop markets/);
-  assert.match(viewModel.emptyMessage, /line shopping only/i);
+  assert.equal(viewModel.rows.length, 1);
+  assert.equal(viewModel.rows[0]?.ev, "—");
+  assert.equal(viewModel.rows[0]?.marketStatus, "Sparse coverage");
+  assert.equal(viewModel.rows[0]?.priceSignal, "Line shopping only");
 });

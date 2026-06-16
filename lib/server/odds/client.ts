@@ -64,6 +64,51 @@ export async function fetchOddsFromUpstream(params: {
   return parsed;
 }
 
+export async function fetchEventOddsFromUpstream(params: {
+  sportKey: string;
+  eventId: string;
+  regions: string;
+  markets: string;
+  oddsFormat?: string;
+}): Promise<unknown> {
+  const apiKey = getOddsApiKey();
+  if (!apiKey) {
+    const err = new Error("Missing ODDS_API_KEY");
+    (err as Error & { code?: string }).code = "MISSING_KEY";
+    throw err;
+  }
+
+  const base = getOddsApiBaseUrl();
+  const upstream = new URL(`/v4/sports/${encodeURIComponent(params.sportKey)}/events/${encodeURIComponent(params.eventId)}/odds`, base);
+  upstream.searchParams.set("regions", params.regions);
+  upstream.searchParams.set("markets", params.markets);
+  upstream.searchParams.set("oddsFormat", params.oddsFormat || "american");
+  upstream.searchParams.set("apiKey", apiKey);
+
+  const response = await fetchWithRetry(upstream.toString());
+  const text = await response.text();
+  if (!response.ok) {
+    const err = new Error(`Upstream error ${response.status}`);
+    const e = err as Error & { code?: string };
+    if (response.status === 401 || response.status === 403) {
+      e.code = "UPSTREAM_AUTH_FAILURE";
+    } else if (response.status === 429) {
+      e.code = "UPSTREAM_RATE_LIMIT";
+    } else {
+      e.code = "UPSTREAM_ERROR";
+    }
+    throw err;
+  }
+
+  try {
+    return JSON.parse(text);
+  } catch {
+    const err = new Error("Upstream payload is not valid JSON");
+    (err as Error & { code?: string }).code = "UPSTREAM_EMPTY_PAYLOAD";
+    throw err;
+  }
+}
+
 export type OddsApiSport = {
   key: string;
   group: string;

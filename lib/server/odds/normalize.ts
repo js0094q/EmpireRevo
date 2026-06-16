@@ -66,6 +66,7 @@ export function normalizeOddsApiResponse(params: {
 
     const eventRef: EventRef = {
       id: eventId(league, awayName, homeName, String(event.commence_time || "")),
+      providerEventId: typeof event.id === "string" && event.id.trim() ? event.id.trim() : undefined,
       league,
       commenceTime: String(event.commence_time || ""),
       home,

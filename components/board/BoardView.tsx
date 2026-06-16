@@ -7,7 +7,8 @@ import { EmptyState } from "@/components/primitives/EmptyState";
 import { BoardTable } from "@/components/board/BoardTable";
 import { BoardToolbar } from "@/components/board/BoardToolbar";
 import type { FairBoardResponse, PersistedOutcomeResult } from "@/lib/server/odds/types";
-import type { PropMarketType } from "@/lib/ui/propsDisplay";
+import type { PropsBoardData } from "@/lib/server/odds/propsService";
+import { normalizePropType, type PropType } from "@/lib/ui/propsDisplay";
 import type { PublicSportOption } from "@/lib/server/odds/sportsRegistry";
 import {
   buildBoardViewModel,
@@ -50,7 +51,8 @@ export function BoardView({
   model,
   mode,
   outcomes = [],
-  sports = []
+  sports = [],
+  propsData = null
 }: {
   board: FairBoardResponse;
   league: string;
@@ -58,6 +60,7 @@ export function BoardView({
   mode: BoardSurfaceIntent;
   outcomes?: PersistedOutcomeResult[];
   sports?: PublicSportOption[];
+  propsData?: PropsBoardData | null;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -71,7 +74,7 @@ export function BoardView({
   const [confidence, setConfidence] = useState<BoardConfidenceFilter>((searchParams?.get("confidence") as BoardConfidenceFilter) || "all");
   const [outcomeStatus, setOutcomeStatus] = useState<BoardOutcomeFilter>((searchParams?.get("outcome") as BoardOutcomeFilter) || "all");
   const [marketScope, setMarketScope] = useState<"main" | "props">(searchParams?.get("scope") === "props" ? "props" : "main");
-  const [propMarketType, setPropMarketType] = useState<PropMarketType>((searchParams?.get("propType") as PropMarketType) || "player_props");
+  const [propMarketType, setPropMarketType] = useState<PropType>(normalizePropType(searchParams?.get("propType")));
   const [includeStale, setIncludeStale] = useState(searchParams?.get("stale") === "1");
   const [pinnedOnly, setPinnedOnly] = useState(searchParams?.get("pinned") === "1");
   const [beginnerMode, setBeginnerMode] = useState<"beginner" | "advanced">("beginner");
@@ -140,9 +143,10 @@ export function BoardView({
           marketScope,
           propMarketType
         },
-        outcomes
+        outcomes,
+        propsData
       }),
-    [board, bookKey, confidence, deferredSearch, edgeThresholdPct, includeStale, league, marketScope, minBooks, mode, model, outcomeStatus, outcomes, pinnedBooks, pinnedOnly, propMarketType, sort]
+    [board, bookKey, confidence, deferredSearch, edgeThresholdPct, includeStale, league, marketScope, minBooks, mode, model, outcomeStatus, outcomes, pinnedBooks, pinnedOnly, propMarketType, propsData, sort]
   );
 
   return (
@@ -220,7 +224,7 @@ export function BoardView({
           }
           if (next.propMarketType !== undefined) {
             setPropMarketType(next.propMarketType);
-            updateParams({ propType: next.propMarketType === "player_props" ? null : next.propMarketType });
+            updateParams({ propType: next.propMarketType === "main" ? null : next.propMarketType });
             trackProductEvent("filter_change", { filter: "prop_market_type", value: next.propMarketType, league, market: board.market });
           }
           if (next.model !== undefined) updateParams({ model: next.model });

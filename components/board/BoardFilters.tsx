@@ -6,7 +6,7 @@ import { Button } from "@/components/primitives/Button";
 import { Input } from "@/components/primitives/Input";
 import { Select } from "@/components/primitives/Select";
 import { Tabs } from "@/components/primitives/Tabs";
-import { PROP_MARKET_TYPE_OPTIONS, type PropMarketType } from "@/lib/ui/propsDisplay";
+import { PROP_MARKET_TYPE_OPTIONS, type PropType } from "@/lib/ui/propsDisplay";
 import type { BoardConfidenceFilter, BoardOutcomeFilter, BoardSortValue } from "@/lib/ui/view-models/boardViewModel";
 import type { PublicSportOption } from "@/lib/server/odds/sportsRegistry";
 import styles from "./workstation.module.css";
@@ -27,7 +27,7 @@ type FilterValue = {
   compactMode: boolean;
   pinnedBooks: string[];
   marketScope: "main" | "props";
-  propMarketType: PropMarketType;
+  propMarketType: PropType;
 };
 
 type ExperienceMode = "beginner" | "advanced";
@@ -134,7 +134,7 @@ export function BoardFilters({
                 {value.marketScope === "props" ? "Prop Type" : "Market"}
               </span>
               {value.marketScope === "props" ? (
-                <Select value={value.propMarketType} onChange={(event) => onChange({ propMarketType: event.target.value as PropMarketType })}>
+                <Select value={value.propMarketType} onChange={(event) => onChange({ propMarketType: event.target.value as PropType })}>
                   {PROP_MARKET_TYPE_OPTIONS.map((option) => (
                     <option key={option.value} value={option.value}>
                       {option.label}

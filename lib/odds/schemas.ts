@@ -28,6 +28,7 @@ export type TeamRef = {
 
 export type EventRef = {
   id: string;
+  providerEventId?: string;
   league: LeagueKey;
   commenceTime: string;
   home: TeamRef;

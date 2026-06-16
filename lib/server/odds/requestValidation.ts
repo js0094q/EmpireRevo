@@ -1,9 +1,12 @@
 import type { LeagueKey, MarketKey } from "@/lib/odds/schemas";
 import { LEAGUE_REGISTRY, configuredOrDefaultSportKeys } from "@/lib/server/odds/sportConfig";
 import type { WeightModel } from "@/lib/server/odds/weights";
+import type { BoardScope, PropType } from "@/lib/ui/propsDisplay";
 
 const MARKET_KEYS = new Set<MarketKey>(["h2h", "spreads", "totals"]);
 const WEIGHT_MODELS = new Set<WeightModel>(["sharp", "equal", "weighted"]);
+const BOARD_SCOPES = new Set<BoardScope>(["board", "props"]);
+const PROP_TYPES = new Set<PropType>(["main", "player", "team", "game", "futures"]);
 const LEAGUE_KEYS = new Set<LeagueKey>(LEAGUE_REGISTRY.map((league) => league.key));
 const SPORT_KEYS = new Set(LEAGUE_REGISTRY.map((league) => league.sportKey));
 const ODDS_FORMATS = new Set(["american", "decimal"]);
@@ -91,6 +94,27 @@ export function parseMarket(value: string | null, fallback: MarketKey = "h2h"): 
     invalid("market must be one of h2h, spreads, totals");
   }
   return normalized as MarketKey;
+}
+
+export function parseBoardScope(value: string | null, fallback: BoardScope = "board"): BoardScope {
+  const normalized = normalize(value).toLowerCase();
+  if (!normalized) return fallback;
+  if (!BOARD_SCOPES.has(normalized as BoardScope)) {
+    invalid("scope must be one of board, props");
+  }
+  return normalized as BoardScope;
+}
+
+export function parsePropType(value: string | null, fallback: PropType = "main"): PropType {
+  const normalized = normalize(value).toLowerCase();
+  if (!normalized) return fallback;
+  if (normalized === "player_props") return "player";
+  if (normalized === "team_props") return "team";
+  if (normalized === "game_props") return "game";
+  if (!PROP_TYPES.has(normalized as PropType)) {
+    invalid("propType must be one of main, player, team, game, futures");
+  }
+  return normalized as PropType;
 }
 
 export function parseMarketsCsv(value: string | null, fallback = "h2h,spreads,totals"): string {

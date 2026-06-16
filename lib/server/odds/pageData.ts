@@ -2,9 +2,11 @@ import { getOddsApiKey } from "@/lib/server/odds/env";
 import { getMarketAvailabilityForBoard, LIMITED_MARKET_MIN_BOOKS } from "@/lib/server/odds/fairEngine";
 import { getFairBoard, getNormalizedOdds } from "@/lib/server/odds/oddsService";
 import { buildBoardDrilldownRows } from "@/lib/server/odds/boardView";
+import { fetchPropsBoardData, type PropEventRef, type PropsBoardData } from "@/lib/server/odds/propsService";
 import { toSportKey } from "@/lib/server/odds/sportsRegistry";
 import type { MarketKey } from "@/lib/odds/schemas";
 import type { FairBoardResponse, MarketAvailability, MarketAvailabilityStatus } from "@/lib/server/odds/types";
+import type { BoardScope, PropType } from "@/lib/ui/propsDisplay";
 
 export { toSportKey } from "@/lib/server/odds/sportsRegistry";
 
@@ -18,6 +20,7 @@ export type FairBoardPageData = {
   marketAvailability: MarketAvailability[];
   resolvedMarket: MarketKey;
   resolvedStatus: MarketAvailabilityStatus;
+  propsData: PropsBoardData | null;
 };
 
 function hasRenderableLimitedBoard(entry: MarketAvailability): boolean {
@@ -81,6 +84,8 @@ export async function fetchFairBoardPageData(params: {
   historyWindowHours?: number;
   includeBooks?: Set<string>;
   minBooks?: number;
+  scope?: BoardScope;
+  propType?: PropType;
 }): Promise<FairBoardPageData> {
   const sportKey = toSportKey(params.league);
   const minBooks = params.minBooks ?? 4;
@@ -117,11 +122,28 @@ export async function fetchFairBoardPageData(params: {
   board.boardRows = buildBoardDrilldownRows(board, { minBooks: effectiveMinBooks });
   board.activeMarkets = activeMarkets;
   board.marketAvailability = marketAvailability;
+  const propsData =
+    params.scope === "props"
+      ? await fetchPropsBoardData({
+          league: params.league,
+          propType: params.propType ?? "main",
+          events: normalizedResult.normalized.map((entry): PropEventRef => ({
+            providerEventId: entry.event.providerEventId || "",
+            routeEventId: entry.event.id,
+            sportKey,
+            commenceTime: entry.event.commenceTime,
+            homeTeam: entry.event.home.name,
+            awayTeam: entry.event.away.name
+          })),
+          minBooks: effectiveMinBooks
+        })
+      : null;
   return {
     board,
     activeMarkets,
     marketAvailability,
     resolvedMarket,
-    resolvedStatus
+    resolvedStatus,
+    propsData
   };
 }

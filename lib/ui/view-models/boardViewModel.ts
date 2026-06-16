@@ -1,7 +1,8 @@
 import { buildPickSummary } from "@/components/board/board-helpers";
 import { filterEvents, pinnedEventMetrics, sortEvents, type SortKey } from "@/components/board/selectors";
 import type { PriceValueDirection } from "@/lib/odds/priceValue";
-import { getPropsDisplayState, type PropMarketType, type PropsDisplayState } from "@/lib/ui/propsDisplay";
+import { getPropsDisplayState, type PropType, type PropsDisplayState } from "@/lib/ui/propsDisplay";
+import type { PropBoardRow, PropsBoardData } from "@/lib/server/odds/propsService";
 import type { FairBoardResponse, FairEvent, FairOutcomeBook, OutcomeResult, PersistedOutcomeResult } from "@/lib/server/odds/types";
 import { toEventRouteId } from "@/lib/server/odds/eventRoute";
 import {
@@ -34,7 +35,7 @@ export type BoardViewFilters = {
   includeStale: boolean;
   pinnedBooks: Set<string>;
   marketScope?: BoardMarketScope;
-  propMarketType?: PropMarketType;
+  propMarketType?: PropType;
 };
 
 export type BoardRowViewModel = {
@@ -401,6 +402,85 @@ function buildBoardRow(
   };
 }
 
+function buildPropRowViewModel(row: PropBoardRow, board: FairBoardResponse): BoardRowViewModel {
+  const evPresentation = row.evPct === null ? null : getEvPresentation(row.evPct);
+  const evTone = evPresentation?.tone ?? "neutral";
+  const line = Number.isFinite(row.line) ? `${row.line}` : "—";
+  const freshness = formatUpdatedLabel(row.updatedAt);
+  const statusMeta = row.status === "EV available" ? "Comparable paired pricing" : row.status;
+
+  return {
+    id: row.id,
+    href: row.href,
+    event: row.event,
+    eventMeta: `${formatLeagueLabel(board.league)} · ${formatLongStartTime(row.startTime)}`,
+    startTime: formatLongStartTime(row.startTime),
+    market: row.market,
+    marketMeta: row.marketMeta,
+    selection: row.selection,
+    outcomeLabel: "Pending",
+    outcomeTone: "neutral",
+    outcomeResult: null,
+    bestPrice: formatAmericanOdds(row.bestPrice),
+    bestPriceMeta: Number.isFinite(row.line) ? `Line ${line}` : "Best posted price",
+    bestBook: row.bestBook,
+    bestBookAbbrev: abbreviateBook(row.bestBook),
+    bestBookKey: row.bestBookKey,
+    bestPinnedPrice: null,
+    pinnedAvailability: "Pinned not evaluated",
+    pinnedAvailabilityTone: "neutral",
+    fairPrice: row.fairPriceAmerican === null ? "—" : formatAmericanOdds(row.fairPriceAmerican),
+    fairPriceMeta: row.fairPriceAmerican === null ? "Line shopping only" : "Comparable fair",
+    priceSignal: row.evPct === null ? "Line shopping only" : "EV available",
+    priceSignalMeta: statusMeta,
+    priceSignalTone: row.evPct === null ? "neutral" : evTone,
+    probabilityGap: "—",
+    probabilityGapValue: 0,
+    ev: row.evPct === null ? "—" : formatSignedNumber(row.evPct, 2, "%"),
+    evValue: row.evPct,
+    evMeta: row.evPct === null ? "Suppressed for safety" : (evPresentation?.label ?? "Comparable pricing"),
+    evTone,
+    confidence: row.confidence,
+    confidenceDetail: row.evPct === null ? "Fair probability is not defensible for this prop row." : "Comparable paired pricing is available.",
+    confidenceBucket: row.evPct === null ? "low" : "medium",
+    books: formatBookCount(row.bookCount),
+    booksValue: row.bookCount,
+    coverage: formatBookCount(row.bookCount),
+    coverageMeta: row.status,
+    updated: freshness,
+    isLive: Date.parse(row.startTime) <= Date.now(),
+    isActionable: row.evPct !== null && row.evPct > 0,
+    isStale: false,
+    staleLabel: null,
+    suppressionReason: row.evPct === null ? row.status : null,
+    marketStatus: row.status,
+    whySignal: [
+      { label: "Best available price", value: `${formatAmericanOdds(row.bestPrice)} at ${row.bestBook}` },
+      { label: "Line", value: line },
+      { label: "Coverage", value: formatBookCount(row.bookCount) },
+      { label: "EV policy", value: row.evPct === null ? "Line shopping only" : "EV available" },
+      { label: "Freshness", value: freshness }
+    ]
+  };
+}
+
+function sortPropRows(rows: BoardRowViewModel[], sort: BoardSortValue): BoardRowViewModel[] {
+  const sorted = rows.slice();
+  if (sort === "ev") {
+    return sorted.sort((a, b) => {
+      if (a.evValue !== null && b.evValue === null) return -1;
+      if (a.evValue === null && b.evValue !== null) return 1;
+      return (b.evValue ?? -999) - (a.evValue ?? -999);
+    });
+  }
+  if (sort === "coverage") return sorted.sort((a, b) => b.booksValue - a.booksValue);
+  if (sort === "soonest") return sorted.sort((a, b) => Date.parse(a.startTime) - Date.parse(b.startTime));
+  if (sort === "timing") return sorted.sort((a, b) => b.updated.localeCompare(a.updated));
+  if (sort === "confidence") return sorted.sort((a, b) => Number(b.evValue !== null) - Number(a.evValue !== null) || b.booksValue - a.booksValue);
+  if (sort === "best") return sorted.sort((a, b) => b.bestPrice.localeCompare(a.bestPrice));
+  return sorted;
+}
+
 function uniqueEventCount(events: FairEvent[]): number {
   return new Set(events.map((event) => event.baseEventId || event.id)).size;
 }
@@ -421,8 +501,15 @@ export function buildBoardViewModel(params: {
   mode: BoardSurfaceIntent;
   filters: BoardViewFilters;
   outcomes?: PersistedOutcomeResult[];
+  propsData?: PropsBoardData | null;
 }): BoardViewModel {
-  const props = getPropsDisplayState();
+  const propType = params.filters.propMarketType ?? "main";
+  const isPropsScope = params.filters.marketScope === "props";
+  const props = getPropsDisplayState({
+    reason: isPropsScope && propType !== "main" ? params.propsData?.emptyReason : undefined,
+    leagueLabel: formatLeagueLabel(params.board.league),
+    propType
+  });
   const visibleBookKeys = new Set(params.board.books.map((book) => book.key));
   const outcomeMap = buildOutcomeMap(params.outcomes);
   const staleEventsBeforeFilters = params.board.events.filter(eventIsStale);
@@ -471,13 +558,11 @@ export function buildBoardViewModel(params: {
     );
   }
 
-  const isPropsScope = params.filters.marketScope === "props";
-
-  if (isPropsScope) {
-    rows = [];
+  if (isPropsScope && propType !== "main") {
+    rows = sortPropRows((params.propsData?.rows ?? []).map((row) => buildPropRowViewModel(row, params.board)), params.filters.sort);
   }
 
-  if (!isPropsScope && params.filters.edgeThresholdPct > 0) {
+  if ((!isPropsScope || propType === "main") && params.filters.edgeThresholdPct > 0) {
     rows = rows.filter((row) => Number.isFinite(row.evValue) && Number(row.evValue) >= params.filters.edgeThresholdPct);
   }
 
@@ -494,8 +579,10 @@ export function buildBoardViewModel(params: {
   }
 
   return {
-    title: "Board",
-    subtitle: "Testing build. Public read-only preview of fair-line, freshness, and book coverage.",
+    title: isPropsScope ? "Props" : "Board",
+    subtitle: isPropsScope && propType !== "main"
+      ? "Line-shopping-first props view. EV appears only when comparable paired pricing is defensible."
+      : "Testing build. Public read-only preview of fair-line, freshness, and book coverage.",
     updatedLabel: formatUpdatedLabel(latestOddsUpdate(params.board.events, params.board.updatedAt)),
     resultLabel: `${rows.length} ${rows.length === 1 ? "market" : "markets"}`,
     coverageLabel: `${params.board.books.length} ${params.board.books.length === 1 ? "book" : "books"}`,
@@ -517,8 +604,16 @@ export function buildBoardViewModel(params: {
     ],
     rows,
     books: params.board.books,
-    emptyTitle: isPropsScope ? props.title : "No qualifying markets for current filters.",
-    emptyMessage: isPropsScope ? props.message : "Adjust filters or include stale markets.",
+    emptyTitle: isPropsScope && propType === "main" ? getPropsDisplayState({
+      reason: "NO_MAIN_MARKETS",
+      leagueLabel: formatLeagueLabel(params.board.league),
+      propType
+    }).title : isPropsScope ? props.title : "No qualifying markets for current filters.",
+    emptyMessage: isPropsScope && propType === "main" ? getPropsDisplayState({
+      reason: "NO_MAIN_MARKETS",
+      leagueLabel: formatLeagueLabel(params.board.league),
+      propType
+    }).message : isPropsScope ? props.message : "Adjust filters or include stale markets.",
     props
   };
 }

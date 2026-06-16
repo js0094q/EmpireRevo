@@ -5,6 +5,7 @@ import type { GameDetailViewModel } from "@/lib/ui/view-models/gameDetailViewMod
 import { BookComparisonTable } from "@/components/game/BookComparisonTable";
 import { ConsensusSummary } from "@/components/game/ConsensusSummary";
 import { GameHeader } from "@/components/game/GameHeader";
+import { GamePropsSection } from "@/components/game/GamePropsSection";
 import { MarketHistoryPanel } from "@/components/game/MarketHistoryPanel";
 import { MarketTabs } from "@/components/game/MarketTabs";
 import { OutcomeRecorder } from "@/components/game/OutcomeRecorder";
@@ -44,25 +45,11 @@ export function GameDetailView({ viewModel, data }: { viewModel: GameDetailViewM
 
       <BookComparisonTable rows={viewModel.comparisonRows} />
       <Panel>
-        <div className={styles.section}>
-          <div>
-            <h2 className={styles.sectionTitle}>Props</h2>
-            <p className={styles.note}>{viewModel.props.title}</p>
-          </div>
-          <div className={styles.propsMeta} aria-label="Props display mode">
-            <span>
-              <small>Mode</small>
-              <strong>Line shopping only</strong>
-            </span>
-            {viewModel.props.metrics.map((metric) => (
-              <span key={metric}>
-                <small>{metric}</small>
-                <strong>Pending</strong>
-              </span>
-            ))}
-          </div>
-          <p className={styles.note}>{viewModel.props.message}</p>
-        </div>
+        <GamePropsSection
+          league={data.league}
+          eventId={data.event.providerEventId || data.event.baseEventId || data.event.id}
+          fallback={viewModel.props}
+        />
       </Panel>
       <QualityNotesPanel title="Signal Quality" notes={viewModel.qualityNotes} />
       <MarketHistoryPanel viewModel={viewModel.history} data={data} />
