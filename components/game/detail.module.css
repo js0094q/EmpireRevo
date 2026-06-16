@@ -85,7 +85,14 @@
   gap: 0.55rem;
 }
 
-.historyStats span {
+.propsMeta {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.55rem;
+}
+
+.historyStats span,
+.propsMeta span {
   display: grid;
   gap: 0.12rem;
   border: 1px solid var(--surface-border-muted);
@@ -95,7 +102,8 @@
   min-width: 0;
 }
 
-.historyStats small {
+.historyStats small,
+.propsMeta small {
   color: var(--text-muted);
   font-size: 0.62rem;
   font-weight: 700;
@@ -103,7 +111,8 @@
   text-transform: uppercase;
 }
 
-.historyStats strong {
+.historyStats strong,
+.propsMeta strong {
   overflow: hidden;
   color: var(--text-primary);
   font-family: var(--font-mono);
@@ -183,7 +192,8 @@
   }
 
   .resultGrid,
-  .historyStats {
+  .historyStats,
+  .propsMeta {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
@@ -200,6 +210,7 @@
   .summaryGrid,
   .resultGrid,
   .historyStats,
+  .propsMeta,
   .recordForm {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -213,6 +224,7 @@
   .summaryGrid,
   .resultGrid,
   .historyStats,
+  .propsMeta,
   .recordForm {
     grid-template-columns: 1fr;
   }

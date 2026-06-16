@@ -69,7 +69,10 @@ export default async function Page({
             detail = "Wait a moment, then refresh. Cached snapshots may still be available.";
           } else if (error.code === "UPSTREAM_EMPTY_PAYLOAD") {
             title = "No games available";
-            message = "The feed returned an empty schedule for this league and market.";
+            message =
+              selectedSport.key === "college_baseball"
+                ? "No college baseball odds are currently available."
+                : "The feed returned an empty schedule for this league and market.";
             detail = "Try another league or market.";
           }
 
@@ -101,8 +104,11 @@ export default async function Page({
     : [];
   if (board && !(board.events?.length ?? 0)) {
     boardError = {
-      title: "No qualifying markets for current filters.",
-      message: "Try another league, market, or book threshold.",
+      title: selectedSport.key === "college_baseball" ? "No college baseball odds are currently available." : "No qualifying markets for current filters.",
+      message:
+        selectedSport.key === "college_baseball"
+          ? "The provider has no comparable College Baseball markets in the current feed."
+          : "Try another league, market, or book threshold.",
       detail: "EmpirePicks only shows markets with live comparable prices."
     };
   }

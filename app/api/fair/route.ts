@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { isValidationError, mapPublicError, publicErrorResponse, validationErrorResponse } from "@/lib/server/odds/apiErrors";
 import { cacheControlHeader } from "@/lib/server/odds/env";
 import { getFairBoard } from "@/lib/server/odds/oddsService";
+import { DEFAULT_SPORT_KEY } from "@/lib/server/odds/sportConfig";
 import {
   parseBookList,
   parseIntegerParam,
@@ -16,7 +17,7 @@ export const runtime = "nodejs";
 export async function GET(req: Request) {
   try {
     const url = new URL(req.url);
-    const sportKey = parseSportKey(url.searchParams.get("sportKey"), "basketball_nba");
+    const sportKey = parseSportKey(url.searchParams.get("sportKey"), DEFAULT_SPORT_KEY);
     const market = parseMarket(url.searchParams.get("market"), "h2h");
     const model = parseModel(url.searchParams.get("model"), "weighted");
     const regions = parseRegionsCsv(url.searchParams.get("regions"), "us");

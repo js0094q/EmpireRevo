@@ -3,6 +3,7 @@ import { errorPayload, isValidationError, mapPublicError, publicErrorResponse, v
 import { cacheControlHeader } from "@/lib/server/odds/env";
 import { getAggregatedOdds } from "@/lib/server/odds/aggregator";
 import { authorizeInternalRequest, toInternalAuthError } from "@/lib/server/odds/internalAuth";
+import { DEFAULT_SPORT_KEY } from "@/lib/server/odds/sportConfig";
 import {
   parseIntegerParam,
   parseMarket,
@@ -40,7 +41,7 @@ function limitRawPayload(events: unknown[], maxBytes: number): { events: unknown
 export async function GET(req: Request) {
   try {
     const url = new URL(req.url);
-    const sportKey = parseSportKey(url.searchParams.get("sportKey"), "basketball_nba");
+    const sportKey = parseSportKey(url.searchParams.get("sportKey"), DEFAULT_SPORT_KEY);
     const regions = parseRegionsCsv(url.searchParams.get("regions"), "us");
     const market = parseMarket(url.searchParams.get("market") || url.searchParams.get("markets"), "h2h");
     const oddsFormat = parseOddsFormat(url.searchParams.get("oddsFormat"), "american");

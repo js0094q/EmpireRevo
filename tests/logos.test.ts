@@ -1,9 +1,10 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { canonicalizeTeamName, resolveTeamLogo } from "../lib/server/odds/logos";
-import type { LeagueKey } from "../lib/odds/schemas";
 
-const TEAMS_BY_LEAGUE: Record<Exclude<LeagueKey, "ncaab">, string[]> = {
+type LogoLeagueKey = "nba" | "nfl" | "nhl" | "mlb";
+
+const TEAMS_BY_LEAGUE: Record<LogoLeagueKey, string[]> = {
   nba: [
     "Atlanta Hawks",
     "Boston Celtics",
@@ -139,7 +140,7 @@ const TEAMS_BY_LEAGUE: Record<Exclude<LeagueKey, "ncaab">, string[]> = {
 };
 
 test("logo coverage resolves canonical teams for mapped pro leagues", () => {
-  for (const [league, teams] of Object.entries(TEAMS_BY_LEAGUE) as Array<[Exclude<LeagueKey, "ncaab">, string[]]>) {
+  for (const [league, teams] of Object.entries(TEAMS_BY_LEAGUE) as Array<[LogoLeagueKey, string[]]>) {
     for (const team of teams) {
       assert.ok(resolveTeamLogo(team, league), `${league}:${team} should resolve to a logo`);
     }

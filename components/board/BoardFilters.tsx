@@ -6,6 +6,7 @@ import { Button } from "@/components/primitives/Button";
 import { Input } from "@/components/primitives/Input";
 import { Select } from "@/components/primitives/Select";
 import { Tabs } from "@/components/primitives/Tabs";
+import { PROP_MARKET_TYPE_OPTIONS, type PropMarketType } from "@/lib/ui/propsDisplay";
 import type { BoardConfidenceFilter, BoardOutcomeFilter, BoardSortValue } from "@/lib/ui/view-models/boardViewModel";
 import type { PublicSportOption } from "@/lib/server/odds/sportsRegistry";
 import styles from "./workstation.module.css";
@@ -25,6 +26,8 @@ type FilterValue = {
   pinnedOnly: boolean;
   compactMode: boolean;
   pinnedBooks: string[];
+  marketScope: "main" | "props";
+  propMarketType: PropMarketType;
 };
 
 type ExperienceMode = "beginner" | "advanced";
@@ -76,7 +79,9 @@ export function BoardFilters({
   const tooltips = {
     search: "Search teams, outcomes, or book names.",
     league: "Switch between supported leagues.",
-    market: "Choose moneyline, spread, or total.",
+    market: "Choose moneyline, spread, total, or a props line-shopping view.",
+    marketScope: "Props use a separate line-shopping display unless fair probability is defensible.",
+    propMarketType: "Choose which prop market family to inspect.",
     mode: "Beginner keeps only the highest-impact controls.",
     sort: "Order rows by signal and decision relevance.",
     includeStale: "Include markets marked stale from feed freshness.",
@@ -112,18 +117,41 @@ export function BoardFilters({
               </Select>
             </label>
             <div className={`${styles.toolbarField} ${styles.marketField}`}>
-              <span className={styles.toolbarLabel} title={tooltips.market}>
-                Market
+              <span className={styles.toolbarLabel} title={tooltips.marketScope}>
+                Board
               </span>
               <Tabs
-                value={value.market}
+                value={value.marketScope}
                 options={[
-                  { value: "h2h", label: "Moneyline" },
-                  { value: "spreads", label: "Spread" },
-                  { value: "totals", label: "Total" }
+                  { value: "main", label: "Main Lines" },
+                  { value: "props", label: "Props" }
                 ]}
-                onChange={(market) => onChange({ market: market as FilterValue["market"] })}
+                onChange={(marketScope) => onChange({ marketScope: marketScope as FilterValue["marketScope"] })}
               />
+            </div>
+            <div className={`${styles.toolbarField} ${styles.marketField}`}>
+              <span className={styles.toolbarLabel} title={tooltips.market}>
+                {value.marketScope === "props" ? "Prop Type" : "Market"}
+              </span>
+              {value.marketScope === "props" ? (
+                <Select value={value.propMarketType} onChange={(event) => onChange({ propMarketType: event.target.value as PropMarketType })}>
+                  {PROP_MARKET_TYPE_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </Select>
+              ) : (
+                <Tabs
+                  value={value.market}
+                  options={[
+                    { value: "h2h", label: "Moneyline" },
+                    { value: "spreads", label: "Spread" },
+                    { value: "totals", label: "Total" }
+                  ]}
+                  onChange={(market) => onChange({ market: market as FilterValue["market"] })}
+                />
+              )}
             </div>
           </div>
         </div>

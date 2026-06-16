@@ -43,6 +43,27 @@ export function GameDetailView({ viewModel, data }: { viewModel: GameDetailViewM
       ) : null}
 
       <BookComparisonTable rows={viewModel.comparisonRows} />
+      <Panel>
+        <div className={styles.section}>
+          <div>
+            <h2 className={styles.sectionTitle}>Props</h2>
+            <p className={styles.note}>{viewModel.props.title}</p>
+          </div>
+          <div className={styles.propsMeta} aria-label="Props display mode">
+            <span>
+              <small>Mode</small>
+              <strong>Line shopping only</strong>
+            </span>
+            {viewModel.props.metrics.map((metric) => (
+              <span key={metric}>
+                <small>{metric}</small>
+                <strong>Pending</strong>
+              </span>
+            ))}
+          </div>
+          <p className={styles.note}>{viewModel.props.message}</p>
+        </div>
+      </Panel>
       <QualityNotesPanel title="Signal Quality" notes={viewModel.qualityNotes} />
       <MarketHistoryPanel viewModel={viewModel.history} data={data} />
       <Panel>

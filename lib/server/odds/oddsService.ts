@@ -2,6 +2,7 @@ import type { LeagueKey, MarketKey, NormalizedEventOdds } from "@/lib/odds/schem
 import type { FairBoardResponse, MarketAvailability } from "@/lib/server/odds/types";
 import { cacheGet, cacheKey, cacheSet } from "@/lib/server/odds/cache";
 import { fetchOddsFromUpstream, sportKeyToLeague } from "@/lib/server/odds/client";
+import { DEFAULT_SPORT_KEY } from "@/lib/server/odds/sportConfig";
 import { normalizeOddsApiResponse } from "@/lib/server/odds/normalize";
 import {
   attachHistoricalSignalsToBoard,
@@ -12,7 +13,6 @@ import { persistBoardSnapshots } from "@/lib/server/odds/snapshotPersistence";
 import type { WeightModel } from "@/lib/server/odds/weights";
 import { getValidationSinkMode } from "@/lib/server/odds/validationEvents";
 
-const DEFAULT_SPORT_KEY = "basketball_nba";
 const DEFAULT_REGIONS = "us";
 const DEFAULT_MARKETS = "h2h,spreads,totals";
 const DEFAULT_ODDS_FORMAT = "american";

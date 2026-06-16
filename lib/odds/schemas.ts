@@ -1,4 +1,19 @@
-export type LeagueKey = "nfl" | "nba" | "nhl" | "ncaab" | "mlb";
+export type LeagueKey =
+  | "nfl"
+  | "ncaaf"
+  | "nba"
+  | "wnba"
+  | "nhl"
+  | "ncaab"
+  | "mlb"
+  | "college_baseball"
+  | "mma"
+  | "soccer_mls"
+  | "soccer_epl"
+  | "soccer_ucl"
+  | "tennis_atp_wimbledon"
+  | "tennis_wta_wimbledon"
+  | "golf_us_open";
 
 export type MarketKey = "h2h" | "spreads" | "totals";
 

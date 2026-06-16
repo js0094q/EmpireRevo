@@ -1,4 +1,5 @@
 import type { GameDetailPageData } from "@/lib/server/odds/gameDetailPageData";
+import { getPropsDisplayState, type PropsDisplayState } from "@/lib/ui/propsDisplay";
 import type { OutcomeResult } from "@/lib/server/odds/types";
 import {
   formatAmericanOdds,
@@ -78,6 +79,7 @@ export type GameDetailViewModel = {
   qualityNotes: string[];
   modelNotes: string[];
   internalNotes: Array<{ label: string; value: string }> | null;
+  props: PropsDisplayState;
 };
 
 function formatRole(isBest: boolean, isSharp: boolean): string {
@@ -150,6 +152,7 @@ function formatTimestamp(ts?: number | string | null): string {
 }
 
 export function buildGameDetailViewModel(data: GameDetailPageData, options?: { includeInternal?: boolean }): GameDetailViewModel {
+  const props = getPropsDisplayState();
   const pressure = data.pressureSignals[0] ?? null;
   const probabilityGapTone: "positive" | "neutral" = (data.featuredBook?.edgePct ?? 0) > 0 ? "positive" : "neutral";
   const evValue = data.featuredBook?.evReliability === "suppressed" ? null : data.featuredBook?.evPct;
@@ -285,6 +288,7 @@ export function buildGameDetailViewModel(data: GameDetailPageData, options?: { i
           { label: "Pressure", value: data.internalContext.pressureLabel },
           { label: "Value Persistence", value: data.internalContext.valuePersistence }
         ]
-      : null
+      : null,
+    props
   };
 }

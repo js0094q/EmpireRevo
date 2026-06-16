@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { resolveRequestedMarket, toSportKey } from "@/lib/server/odds/pageData";
+import { DEFAULT_LEAGUE_KEY } from "@/lib/server/odds/sportConfig";
 import { buildFairEventsForNormalizedEvent, getMarketAvailabilityForBoard, LIMITED_MARKET_MIN_BOOKS } from "@/lib/server/odds/fairEngine";
 import { getNormalizedOdds } from "@/lib/server/odds/oddsService";
 import { matchesEventRouteId, toEventRouteId } from "@/lib/server/odds/eventRoute";
@@ -221,7 +222,7 @@ export async function getGameDetailPageData(params: {
     edge?: string;
   };
 }): Promise<GameDetailPageData | null> {
-  const league = params.query.league || "nba";
+  const league = params.query.league || DEFAULT_LEAGUE_KEY;
   const market = params.query.market === "spreads" || params.query.market === "totals" ? params.query.market : "h2h";
   const model = params.query.model === "sharp" || params.query.model === "equal" || params.query.model === "weighted" ? params.query.model : "weighted";
   const boardContext: BoardNavigationContext = {

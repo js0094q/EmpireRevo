@@ -1,16 +1,11 @@
 import type { LeagueKey, MarketKey } from "@/lib/odds/schemas";
+import { LEAGUE_REGISTRY, configuredOrDefaultSportKeys } from "@/lib/server/odds/sportConfig";
 import type { WeightModel } from "@/lib/server/odds/weights";
 
 const MARKET_KEYS = new Set<MarketKey>(["h2h", "spreads", "totals"]);
 const WEIGHT_MODELS = new Set<WeightModel>(["sharp", "equal", "weighted"]);
-const LEAGUE_KEYS = new Set<LeagueKey>(["nfl", "nba", "nhl", "ncaab", "mlb"]);
-const SPORT_KEYS = new Set([
-  "americanfootball_nfl",
-  "basketball_nba",
-  "icehockey_nhl",
-  "basketball_ncaab",
-  "baseball_mlb"
-]);
+const LEAGUE_KEYS = new Set<LeagueKey>(LEAGUE_REGISTRY.map((league) => league.key));
+const SPORT_KEYS = new Set(LEAGUE_REGISTRY.map((league) => league.sportKey));
 const ODDS_FORMATS = new Set(["american", "decimal"]);
 const REGION_CODES = new Set(["us", "us2", "uk", "eu", "au"]);
 const SPORT_KEY_PATTERN = /^[a-z0-9_]+$/;
@@ -36,13 +31,8 @@ function normalize(value: string | null | undefined): string {
 }
 
 function readAllowedSportKeys(): Set<string> {
-  const configured = (process.env.ODDS_ALLOWED_SPORT_KEYS || "")
-    .split(",")
-    .map((part) => part.trim().toLowerCase())
-    .filter((part) => part.length > 0);
-
   const allowed = new Set<string>(SPORT_KEYS);
-  for (const entry of configured) {
+  for (const entry of configuredOrDefaultSportKeys()) {
     if (entry.length <= 64 && SPORT_KEY_PATTERN.test(entry)) {
       allowed.add(entry);
     }
@@ -54,7 +44,7 @@ export function parseLeague(value: string | null, fallback: LeagueKey = "nba"): 
   const normalized = normalize(value).toLowerCase();
   if (!normalized) return fallback;
   if (!LEAGUE_KEYS.has(normalized as LeagueKey)) {
-    invalid("league must be one of nfl, nba, nhl, ncaab, mlb");
+    invalid(`league must be one of ${Array.from(LEAGUE_KEYS).sort().join(", ")}`);
   }
   return normalized as LeagueKey;
 }

@@ -429,3 +429,54 @@ test("buildBoardViewModel keeps below-market EV states neutral", () => {
   assert.equal(viewModel.rows[0]?.evMeta, "Market is less favorable");
   assert.equal(viewModel.rows[0]?.priceSignal, "Below market");
 });
+
+test("buildBoardViewModel exposes props as line-shopping only without mixing EV rows", () => {
+  const board = {
+    ok: true,
+    league: "mlb",
+    sportKey: "baseball_mlb",
+    market: "h2h",
+    model: "weighted",
+    updatedAt: new Date().toISOString(),
+    lastUpdatedLabel: "Updated recently",
+    activeMarkets: ["h2h"],
+    marketAvailability: [],
+    sharpBooksUsed: [],
+    books: [{ key: "fanduel", title: "FanDuel", tier: "mainstream" }],
+    events: [makeEvent({ sportKey: "baseball_mlb" })],
+    topOpportunities: [],
+    bookBehavior: [],
+    diagnostics: {
+      calibration: {} as FairBoardResponse["diagnostics"]["calibration"],
+      calibrationMeta: { version: 1 },
+      validation: { emittedEvents: 0, sink: "memory" }
+    },
+    disclaimer: "test"
+  } as unknown as FairBoardResponse;
+
+  const viewModel = buildBoardViewModel({
+    board,
+    league: "mlb",
+    model: "weighted",
+    mode: "board",
+    filters: {
+      search: "",
+      sort: "score",
+      bookKey: "all",
+      edgeThresholdPct: 0,
+      confidence: "all",
+      outcomeStatus: "all",
+      minBooks: 4,
+      pinnedOnly: false,
+      includeStale: true,
+      pinnedBooks: new Set<string>(),
+      marketScope: "props",
+      propMarketType: "player_props"
+    }
+  });
+
+  assert.equal(viewModel.rows.length, 0);
+  assert.equal(viewModel.props.evVisible, false);
+  assert.match(viewModel.emptyTitle, /No prop markets/);
+  assert.match(viewModel.emptyMessage, /line shopping only/i);
+});

@@ -1,33 +1,16 @@
 import type { LeagueKey } from "@/lib/odds/schemas";
 import { getOddsApiBaseUrl, getOddsApiKey } from "@/lib/server/odds/env";
+import { leagueToSportKeyFromRegistry, sportKeyToLeagueFromRegistry } from "@/lib/server/odds/sportConfig";
 
 const UPSTREAM_TIMEOUT_MS = 5000;
 const MAX_UPSTREAM_ATTEMPTS = 2;
 
 export function leagueToSportKey(league: LeagueKey): string {
-  switch (league) {
-    case "nfl":
-      return "americanfootball_nfl";
-    case "nba":
-      return "basketball_nba";
-    case "nhl":
-      return "icehockey_nhl";
-    case "ncaab":
-      return "basketball_ncaab";
-    case "mlb":
-      return "baseball_mlb";
-    default:
-      return "basketball_nba";
-  }
+  return leagueToSportKeyFromRegistry(league);
 }
 
 export function sportKeyToLeague(sportKey: string): LeagueKey {
-  if (sportKey.includes("nfl")) return "nfl";
-  if (sportKey.includes("nba")) return "nba";
-  if (sportKey.includes("nhl")) return "nhl";
-  if (sportKey.includes("ncaab")) return "ncaab";
-  if (sportKey.includes("mlb")) return "mlb";
-  return "nba";
+  return sportKeyToLeagueFromRegistry(sportKey);
 }
 
 export async function fetchOddsFromUpstream(params: {

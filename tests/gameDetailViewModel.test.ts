@@ -136,6 +136,8 @@ test("buildGameDetailViewModel separates internal notes from public notes", () =
   assert.ok(publicView.summary.some((item) => item.label === "EV"));
   assert.ok(!publicView.summary.some((item) => item.label === "Edge"));
   assert.equal(publicView.comparisonRows[0]?.notes, "Below market");
+  assert.equal(publicView.props.evVisible, false);
+  assert.match(publicView.props.title, /No prop markets/);
 });
 
 test("buildGameDetailViewModel keeps below-market EV states neutral", () => {

@@ -1,9 +1,10 @@
 import type { LeagueKey } from "@/lib/odds/schemas";
 
 export type TeamLogoMap = Record<string, string>;
+type LogoLeagueKey = "nba" | "nfl" | "nhl" | "mlb";
 
 type TeamLogoEntry = {
-  league: Exclude<LeagueKey, "ncaab">;
+  league: LogoLeagueKey;
   canonical: string;
   sportPath: "nba" | "nfl" | "nhl" | "mlb";
   code: string;
@@ -111,7 +112,7 @@ function automaticAbbreviationAliases(entry: TeamLogoEntry): string[] {
 }
 
 function entry(
-  league: Exclude<LeagueKey, "ncaab">,
+  league: LogoLeagueKey,
   canonical: string,
   sportPath: TeamLogoEntry["sportPath"],
   code: string,
@@ -253,7 +254,7 @@ const TEAM_LOGO_ENTRIES: TeamLogoEntry[] = [
 
 type LogoRegistry = {
   logoMap: TeamLogoMap;
-  aliasesByLeague: Record<Exclude<LeagueKey, "ncaab">, Record<string, string>>;
+  aliasesByLeague: Record<LogoLeagueKey, Record<string, string>>;
   globalAliases: Record<string, string | null>;
 };
 
@@ -305,7 +306,7 @@ export const TEAM_LOGO_MAP: TeamLogoMap = LOGO_REGISTRY.logoMap;
 
 export function canonicalizeTeamName(name: string, league?: LeagueKey): string {
   const normalized = normalizeTeamName(name);
-  if (league && league !== "ncaab") {
+  if (league === "nba" || league === "nfl" || league === "nhl" || league === "mlb") {
     return LOGO_REGISTRY.aliasesByLeague[league][normalized] || cleanedTeamName(name);
   }
   const globalAlias = LOGO_REGISTRY.globalAliases[normalized];

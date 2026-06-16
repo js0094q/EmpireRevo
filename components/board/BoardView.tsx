@@ -7,6 +7,7 @@ import { EmptyState } from "@/components/primitives/EmptyState";
 import { BoardTable } from "@/components/board/BoardTable";
 import { BoardToolbar } from "@/components/board/BoardToolbar";
 import type { FairBoardResponse, PersistedOutcomeResult } from "@/lib/server/odds/types";
+import type { PropMarketType } from "@/lib/ui/propsDisplay";
 import type { PublicSportOption } from "@/lib/server/odds/sportsRegistry";
 import {
   buildBoardViewModel,
@@ -69,6 +70,8 @@ export function BoardView({
   const [edgeThresholdPct, setEdgeThresholdPct] = useState(Number(searchParams?.get("edgeThresholdPct") || "0"));
   const [confidence, setConfidence] = useState<BoardConfidenceFilter>((searchParams?.get("confidence") as BoardConfidenceFilter) || "all");
   const [outcomeStatus, setOutcomeStatus] = useState<BoardOutcomeFilter>((searchParams?.get("outcome") as BoardOutcomeFilter) || "all");
+  const [marketScope, setMarketScope] = useState<"main" | "props">(searchParams?.get("scope") === "props" ? "props" : "main");
+  const [propMarketType, setPropMarketType] = useState<PropMarketType>((searchParams?.get("propType") as PropMarketType) || "player_props");
   const [includeStale, setIncludeStale] = useState(searchParams?.get("stale") === "1");
   const [pinnedOnly, setPinnedOnly] = useState(searchParams?.get("pinned") === "1");
   const [beginnerMode, setBeginnerMode] = useState<"beginner" | "advanced">("beginner");
@@ -133,11 +136,13 @@ export function BoardView({
           minBooks,
           pinnedOnly,
           includeStale,
-          pinnedBooks: new Set(pinnedBooks)
+          pinnedBooks: new Set(pinnedBooks),
+          marketScope,
+          propMarketType
         },
         outcomes
       }),
-    [board, bookKey, confidence, deferredSearch, edgeThresholdPct, includeStale, league, minBooks, mode, model, outcomeStatus, outcomes, pinnedBooks, pinnedOnly, sort]
+    [board, bookKey, confidence, deferredSearch, edgeThresholdPct, includeStale, league, marketScope, minBooks, mode, model, outcomeStatus, outcomes, pinnedBooks, pinnedOnly, propMarketType, sort]
   );
 
   return (
@@ -192,7 +197,9 @@ export function BoardView({
           includeStale,
           pinnedOnly,
           compactMode,
-          pinnedBooks
+          pinnedBooks,
+          marketScope,
+          propMarketType
         }}
         books={viewModel.books}
         sports={sports}
@@ -205,6 +212,16 @@ export function BoardView({
           if (next.market !== undefined) {
             updateParams({ market: next.market });
             trackProductEvent("filter_change", { filter: "market", value: next.market, league, market: next.market });
+          }
+          if (next.marketScope !== undefined) {
+            setMarketScope(next.marketScope);
+            updateParams({ scope: next.marketScope === "props" ? "props" : null });
+            trackProductEvent("filter_change", { filter: "market_scope", value: next.marketScope, league, market: board.market });
+          }
+          if (next.propMarketType !== undefined) {
+            setPropMarketType(next.propMarketType);
+            updateParams({ propType: next.propMarketType === "player_props" ? null : next.propMarketType });
+            trackProductEvent("filter_change", { filter: "prop_market_type", value: next.propMarketType, league, market: board.market });
           }
           if (next.model !== undefined) updateParams({ model: next.model });
           if (next.minBooks !== undefined) {

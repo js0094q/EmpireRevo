@@ -1,6 +1,7 @@
 import { buildPickSummary } from "@/components/board/board-helpers";
 import { filterEvents, pinnedEventMetrics, sortEvents, type SortKey } from "@/components/board/selectors";
 import type { PriceValueDirection } from "@/lib/odds/priceValue";
+import { getPropsDisplayState, type PropMarketType, type PropsDisplayState } from "@/lib/ui/propsDisplay";
 import type { FairBoardResponse, FairEvent, FairOutcomeBook, OutcomeResult, PersistedOutcomeResult } from "@/lib/server/odds/types";
 import { toEventRouteId } from "@/lib/server/odds/eventRoute";
 import {
@@ -19,6 +20,7 @@ export type BoardSurfaceIntent = "board";
 export type BoardSortValue = Extract<SortKey, "score" | "edge" | "ev" | "confidence" | "soonest" | "timing" | "book" | "coverage" | "pinned_score" | "best"> | "outcome";
 export type BoardConfidenceFilter = "all" | "high" | "medium" | "low";
 export type BoardOutcomeFilter = "all" | "pending" | OutcomeResult;
+export type BoardMarketScope = "main" | "props";
 
 export type BoardViewFilters = {
   search: string;
@@ -31,6 +33,8 @@ export type BoardViewFilters = {
   pinnedOnly: boolean;
   includeStale: boolean;
   pinnedBooks: Set<string>;
+  marketScope?: BoardMarketScope;
+  propMarketType?: PropMarketType;
 };
 
 export type BoardRowViewModel = {
@@ -93,6 +97,7 @@ export type BoardViewModel = {
   books: Array<{ key: string; title: string; tier: string }>;
   emptyTitle: string;
   emptyMessage: string;
+  props: PropsDisplayState;
 };
 
 function confidenceBucket(label?: FairEvent["confidenceLabel"]): "high" | "medium" | "low" {
@@ -417,6 +422,7 @@ export function buildBoardViewModel(params: {
   filters: BoardViewFilters;
   outcomes?: PersistedOutcomeResult[];
 }): BoardViewModel {
+  const props = getPropsDisplayState();
   const visibleBookKeys = new Set(params.board.books.map((book) => book.key));
   const outcomeMap = buildOutcomeMap(params.outcomes);
   const staleEventsBeforeFilters = params.board.events.filter(eventIsStale);
@@ -465,7 +471,13 @@ export function buildBoardViewModel(params: {
     );
   }
 
-  if (params.filters.edgeThresholdPct > 0) {
+  const isPropsScope = params.filters.marketScope === "props";
+
+  if (isPropsScope) {
+    rows = [];
+  }
+
+  if (!isPropsScope && params.filters.edgeThresholdPct > 0) {
     rows = rows.filter((row) => Number.isFinite(row.evValue) && Number(row.evValue) >= params.filters.edgeThresholdPct);
   }
 
@@ -505,8 +517,9 @@ export function buildBoardViewModel(params: {
     ],
     rows,
     books: params.board.books,
-    emptyTitle: "No qualifying markets for current filters.",
-    emptyMessage: "Adjust filters or include stale markets."
+    emptyTitle: isPropsScope ? props.title : "No qualifying markets for current filters.",
+    emptyMessage: isPropsScope ? props.message : "Adjust filters or include stale markets.",
+    props
   };
 }
 
