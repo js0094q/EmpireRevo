@@ -108,14 +108,12 @@ export default async function Page({
     ? await listOutcomeResults(500).catch(() => [])
     : [];
   if (board && !(board.events?.length ?? 0)) {
-    const propsState =
+    const propsEmptyReason =
       scope === "props"
-        ? getPropsDisplayState({
-            reason: propType === "main" ? "NO_MAIN_MARKETS" : pageData?.propsData?.emptyReason,
-            leagueLabel: selectedSport.label,
-            propType
-          })
-        : null;
+        ? pageData?.propsData?.emptyReason ?? (propType === "main" ? "NO_MAIN_MARKETS" : "PROPS_UNSUPPORTED_FOR_LEAGUE")
+        : undefined;
+    const propsState =
+      propsEmptyReason ? getPropsDisplayState({ reason: propsEmptyReason, leagueLabel: selectedSport.label, propType }) : null;
     boardError = {
       title:
         propsState?.title ??

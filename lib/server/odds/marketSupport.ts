@@ -4,14 +4,18 @@ import type { BoardScope, MarketFamily, PropType, PropsEmptyReason } from "@/lib
 export type PropFetchMode = "league" | "event" | "unsupported";
 export type EvPolicy = "allow" | "suppress" | "line_shopping_only";
 
-export type LeagueMarketSupport = {
-  sportKey: string;
-  label: string;
-  supportsMainLines: boolean;
+export type MarketCapability = {
+  supportsMainMarkets: boolean;
   supportsPlayerProps: boolean;
   supportsTeamProps: boolean;
   supportsGameProps: boolean;
   supportsFutures: boolean;
+  disabledReason?: string;
+};
+
+export type LeagueMarketSupport = MarketCapability & {
+  sportKey: string;
+  label: string;
   mainMarkets: string[];
   playerPropMarkets: string[];
   teamPropMarkets: string[];
@@ -29,6 +33,8 @@ export type MarketRequestResolution = {
   fetchMode: PropFetchMode;
   evPolicy: EvPolicy;
   emptyStateReason?: PropsEmptyReason;
+  unsupportedReason?: string;
+  fallbackScope?: BoardScope;
 };
 
 const STANDARD_MAIN_MARKETS = ["h2h", "spreads", "totals"];
@@ -42,17 +48,18 @@ const MLB_PLAYER_PROP_MARKETS = [
 
 const MARKET_SUPPORT_OVERRIDES: Record<string, Partial<LeagueMarketSupport>> = {
   baseball_ncaa: {
-    supportsMainLines: true,
+    supportsMainMarkets: true,
     supportsPlayerProps: false,
     supportsTeamProps: false,
     supportsGameProps: false,
     supportsFutures: false,
     mainMarkets: STANDARD_MAIN_MARKETS,
     propFetchMode: "unsupported",
+    disabledReason: "College Baseball props are not currently supported by the odds provider.",
     notes: "Provider currently supports NCAA baseball main lines but not additional player prop markets."
   },
   baseball_mlb: {
-    supportsMainLines: true,
+    supportsMainMarkets: true,
     supportsPlayerProps: true,
     supportsTeamProps: false,
     supportsGameProps: false,
@@ -71,7 +78,7 @@ export function getLeagueMarketSupport(leagueOrSportKey: string): LeagueMarketSu
   return {
     sportKey,
     label: config?.label ?? sportKey,
-    supportsMainLines: config?.supportsStandardMarkets ?? true,
+    supportsMainMarkets: config?.supportsStandardMarkets ?? true,
     supportsPlayerProps: false,
     supportsTeamProps: false,
     supportsGameProps: false,
@@ -87,7 +94,16 @@ export function getLeagueMarketSupport(leagueOrSportKey: string): LeagueMarketSu
   };
 }
 
-function unsupportedResolution(support: LeagueMarketSupport, marketFamily: MarketFamily, propType: PropType): MarketRequestResolution {
+export function supportsAnyProps(support: MarketCapability): boolean {
+  return support.supportsPlayerProps || support.supportsTeamProps || support.supportsGameProps;
+}
+
+function unsupportedResolution(
+  support: LeagueMarketSupport,
+  marketFamily: MarketFamily,
+  propType: PropType,
+  emptyStateReason: PropsEmptyReason = propType === "main" ? "NO_MAIN_MARKETS" : "PROPS_UNSUPPORTED_FOR_LEAGUE"
+): MarketRequestResolution {
   return {
     sportKey: support.sportKey,
     leagueLabel: support.label,
@@ -95,7 +111,9 @@ function unsupportedResolution(support: LeagueMarketSupport, marketFamily: Marke
     marketFamily,
     fetchMode: "unsupported",
     evPolicy: "line_shopping_only",
-    emptyStateReason: propType === "main" ? "NO_MAIN_MARKETS" : "PROPS_UNSUPPORTED_FOR_LEAGUE"
+    emptyStateReason,
+    unsupportedReason: support.disabledReason,
+    fallbackScope: "board"
   };
 }
 
@@ -118,9 +136,14 @@ export function resolveMarketRequest(params: {
   }
 
   if (params.propType === "main") {
-    if (!support.supportsMainLines || !support.mainMarkets.length) {
+    if (params.scope === "props" && !supportsAnyProps(support)) {
+      return unsupportedResolution(support, "unsupported", params.propType, "PROPS_UNSUPPORTED_FOR_LEAGUE");
+    }
+
+    if (!support.supportsMainMarkets || !support.mainMarkets.length) {
       return unsupportedResolution(support, "main", params.propType);
     }
+
     return {
       sportKey: support.sportKey,
       leagueLabel: support.label,
@@ -176,6 +199,7 @@ export function resolveMarketRequest(params: {
   if (!support.supportsFutures || !support.futuresMarkets.length) {
     return unsupportedResolution(support, "future", params.propType);
   }
+
   return {
     sportKey: support.sportKey,
     leagueLabel: support.label,

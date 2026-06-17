@@ -123,8 +123,44 @@ test("props main fetch path does not call event odds upstream", async () => {
     });
 
     assert.equal(calls, 0);
-    assert.deepEqual(data.requestedMarkets, ["h2h", "spreads", "totals"]);
-    assert.equal(data.marketFamily, "main");
+    assert.deepEqual(data.requestedMarkets, []);
+    assert.equal(data.marketFamily, "unsupported");
+    assert.equal(data.unsupported, true);
+    assert.equal(data.unsupportedReason, "College Baseball props are not currently supported by the odds provider.");
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("college baseball player prop request uses unsupported short-circuit", async () => {
+  const originalFetch = globalThis.fetch;
+  let calls = 0;
+  globalThis.fetch = ((async () => {
+    calls += 1;
+    throw new Error("fetch should not run for unsupported college props");
+  }) as unknown) as typeof fetch;
+
+  try {
+    const data = await fetchPropsBoardData({
+      league: "college_baseball",
+      propType: "player",
+      events: [
+        {
+          providerEventId: "provider-event-1",
+          routeEventId: "route-event-1",
+          sportKey: "baseball_ncaa",
+          commenceTime: "2099-01-01T00:00:00.000Z",
+          homeTeam: "Home",
+          awayTeam: "Away"
+        }
+      ]
+    });
+
+    assert.equal(calls, 0);
+    assert.equal(data.unsupported, true);
+    assert.equal(data.emptyReason, "PROPS_UNSUPPORTED_FOR_LEAGUE");
+    assert.equal(data.marketFamily, "player_prop");
+    assert.equal(data.fetchMode, "unsupported");
   } finally {
     globalThis.fetch = originalFetch;
   }

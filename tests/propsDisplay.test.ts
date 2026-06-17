@@ -28,3 +28,18 @@ test("props market type aliases normalize old query values", () => {
   assert.equal(normalizePropType("game_props"), "game");
   assert.equal(normalizePropType("main"), "main");
 });
+
+test("props unsupported state keeps a league-specific provider message for main scope", () => {
+  const state = getPropsDisplayState({
+    reason: "PROPS_UNSUPPORTED_FOR_LEAGUE",
+    leagueLabel: "College Baseball",
+    propType: "main"
+  });
+
+  assert.equal(state.title, "College Baseball props are not currently supported by the odds provider.");
+  assert.equal(
+    state.message,
+    "Main markets are still available for College Baseball. Switch to Main Lines to continue browsing."
+  );
+  assert.equal(state.evVisible, false);
+});

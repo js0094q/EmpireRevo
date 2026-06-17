@@ -41,7 +41,9 @@ export function BoardFilters({
   preferencesLabel,
   experienceMode,
   onModeChange,
-  onRefresh
+  onRefresh,
+  supportsAnyProps,
+  propsDisabledReason
 }: {
   value: FilterValue;
   books: Array<{ key: string; title: string; tier: string }>;
@@ -52,6 +54,8 @@ export function BoardFilters({
   experienceMode: ExperienceMode;
   onModeChange: (mode: ExperienceMode) => void;
   onRefresh: () => void;
+  supportsAnyProps: boolean;
+  propsDisabledReason?: string;
 }) {
   const [showPreferences, setShowPreferences] = useState(false);
   const staleLabel = value.includeStale ? "Including stale" : "Fresh only";
@@ -80,7 +84,9 @@ export function BoardFilters({
     search: "Search teams, outcomes, or book names.",
     league: "Switch between supported leagues.",
     market: "Choose moneyline, spread, total, or a props line-shopping view.",
-    marketScope: "Props use a separate line-shopping display unless fair probability is defensible.",
+    marketScope: supportsAnyProps
+      ? "Props use a separate line-shopping display unless fair probability is defensible."
+      : "Props are not currently supported for this league by the provider.",
     propMarketType: "Choose which prop market family to inspect.",
     mode: "Beginner keeps only the highest-impact controls.",
     sort: "Order rows by signal and decision relevance.",
@@ -124,7 +130,11 @@ export function BoardFilters({
                 value={value.marketScope}
                 options={[
                   { value: "main", label: "Main Lines" },
-                  { value: "props", label: "Props" }
+                  {
+                    value: "props",
+                    label: "Props",
+                    disabled: !supportsAnyProps && value.marketScope !== "props"
+                  }
                 ]}
                 onChange={(marketScope) => onChange({ marketScope: marketScope as FilterValue["marketScope"] })}
               />
@@ -134,7 +144,12 @@ export function BoardFilters({
                 {value.marketScope === "props" ? "Prop Type" : "Market"}
               </span>
               {value.marketScope === "props" ? (
-                <Select value={value.propMarketType} onChange={(event) => onChange({ propMarketType: event.target.value as PropType })}>
+                <Select
+                  value={value.propMarketType}
+                  disabled={!supportsAnyProps}
+                  title={supportsAnyProps ? undefined : propsDisabledReason}
+                  onChange={(event) => onChange({ propMarketType: event.target.value as PropType })}
+                >
                   {PROP_MARKET_TYPE_OPTIONS.map((option) => (
                     <option key={option.value} value={option.value}>
                       {option.label}

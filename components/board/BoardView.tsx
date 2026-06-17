@@ -4,8 +4,10 @@ import { startTransition, useDeferredValue, useEffect, useMemo, useState } from 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { TrackOnMount, trackProductEvent } from "@/components/analytics/ProductAnalytics";
 import { EmptyState } from "@/components/primitives/EmptyState";
+import { Button } from "@/components/primitives/Button";
 import { BoardTable } from "@/components/board/BoardTable";
 import { BoardToolbar } from "@/components/board/BoardToolbar";
+import { getLeagueMarketSupport, supportsAnyProps } from "@/lib/server/odds/marketSupport";
 import type { FairBoardResponse, PersistedOutcomeResult } from "@/lib/server/odds/types";
 import type { PropsBoardData } from "@/lib/server/odds/propsService";
 import { normalizePropType, type PropType } from "@/lib/ui/propsDisplay";
@@ -84,6 +86,11 @@ export function BoardView({
   const [minBooks, setMinBooks] = useState(Number.isFinite(initialMinBooks) ? initialMinBooks : 4);
   const [pinnedBooks, setPinnedBooks] = useState<string[]>(storedPreferences?.pinnedBooks || []);
   const deferredSearch = useDeferredValue(search);
+  const leagueSupport = getLeagueMarketSupport(league);
+  const leagueSupportsAnyProps = supportsAnyProps(leagueSupport);
+  const normalizedPropMarketType: PropType =
+    !leagueSupportsAnyProps && marketScope === "props" ? "main" : propMarketType;
+  const unsupportedPropsScope = marketScope === "props" && propsData?.unsupported === true;
 
   useEffect(() => {
     const preferences = storedPreferences;
@@ -141,12 +148,31 @@ export function BoardView({
           includeStale,
           pinnedBooks: new Set(pinnedBooks),
           marketScope,
-          propMarketType
+          propMarketType: normalizedPropMarketType
         },
         outcomes,
         propsData
       }),
-    [board, bookKey, confidence, deferredSearch, edgeThresholdPct, includeStale, league, marketScope, minBooks, mode, model, outcomeStatus, outcomes, pinnedBooks, pinnedOnly, propMarketType, propsData, sort]
+    [
+      board,
+      bookKey,
+      confidence,
+      deferredSearch,
+      edgeThresholdPct,
+      includeStale,
+      league,
+      marketScope,
+      minBooks,
+      mode,
+      model,
+      outcomeStatus,
+      outcomes,
+      pinnedBooks,
+      pinnedOnly,
+      normalizedPropMarketType,
+      propsData,
+      sort
+    ]
   );
 
   return (
@@ -203,7 +229,7 @@ export function BoardView({
           compactMode,
           pinnedBooks,
           marketScope,
-          propMarketType
+          propMarketType: normalizedPropMarketType
         }}
         books={viewModel.books}
         sports={sports}
@@ -223,9 +249,10 @@ export function BoardView({
             trackProductEvent("filter_change", { filter: "market_scope", value: next.marketScope, league, market: board.market });
           }
           if (next.propMarketType !== undefined) {
-            setPropMarketType(next.propMarketType);
-            updateParams({ propType: next.propMarketType === "main" ? null : next.propMarketType });
-            trackProductEvent("filter_change", { filter: "prop_market_type", value: next.propMarketType, league, market: board.market });
+            const safePropType = marketScope === "props" && !leagueSupportsAnyProps ? "main" : next.propMarketType;
+            setPropMarketType(safePropType);
+            updateParams({ propType: safePropType === "main" ? null : safePropType });
+            trackProductEvent("filter_change", { filter: "prop_market_type", value: safePropType, league, market: board.market });
           }
           if (next.model !== undefined) updateParams({ model: next.model });
           if (next.minBooks !== undefined) {
@@ -293,12 +320,38 @@ export function BoardView({
         }
         experienceMode={beginnerMode}
         onModeChange={(nextMode) => setBeginnerMode(nextMode)}
+        supportsAnyProps={leagueSupportsAnyProps}
+        propsDisabledReason={leagueSupport.disabledReason}
       />
 
       {viewModel.rows.length ? (
         <BoardTable rows={viewModel.rows} compactMode={compactMode} />
       ) : (
-        <EmptyState title={viewModel.emptyTitle} message={viewModel.emptyMessage} />
+        <EmptyState
+          title={viewModel.emptyTitle}
+          message={viewModel.emptyMessage}
+          actions={
+            unsupportedPropsScope ? (
+              <Button
+                type="button"
+                onClick={() => {
+                  setMarketScope("main");
+                  setPropMarketType("main");
+                  updateParams({ scope: null, propType: null });
+                  trackProductEvent("filter_change", {
+                    filter: "market_scope",
+                    value: "main",
+                    league,
+                    market: board.market,
+                    reason: "unsupported_props"
+                  });
+                }}
+              >
+                Switch to Main Lines
+              </Button>
+            ) : undefined
+          }
+        />
       )}
     </div>
   );

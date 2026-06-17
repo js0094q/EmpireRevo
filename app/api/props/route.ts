@@ -12,6 +12,7 @@ export const runtime = "nodejs";
 type PropsApiResponse = PropsBoardData & {
   ok: true;
   emptyState: ReturnType<typeof getPropsDisplayState>;
+  reason?: string;
 };
 
 export async function GET(req: Request) {
@@ -46,6 +47,7 @@ export async function GET(req: Request) {
         fetchMode: resolution.fetchMode,
         requestedMarkets: resolution.markets,
         failures: 0,
+        reason: "EVENT_REQUIRED",
         emptyState
       };
       return NextResponse.json(response, { headers: cacheControlHeader(15, 30) });
@@ -79,6 +81,7 @@ export async function GET(req: Request) {
     const response: PropsApiResponse = {
       ok: true,
       ...data,
+      reason: data.unsupportedReason,
       emptyState
     };
     return NextResponse.json(response, { headers: cacheControlHeader(15, 30) });

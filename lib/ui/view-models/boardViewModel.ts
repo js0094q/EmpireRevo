@@ -497,6 +497,7 @@ function latestOddsUpdate(events: FairEvent[], fallback: string): string {
 export function buildBoardViewModel(params: {
   board: FairBoardResponse;
   league: string;
+  leagueLabel?: string;
   model: "sharp" | "equal" | "weighted";
   mode: BoardSurfaceIntent;
   filters: BoardViewFilters;
@@ -506,10 +507,11 @@ export function buildBoardViewModel(params: {
   const propType = params.filters.propMarketType ?? "main";
   const isPropsScope = params.filters.marketScope === "props";
   const props = getPropsDisplayState({
-    reason: isPropsScope && propType !== "main" ? params.propsData?.emptyReason : undefined,
-    leagueLabel: formatLeagueLabel(params.board.league),
+    reason: isPropsScope ? params.propsData?.emptyReason : undefined,
+    leagueLabel: params.leagueLabel ?? formatLeagueLabel(params.board.league),
     propType
   });
+  const isUnsupportedPropsScope = isPropsScope && params.propsData?.unsupported === true;
   const visibleBookKeys = new Set(params.board.books.map((book) => book.key));
   const outcomeMap = buildOutcomeMap(params.outcomes);
   const staleEventsBeforeFilters = params.board.events.filter(eventIsStale);
@@ -560,6 +562,8 @@ export function buildBoardViewModel(params: {
 
   if (isPropsScope && propType !== "main") {
     rows = sortPropRows((params.propsData?.rows ?? []).map((row) => buildPropRowViewModel(row, params.board)), params.filters.sort);
+  } else if (isUnsupportedPropsScope) {
+    rows = [];
   }
 
   if ((!isPropsScope || propType === "main") && params.filters.edgeThresholdPct > 0) {
@@ -604,16 +608,8 @@ export function buildBoardViewModel(params: {
     ],
     rows,
     books: params.board.books,
-    emptyTitle: isPropsScope && propType === "main" ? getPropsDisplayState({
-      reason: "NO_MAIN_MARKETS",
-      leagueLabel: formatLeagueLabel(params.board.league),
-      propType
-    }).title : isPropsScope ? props.title : "No qualifying markets for current filters.",
-    emptyMessage: isPropsScope && propType === "main" ? getPropsDisplayState({
-      reason: "NO_MAIN_MARKETS",
-      leagueLabel: formatLeagueLabel(params.board.league),
-      propType
-    }).message : isPropsScope ? props.message : "Adjust filters or include stale markets.",
+    emptyTitle: isPropsScope ? props.title : "No qualifying markets for current filters.",
+    emptyMessage: isPropsScope ? props.message : "Adjust filters or include stale markets.",
     props
   };
 }

@@ -4,7 +4,7 @@ import { fetchEventOddsFromUpstream } from "@/lib/server/odds/client";
 import { calculateEvPercent } from "@/lib/server/odds/ev";
 import { americanToDecimal, americanToRawImpliedProbability, probabilityToAmerican, removeVigWithinGroup } from "@/lib/server/odds/fairMath";
 import { cappedPropMarkets, resolveMarketRequest } from "@/lib/server/odds/marketSupport";
-import type { MarketFamily, PropType, PropsEmptyReason } from "@/lib/ui/propsDisplay";
+import type { BoardScope, MarketFamily, PropType, PropsEmptyReason } from "@/lib/ui/propsDisplay";
 
 const PROP_TTL_MS = 20_000;
 const EMPTY_PROP_TTL_MS = 10_000;
@@ -85,6 +85,9 @@ export type PropsBoardData = {
   fetchMode: "league" | "event" | "unsupported";
   requestedMarkets: string[];
   failures: number;
+  unsupported?: boolean;
+  unsupportedReason?: string;
+  fallbackScope?: BoardScope;
 };
 
 type RawOutcome = {
@@ -509,7 +512,10 @@ export async function fetchPropsBoardData(params: {
       propType: params.propType,
       fetchMode: resolution.fetchMode,
       requestedMarkets: [],
-      failures: 0
+      failures: 0,
+      unsupported: true,
+      unsupportedReason: resolution.unsupportedReason,
+      fallbackScope: resolution.fallbackScope
     };
   }
   if (resolution.marketFamily === "main") {

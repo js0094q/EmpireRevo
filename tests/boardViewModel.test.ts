@@ -431,7 +431,7 @@ test("buildBoardViewModel keeps below-market EV states neutral", () => {
   assert.equal(viewModel.rows[0]?.priceSignal, "Below market");
 });
 
-test("buildBoardViewModel keeps main-line rows in props main scope", () => {
+test("buildBoardViewModel keeps unsupported college baseball props as an empty props state", () => {
   const board = {
     ok: true,
     league: "college_baseball",
@@ -454,12 +454,26 @@ test("buildBoardViewModel keeps main-line rows in props main scope", () => {
     },
     disclaimer: "test"
   } as unknown as FairBoardResponse;
+  const propsData: PropsBoardData = {
+    rows: [],
+    marketFamily: "unsupported",
+    propType: "main",
+    fetchMode: "unsupported",
+    requestedMarkets: [],
+    failures: 0,
+    emptyReason: "PROPS_UNSUPPORTED_FOR_LEAGUE",
+    unsupported: true,
+    unsupportedReason: "College Baseball props are not currently supported by the odds provider.",
+    fallbackScope: "board"
+  };
 
   const viewModel = buildBoardViewModel({
     board,
     league: "college_baseball",
+    leagueLabel: "College Baseball",
     model: "weighted",
     mode: "board",
+    propsData,
     filters: {
       search: "",
       sort: "score",
@@ -476,10 +490,13 @@ test("buildBoardViewModel keeps main-line rows in props main scope", () => {
     }
   });
 
-  assert.equal(viewModel.rows.length, 1);
+  assert.equal(viewModel.rows.length, 0);
   assert.equal(viewModel.title, "Props");
-  assert.equal(viewModel.rows[0]?.market, "Moneyline");
-  assert.equal(viewModel.rows[0]?.ev, "+2.10%");
+  assert.equal(viewModel.emptyTitle, "College Baseball props are not currently supported by the odds provider.");
+  assert.equal(
+    viewModel.emptyMessage,
+    "Main markets are still available for College Baseball. Switch to Main Lines to continue browsing."
+  );
 });
 
 test("buildBoardViewModel exposes event props as line-shopping rows when EV is suppressed", () => {

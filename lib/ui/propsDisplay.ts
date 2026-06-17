@@ -74,10 +74,14 @@ export function getPropsDisplayState(params?: {
     };
   }
   if (reason === "PROPS_UNSUPPORTED_FOR_LEAGUE") {
+    const subject = propType === "main" ? "props" : propLabel;
     return {
       mode: "line_shopping_only",
-      title: `${leagueLabel} ${propLabel} are not currently supported by the odds provider.`,
-      message: "Main lines remain available when posted; unsupported prop markets are not requested.",
+      title: `${leagueLabel} ${subject} are not currently supported by the odds provider.`,
+      message:
+        propType === "main"
+          ? `Main markets are still available for ${leagueLabel}. Switch to Main Lines to continue browsing.`
+          : "Main markets remain available when posted; unsupported prop markets are not requested.",
       evVisible: false,
       metrics: ["Best book", "Best price", "Book count", "Last updated"],
       reason
