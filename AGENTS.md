@@ -6,6 +6,18 @@
 - Preserve the existing odds, fair-line, EV, ranking, caching, diagnostics, and internal/public boundary.
 - Do not treat this repo as a prototype or marketing site.
 
+## Codex Context Shortcuts
+
+To reduce repeated repository discovery and token usage, coding agents should read these short files before broad repo scans:
+
+- `docs/codex/repo-map.md` - high-value paths and files to avoid touching casually
+- `docs/codex/common-tasks.md` - common implementation workflows
+- `docs/codex/league-market-playbook.md` - checklist for adding leagues/markets
+- `docs/codex/validation-checklist.md` - standard validation and handoff format
+- `docs/codex/deployment-notes.md` - Vercel/env reminders
+
+Prefer these files before large recursive searches. Use targeted `rg` after reading them.
+
 ## Source Boundaries
 
 - `app/`: pages, layouts, API routes, and internal/public surfaces.
