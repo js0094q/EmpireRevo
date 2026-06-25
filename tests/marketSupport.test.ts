@@ -71,3 +71,28 @@ test("MLB player props use event-level fetching", () => {
   assert.equal(resolution.marketFamily, "player_prop");
   assert.ok(resolution.markets.includes("batter_hits"));
 });
+
+test("FIFA World Cup supports main markets and returns a provider-aware unsupported props state", () => {
+  const main = resolveMarketRequest({
+    scope: "board",
+    propType: "main",
+    league: "fifa_world_cup"
+  });
+
+  assert.equal(main.sportKey, "soccer_fifa_world_cup");
+  assert.deepEqual(main.markets, ["h2h", "spreads", "totals"]);
+  assert.equal(main.fetchMode, "league");
+  assert.equal(main.evPolicy, "allow");
+
+  const props = resolveMarketRequest({
+    scope: "props",
+    propType: "game",
+    league: "fifa_world_cup"
+  });
+
+  assert.equal(props.sportKey, "soccer_fifa_world_cup");
+  assert.equal(props.marketFamily, "game_prop");
+  assert.equal(props.fetchMode, "unsupported");
+  assert.equal(props.emptyStateReason, "PROPS_UNSUPPORTED_FOR_LEAGUE");
+  assert.equal(props.unsupportedReason, "FIFA World Cup props are not currently supported by the odds provider.");
+});

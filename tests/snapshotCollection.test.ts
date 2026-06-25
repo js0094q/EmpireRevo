@@ -275,3 +275,66 @@ test("internal snapshot collection route can aggregate multiple sports for monit
     assert.equal(payload.sportSummaries[1].sportKey, "americanfootball_nfl");
   });
 });
+
+test("internal snapshot collection route accepts FIFA World Cup through the league query", async () => {
+  process.env.ODDS_SNAPSHOT_COLLECTION_ENABLED = "true";
+  resetOddsHistoryConfigForTests();
+
+  await withMockedFetch(
+    [
+      {
+        sport_key: "soccer_fifa_world_cup",
+        home_team: "United States",
+        away_team: "Canada",
+        commence_time: "2026-06-26T00:00:00.000Z",
+        bookmakers: [
+          {
+            key: "fanduel",
+            title: "FanDuel",
+            markets: [
+              {
+                key: "h2h",
+                last_update: "2026-06-25T12:00:00.000Z",
+                outcomes: [
+                  { name: "Canada", price: 140 },
+                  { name: "United States", price: -150 }
+                ]
+              }
+            ]
+          },
+          {
+            key: "draftkings",
+            title: "DraftKings",
+            markets: [
+              {
+                key: "h2h",
+                last_update: "2026-06-25T12:05:00.000Z",
+                outcomes: [
+                  { name: "Canada", price: 145 },
+                  { name: "United States", price: -155 }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    async () => {
+      const response = await GET(
+        new Request("http://localhost/api/internal/snapshots/collect?force=1&league=fifa_world_cup&markets=h2h", {
+          headers: {
+            "x-empire-internal-key": INTERNAL_TEST_KEY
+          }
+        })
+      );
+      const payload = await response.json();
+
+      assert.equal(response.status, 200);
+      assert.equal(payload.ok, true);
+      assert.equal(payload.sportKey, "soccer_fifa_world_cup");
+      assert.deepEqual(payload.sportKeys, ["soccer_fifa_world_cup"]);
+      assert.equal(payload.eventsProcessed, 1);
+      assert.equal(payload.failures, 0);
+    }
+  );
+});

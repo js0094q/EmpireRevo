@@ -115,7 +115,7 @@ ODDS_API_KEY=your_key_here
 # optional
 ODDS_API_BASE=https://api.the-odds-api.com
 ODDS_API_ALLOWED_HOSTS=api.the-odds-api.com
-ODDS_ALLOWED_SPORT_KEYS=
+ODDS_ALLOWED_SPORT_KEYS=soccer_fifa_world_cup
 ODDS_CALIBRATION_OVERRIDES_JSON={"ranking":{"penalties":{"sparseCoveragePenalty":14}}}
 UPSTASH_REDIS_REST_URL=...
 UPSTASH_REDIS_REST_TOKEN=...
@@ -136,6 +136,8 @@ ODDS_DIAGNOSTICS_TTL_SECONDS=
 ```
 
 Never expose keys in client code.
+
+If `ODDS_ALLOWED_SPORT_KEYS` is already set with multiple provider sport keys, append `soccer_fifa_world_cup` instead of replacing the existing list.
 
 ## Validation Commands
 

@@ -82,7 +82,7 @@ Recommended:
 Optional hardening/config:
 - `ODDS_API_BASE`: upstream override (validated; invalid values are ignored).
 - `ODDS_API_ALLOWED_HOSTS`: additional host allowlist entries for `ODDS_API_BASE`.
-- `ODDS_ALLOWED_SPORT_KEYS`: explicit extra sport-key allowlist entries if non-default leagues are intentionally supported.
+- `ODDS_ALLOWED_SPORT_KEYS`: explicit extra sport-key allowlist entries if non-default leagues are intentionally supported; include `soccer_fifa_world_cup` when enabling FIFA World Cup explicitly.
 
 Operational rules:
 - No secret env var should be exposed client-side unless intentionally prefixed as public.

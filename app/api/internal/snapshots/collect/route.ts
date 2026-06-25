@@ -3,7 +3,7 @@ import { internalUnexpectedErrorResponse, isValidationError, validationErrorResp
 import { getOddsHistoryConfig } from "@/lib/server/odds/historyConfig";
 import { authorizeInternalRequest, toInternalAuthError } from "@/lib/server/odds/internalAuth";
 import { collectHistoricalSnapshotsForSportKeys } from "@/lib/server/odds/snapshots";
-import { parseMarketsCsv, parseRegionsCsv, parseSportKey, parseSportKeysCsv } from "@/lib/server/odds/requestValidation";
+import { parseMarketsCsv, parseRegionsCsv, parseSportKeyOrLeague, parseSportKeysCsv } from "@/lib/server/odds/requestValidation";
 import { DEFAULT_SPORT_KEY } from "@/lib/server/odds/sportConfig";
 
 export const runtime = "nodejs";
@@ -45,7 +45,12 @@ async function handle(req: Request) {
       );
     }
 
-    const sportKey = parseSportKey(url.searchParams.get("sportKey"), DEFAULT_SPORT_KEY);
+    const sportKey = parseSportKeyOrLeague({
+      sportKey: url.searchParams.get("sportKey"),
+      league: url.searchParams.get("league"),
+      sport: url.searchParams.get("sport"),
+      fallbackSportKey: DEFAULT_SPORT_KEY
+    });
     const sportKeys = parseSportKeysCsv(url.searchParams.get("sportKeys"), sportKey);
     const regions = parseRegionsCsv(url.searchParams.get("regions"), "us");
     const markets = parseMarketsCsv(url.searchParams.get("markets"), "h2h,spreads,totals")

@@ -130,6 +130,76 @@ test("GET /api/fair rejects invalid query values before upstream fetch", async (
   fetchMock.mock.restore();
 });
 
+test("GET /api/fair accepts FIFA World Cup through the league query", async () => {
+  const upstreamPayload = [
+    {
+      sport_key: "soccer_fifa_world_cup",
+      home_team: "United States",
+      away_team: "Canada",
+      commence_time: "2026-06-26T00:00:00.000Z",
+      bookmakers: [
+        {
+          key: "fanduel",
+          title: "FanDuel",
+          markets: [
+            {
+              key: "h2h",
+              last_update: "2026-06-25T12:00:00.000Z",
+              outcomes: [
+                { name: "Canada", price: 140 },
+                { name: "United States", price: -150 }
+              ]
+            }
+          ]
+        },
+        {
+          key: "draftkings",
+          title: "DraftKings",
+          markets: [
+            {
+              key: "h2h",
+              last_update: "2026-06-25T12:05:00.000Z",
+              outcomes: [
+                { name: "Canada", price: 145 },
+                { name: "United States", price: -155 }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ];
+  const requestedUrls: string[] = [];
+  const fetchMock = mock.method(globalThis, "fetch", async (input: string | URL | Request) => {
+    requestedUrls.push(typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url);
+    return new Response(JSON.stringify(upstreamPayload), {
+      status: 200,
+      headers: { "Content-Type": "application/json" }
+    });
+  });
+
+  const originalKey = process.env.ODDS_API_KEY;
+  process.env.ODDS_API_KEY = "test-key";
+
+  const response = await GET(
+    new Request("http://localhost/api/fair?league=fifa_world_cup&regions=us&model=weighted&windowHours=17&minBooks=2")
+  );
+  const payload = await response.json();
+
+  assert.equal(response.status, 200);
+  assert.equal(payload.ok, true);
+  assert.equal(payload.league, "fifa_world_cup");
+  assert.equal(payload.sportKey, "soccer_fifa_world_cup");
+  assert.ok(requestedUrls.some((url) => url.includes("/v4/sports/soccer_fifa_world_cup/odds")));
+
+  fetchMock.mock.restore();
+  if (originalKey === undefined) {
+    delete process.env.ODDS_API_KEY;
+  } else {
+    process.env.ODDS_API_KEY = originalKey;
+  }
+});
+
 test("GET /api/fair sanitizes upstream 5xx payload details", async () => {
   const fetchMock = mock.method(globalThis, "fetch", async () => {
     return new Response("secret upstream payload should never leak", { status: 500 });

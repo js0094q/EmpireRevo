@@ -8,6 +8,7 @@ export type LeagueKey =
   | "mlb"
   | "college_baseball"
   | "mma"
+  | "fifa_world_cup"
   | "soccer_mls"
   | "soccer_epl"
   | "soccer_ucl"

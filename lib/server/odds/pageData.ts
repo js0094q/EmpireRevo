@@ -20,6 +20,7 @@ export type FairBoardPageData = {
   marketAvailability: MarketAvailability[];
   resolvedMarket: MarketKey;
   resolvedStatus: MarketAvailabilityStatus;
+  providerEventCount: number;
   propsData: PropsBoardData | null;
 };
 
@@ -144,6 +145,7 @@ export async function fetchFairBoardPageData(params: {
     marketAvailability,
     resolvedMarket,
     resolvedStatus,
+    providerEventCount: normalizedResult.normalized.length,
     propsData
   };
 }

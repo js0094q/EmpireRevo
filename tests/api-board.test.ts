@@ -173,6 +173,78 @@ test("GET /api/board rejects invalid query values before upstream fetch", async 
   fetchMock.mock.restore();
 });
 
+test("GET /api/board accepts FIFA World Cup league and sportKey aliases", async () => {
+  const upstreamPayload = [
+    {
+      sport_key: "soccer_fifa_world_cup",
+      home_team: "United States",
+      away_team: "Canada",
+      commence_time: "2026-06-26T00:00:00.000Z",
+      bookmakers: [
+        {
+          key: "fanduel",
+          title: "FanDuel",
+          markets: [
+            {
+              key: "h2h",
+              last_update: "2026-06-25T12:00:00.000Z",
+              outcomes: [
+                { name: "Canada", price: 140 },
+                { name: "United States", price: -150 }
+              ]
+            }
+          ]
+        },
+        {
+          key: "draftkings",
+          title: "DraftKings",
+          markets: [
+            {
+              key: "h2h",
+              last_update: "2026-06-25T12:05:00.000Z",
+              outcomes: [
+                { name: "Canada", price: 145 },
+                { name: "United States", price: -155 }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ];
+  const requestedUrls: string[] = [];
+  const fetchMock = mock.method(globalThis, "fetch", async (input: string | URL | Request) => {
+    requestedUrls.push(typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url);
+    return new Response(JSON.stringify(upstreamPayload), {
+      status: 200,
+      headers: { "Content-Type": "application/json" }
+    });
+  });
+
+  const originalKey = process.env.ODDS_API_KEY;
+  process.env.ODDS_API_KEY = "test-key";
+
+  const byLeague = await GET(new Request("http://localhost/api/board?league=fifa_world_cup&markets=h2h&model=weighted&minBooks=2"));
+  const byLeaguePayload = await byLeague.json();
+  const bySportKey = await GET(
+    new Request("http://localhost/api/board?sportKey=soccer_fifa_world_cup&markets=h2h&model=weighted&minBooks=2")
+  );
+  const bySportKeyPayload = await bySportKey.json();
+
+  assert.equal(byLeague.status, 200);
+  assert.equal(bySportKey.status, 200);
+  assert.equal(byLeaguePayload.league, "fifa_world_cup");
+  assert.equal(bySportKeyPayload.league, "fifa_world_cup");
+  assert.ok(requestedUrls.some((url) => url.includes("/v4/sports/soccer_fifa_world_cup/odds")));
+
+  fetchMock.mock.restore();
+  if (originalKey === undefined) {
+    delete process.env.ODDS_API_KEY;
+  } else {
+    process.env.ODDS_API_KEY = originalKey;
+  }
+});
+
 test("GET /api/board maps upstream rate-limit failures", async () => {
   const fetchMock = mock.method(globalThis, "fetch", async () => {
     return new Response("rate limit", { status: 429 });

@@ -1,5 +1,5 @@
 import type { LeagueKey, MarketKey } from "@/lib/odds/schemas";
-import { LEAGUE_REGISTRY, configuredOrDefaultSportKeys } from "@/lib/server/odds/sportConfig";
+import { LEAGUE_REGISTRY, configuredOrDefaultSportKeys, getLeagueConfig, type LeagueConfig } from "@/lib/server/odds/sportConfig";
 import type { WeightModel } from "@/lib/server/odds/weights";
 import type { BoardScope, PropType } from "@/lib/ui/propsDisplay";
 
@@ -33,6 +33,21 @@ function normalize(value: string | null | undefined): string {
   return (value || "").trim();
 }
 
+function leagueList(): string {
+  return Array.from(LEAGUE_KEYS).sort().join(", ");
+}
+
+function sportKeyForLeague(league: LeagueKey): string {
+  return getLeagueConfig(league)?.sportKey ?? "basketball_nba";
+}
+
+function requireStandardLeagueConfig(config: LeagueConfig): LeagueConfig {
+  if (!config.supportsStandardMarkets) {
+    invalid("league must support standard board markets");
+  }
+  return config;
+}
+
 function readAllowedSportKeys(): Set<string> {
   const allowed = new Set<string>(SPORT_KEYS);
   for (const entry of configuredOrDefaultSportKeys()) {
@@ -47,7 +62,7 @@ export function parseLeague(value: string | null, fallback: LeagueKey = "nba"): 
   const normalized = normalize(value).toLowerCase();
   if (!normalized) return fallback;
   if (!LEAGUE_KEYS.has(normalized as LeagueKey)) {
-    invalid(`league must be one of ${Array.from(LEAGUE_KEYS).sort().join(", ")}`);
+    invalid(`league must be one of ${leagueList()}`);
   }
   return normalized as LeagueKey;
 }
@@ -85,6 +100,58 @@ export function parseSportKeysCsv(value: string | null, fallback = "basketball_n
     deduped.push(sportKey);
   }
   return deduped;
+}
+
+export function parseSportKeyOrLeague(params: {
+  sportKey: string | null;
+  league?: string | null;
+  sport?: string | null;
+  fallbackSportKey?: string;
+}): string {
+  const rawSportKey = normalize(params.sportKey);
+  if (rawSportKey) return parseSportKey(rawSportKey, params.fallbackSportKey ?? "basketball_nba");
+
+  const rawLeague = normalize(params.league || params.sport);
+  if (rawLeague) {
+    const config = getLeagueConfig(rawLeague.toLowerCase());
+    if (!config) {
+      invalid(`league must be one of ${leagueList()}`);
+    }
+    return parseSportKey(config.sportKey, params.fallbackSportKey ?? "basketball_nba");
+  }
+
+  return parseSportKey(null, params.fallbackSportKey ?? "basketball_nba");
+}
+
+export function parseBoardSportSelection(params: {
+  sportKey: string | null;
+  league?: string | null;
+  sport?: string | null;
+  fallbackLeague?: LeagueKey;
+}): { league: LeagueKey; sportKey: string } {
+  const rawSportKey = normalize(params.sportKey);
+  if (rawSportKey) {
+    const sportKey = parseSportKey(rawSportKey);
+    const config = getLeagueConfig(sportKey);
+    if (!config) {
+      invalid("sportKey must map to a configured board league");
+    }
+    const boardConfig = requireStandardLeagueConfig(config);
+    return { league: boardConfig.key, sportKey };
+  }
+
+  const rawLeague = normalize(params.league || params.sport);
+  if (rawLeague) {
+    const config = getLeagueConfig(rawLeague.toLowerCase());
+    if (!config) {
+      invalid(`league must be one of ${leagueList()}`);
+    }
+    const boardConfig = requireStandardLeagueConfig(config);
+    return { league: boardConfig.key, sportKey: boardConfig.sportKey };
+  }
+
+  const league = params.fallbackLeague ?? "nba";
+  return { league, sportKey: sportKeyForLeague(league) };
 }
 
 export function parseMarket(value: string | null, fallback: MarketKey = "h2h"): MarketKey {

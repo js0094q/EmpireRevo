@@ -18,6 +18,9 @@ UPSTASH_REDIS_REST_TOKEN
 Optional:
 
 NEXT_PUBLIC_DEFAULT_LEAGUE
+ODDS_ALLOWED_SPORT_KEYS=soccer_fifa_world_cup
+
+If `ODDS_ALLOWED_SPORT_KEYS` is already configured, append `soccer_fifa_world_cup` to the comma-separated list to expose FIFA World Cup markets.
 ## Local Setup
 
 Install dependencies

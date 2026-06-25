@@ -6,6 +6,7 @@ import { fetchFairBoardPageData, hasOddsKey } from "@/lib/server/odds/pageData";
 import { getPublicSportOptions, resolveSportOption } from "@/lib/server/odds/sportsRegistry";
 import { listOutcomeResults } from "@/lib/server/odds/outcomes";
 import { getPropsDisplayState, normalizeBoardScope, normalizePropType } from "@/lib/ui/propsDisplay";
+import { getBoardEmptyStateCopy } from "@/lib/ui/boardEmptyState";
 import { redirect } from "next/navigation";
 import styles from "./page.module.css";
 
@@ -114,15 +115,13 @@ export default async function Page({
         : undefined;
     const propsState =
       propsEmptyReason ? getPropsDisplayState({ reason: propsEmptyReason, leagueLabel: selectedSport.label, propType }) : null;
+    const emptyState = getBoardEmptyStateCopy({
+      leagueKey: selectedSport.key,
+      providerEventCount: pageData?.providerEventCount
+    });
     boardError = {
-      title:
-        propsState?.title ??
-        (selectedSport.key === "college_baseball" ? "No college baseball odds are currently available." : "No qualifying markets for current filters."),
-      message:
-        propsState?.message ??
-        (selectedSport.key === "college_baseball"
-          ? "The provider has no comparable College Baseball markets in the current feed."
-          : "Try another league, market, or book threshold."),
+      title: propsState?.title ?? emptyState.title,
+      message: propsState?.message ?? emptyState.message,
       detail: "EmpirePicks only shows markets with live comparable prices."
     };
   }

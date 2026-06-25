@@ -101,6 +101,8 @@ export function formatConfidenceLabel(label?: string | null): string {
 }
 
 export function formatLeagueLabel(league: string): string {
+  const normalized = league.trim().toLowerCase();
+  if (normalized === "fifa_world_cup" || normalized === "soccer_fifa_world_cup") return "FIFA World Cup";
   const upper = league.toUpperCase();
   if (upper === "NCAAB") return "NCAAB";
   return upper;

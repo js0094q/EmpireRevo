@@ -76,6 +76,17 @@ export const LEAGUE_REGISTRY: LeagueConfig[] = [
     supportsStandardMarkets: true
   },
   {
+    key: "fifa_world_cup",
+    sportKey: "soccer_fifa_world_cup",
+    label: "FIFA World Cup",
+    category: "soccer",
+    group: "Soccer",
+    priority: 55,
+    enabledByDefault: true,
+    supportsStandardMarkets: true,
+    notes: "The Odds API lists FIFA World Cup as soccer_fifa_world_cup; tolerate empty feeds outside posted market windows."
+  },
+  {
     key: "soccer_epl",
     sportKey: "soccer_epl",
     label: "EPL",

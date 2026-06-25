@@ -36,6 +36,7 @@ test("registry includes active summer and fall sport keys without enabling incom
   assert.ok(sportKeys.has("mma_mixed_martial_arts"));
   assert.ok(sportKeys.has("americanfootball_ncaaf"));
   assert.ok(sportKeys.has("soccer_usa_mls"));
+  assert.ok(sportKeys.has("soccer_fifa_world_cup"));
   assert.ok(sportKeys.has("tennis_atp_wimbledon"));
 
   const golf = getLeagueConfig("golf_us_open");
@@ -47,4 +48,18 @@ test("toSportKey resolves new league aliases", () => {
   assert.equal(toSportKey("college_baseball"), "baseball_ncaa");
   assert.equal(toSportKey("wnba"), "basketball_wnba");
   assert.equal(toSportKey("ncaaf"), "americanfootball_ncaaf");
+  assert.equal(toSportKey("fifa_world_cup"), "soccer_fifa_world_cup");
+  assert.equal(toSportKey("soccer_fifa_world_cup"), "soccer_fifa_world_cup");
+});
+
+test("league registry includes FIFA World Cup as a soccer main-market option", () => {
+  const worldCup = getLeagueConfig("fifa_world_cup");
+
+  assert.ok(worldCup);
+  assert.equal(worldCup.sportKey, "soccer_fifa_world_cup");
+  assert.equal(worldCup.label, "FIFA World Cup");
+  assert.equal(worldCup.category, "soccer");
+  assert.equal(worldCup.group, "Soccer");
+  assert.equal(worldCup.supportsStandardMarkets, true);
+  assert.ok(defaultEnabledLeagues().some((league) => league.key === "fifa_world_cup"));
 });

@@ -4,13 +4,12 @@ import type { BoardResponse } from "@/lib/odds/schemas";
 import { isValidationError, mapPublicError, publicErrorResponse, validationErrorResponse } from "@/lib/server/odds/apiErrors";
 import { buildEditorNote, BOARD_DISCLAIMER } from "@/lib/server/odds/editor";
 import { cacheGet, cacheKey, cacheSet } from "@/lib/server/odds/cache";
-import { leagueToSportKey } from "@/lib/server/odds/client";
 import { cacheControlHeader } from "@/lib/server/odds/env";
 import { DEFAULT_LEAGUE_KEY } from "@/lib/server/odds/sportConfig";
 import { buildLegacyBoardGames, latestBoardUpdatedAt } from "@/lib/server/odds/legacyBoard";
 import { getFairBoard, getNormalizedOdds } from "@/lib/server/odds/oddsService";
 import { buildFeed, selectBestValue, selectComingUp } from "@/lib/server/odds/derive";
-import { parseIntegerParam, parseLeague, parseMarketsCsv, parseModel, parseRegionsCsv } from "@/lib/server/odds/requestValidation";
+import { parseBoardSportSelection, parseIntegerParam, parseMarketsCsv, parseModel, parseRegionsCsv } from "@/lib/server/odds/requestValidation";
 
 export const runtime = "nodejs";
 
@@ -20,7 +19,12 @@ const DEFAULT_MIN_BOOKS = 4;
 export async function GET(req: Request) {
   try {
     const url = new URL(req.url);
-    const league = parseLeague(url.searchParams.get("sport"), DEFAULT_LEAGUE_KEY);
+    const { league, sportKey } = parseBoardSportSelection({
+      sportKey: url.searchParams.get("sportKey"),
+      league: url.searchParams.get("league"),
+      sport: url.searchParams.get("sport"),
+      fallbackLeague: DEFAULT_LEAGUE_KEY
+    });
     const regions = parseRegionsCsv(url.searchParams.get("regions"), "us");
     const markets = parseMarketsCsv(url.searchParams.get("markets") || url.searchParams.get("market"), "h2h,spreads,totals");
     const requestedMarkets = markets.split(",") as MarketKey[];
@@ -32,7 +36,6 @@ export async function GET(req: Request) {
       min: 2,
       max: 25
     });
-    const sportKey = leagueToSportKey(league);
 
     const normalized = await getNormalizedOdds({
       sportKey,

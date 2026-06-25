@@ -10,7 +10,7 @@ import {
   parseOddsFormat,
   parseRegionsCsv,
   parseResponseFormat,
-  parseSportKey
+  parseSportKeyOrLeague
 } from "@/lib/server/odds/requestValidation";
 
 export const runtime = "nodejs";
@@ -41,7 +41,12 @@ function limitRawPayload(events: unknown[], maxBytes: number): { events: unknown
 export async function GET(req: Request) {
   try {
     const url = new URL(req.url);
-    const sportKey = parseSportKey(url.searchParams.get("sportKey"), DEFAULT_SPORT_KEY);
+    const sportKey = parseSportKeyOrLeague({
+      sportKey: url.searchParams.get("sportKey"),
+      league: url.searchParams.get("league"),
+      sport: url.searchParams.get("sport"),
+      fallbackSportKey: DEFAULT_SPORT_KEY
+    });
     const regions = parseRegionsCsv(url.searchParams.get("regions"), "us");
     const market = parseMarket(url.searchParams.get("market") || url.searchParams.get("markets"), "h2h");
     const oddsFormat = parseOddsFormat(url.searchParams.get("oddsFormat"), "american");

@@ -61,6 +61,35 @@ test("GET /api/odds format=raw fails closed when internal auth key is not config
   }
 });
 
+test("GET /api/odds accepts FIFA World Cup through the league query", async () => {
+  const requestedUrls: string[] = [];
+  const fetchMock = mock.method(globalThis, "fetch", async (input: string | URL | Request) => {
+    requestedUrls.push(typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url);
+    return new Response(JSON.stringify([]), {
+      status: 200,
+      headers: { "Content-Type": "application/json" }
+    });
+  });
+
+  const originalKey = process.env.ODDS_API_KEY;
+  process.env.ODDS_API_KEY = "test-key";
+
+  const response = await GET(new Request("http://localhost/api/odds?league=fifa_world_cup&market=h2h"));
+  const payload = await response.json();
+
+  assert.equal(response.status, 200);
+  assert.equal(payload.sportKey, "soccer_fifa_world_cup");
+  assert.deepEqual(payload.games, []);
+  assert.ok(requestedUrls.some((url) => url.includes("/v4/sports/soccer_fifa_world_cup/odds")));
+
+  fetchMock.mock.restore();
+  if (originalKey === undefined) {
+    delete process.env.ODDS_API_KEY;
+  } else {
+    process.env.ODDS_API_KEY = originalKey;
+  }
+});
+
 test("GET /api/odds sanitizes upstream 5xx details", async () => {
   const fetchMock = mock.method(globalThis, "fetch", async () => {
     return new Response("upstream secret payload", { status: 500 });

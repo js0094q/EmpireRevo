@@ -68,6 +68,17 @@ const MARKET_SUPPORT_OVERRIDES: Record<string, Partial<LeagueMarketSupport>> = {
     playerPropMarkets: MLB_PLAYER_PROP_MARKETS,
     propFetchMode: "event",
     notes: "MLB player props are fetched event-by-event to keep board payloads bounded."
+  },
+  soccer_fifa_world_cup: {
+    supportsMainMarkets: true,
+    supportsPlayerProps: false,
+    supportsTeamProps: false,
+    supportsGameProps: false,
+    supportsFutures: false,
+    mainMarkets: STANDARD_MAIN_MARKETS,
+    propFetchMode: "unsupported",
+    disabledReason: "FIFA World Cup props are not currently supported by the odds provider.",
+    notes: "Use standard moneyline, spread, and total markets unless provider prop coverage is explicitly added."
   }
 };
 
